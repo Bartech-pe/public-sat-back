@@ -6,12 +6,14 @@ import {
   DefaultScope,
   DeletedAt,
   ForeignKey,
+  HasMany,
   Model,
   Scopes,
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
 import { User } from '@modules/user/entities/user.entity';
+import { CitizenContact } from './citizen-contact.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -57,6 +59,13 @@ export class Citizen extends Model {
     comment: 'Nombre del canal',
   })
   name: string;
+
+  @HasMany(() => CitizenContact, {
+    foreignKey: 'docIde',
+    sourceKey: 'docIde',
+    as: 'citizenContacts',
+  })
+  citizenContacts: CitizenContact[];
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

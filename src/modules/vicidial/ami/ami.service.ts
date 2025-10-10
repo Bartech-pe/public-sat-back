@@ -28,6 +28,10 @@ import { CallDTO, InterferCallDTO } from '@modules/call/dto/call.dto';
 import { SpyDTO } from '@modules/call/dto/spy.dto';
 import { RecordingDTO } from '@modules/call/dto/recording-dto';
 import { amiConfig } from 'config/env';
+import { ChannelPhoneState } from '@common/enums/status-call.enum';
+import { VicidialPauseCode } from '@common/enums/pause-code.enum';
+import { UserGateway } from '@modules/user/user.gateway';
+import { CallHistoryRepository } from '@modules/user/repositories/call-history.repository';
 const AsteriskManager = require('asterisk-manager');
 
 @Injectable()
@@ -43,6 +47,10 @@ export class AmiService implements OnModuleInit {
     private readonly userRepository: VicidialUserRepository,
     @Inject(forwardRef(() => AloSatService))
     private readonly aloSatService: AloSatService,
+    private readonly vicidialUserRepository: VicidialUserRepository,
+    private readonly callHistoryRepository: CallHistoryRepository,
+    @Inject(forwardRef(() => UserGateway))
+    private readonly userGateway: UserGateway,
   ) {
     try {
       const port = amiConfig.port;
@@ -61,7 +69,7 @@ export class AmiService implements OnModuleInit {
         console.error('Error en AMI:', err);
       });
       this.ami.on('managerevent', async (event) => {
-        //// console.log('📥 Evento AMI recibido (Manager):', event);
+        // console.log('📥 Evento AMI recibido (Manager):', event);
         switch (event.event) {
           case 'PeerStatus':
             //console.log(`PeerStatus:`, event);
@@ -79,10 +87,102 @@ export class AmiService implements OnModuleInit {
             //console.log(`BridgeInfoChannel:`, event);
             break;
           case 'BridgeListComplete':
-            //console.log(`BridgeListComplete:`, event);
+            // console.log(`BridgeListComplete:`, event);
+            break;
+          case 'Newstate':
+            if (
+              event.channelstate === '4' &&
+              /^SIP\/[^-]+-\w+$/.test(event.channel) &&
+              event.context != 'default'
+            ) {
+              console.log('📞 Llamada entrante detectada:', event);
+
+              const viciUsers = await this.vicidialUserRepository.findAll({
+                raw: true,
+                where: { channelStateId: ChannelPhoneState.READY },
+              });
+
+              for (const v of viciUsers) {
+                console.log(`▶️ Reanudando agente: ${v.username}`);
+                await aloSatService.resumeAgent(v.userId);
+              }
+            }
+            break;
+          case 'MeetmeJoin':
+            if (/^SIP\/[^-]+-\w+$/.test(event.channel)) {
+              console.log(`MeetmeLeave:`, event);
+              console.log(`meetme:`, event.meetme);
+              const username = await aloSatService.getAgentNameByConfExten(
+                event.meetme,
+              );
+              if (username) {
+                console.log(`username:`, username);
+                const vicidialUser = await this.vicidialUserRepository.findOne({
+                  where: {
+                    username: username,
+                    channelStateId: ChannelPhoneState.READY,
+                  },
+                });
+
+                if (vicidialUser) {
+                  await vicidialUser?.update({
+                    channelStateId: ChannelPhoneState.INCALL,
+                    pauseCode: null,
+                  });
+                  this.userGateway.notifyPhoneStateUser(
+                    vicidialUser.toJSON().userId,
+                  );
+                }
+              }
+            }
+            break;
+          case 'MeetmeLeave':
+            console.log(`MeetmeLeave:`, event);
+            if (
+              /^SIP\/[^-]+-\w+$/.test(event.channel) &&
+              event.context == 'default'
+            ) {
+              console.log(`MeetmeLeave:`, event);
+              const username = await aloSatService.getAgentNameByConfExten(
+                event.meetme,
+              );
+              if (username) {
+                const vicidialUser = await this.vicidialUserRepository.findOne({
+                  where: {
+                    username: username,
+                    channelStateId: ChannelPhoneState.INCALL,
+                  },
+                });
+
+                if (vicidialUser) {
+                  await this.aloSatService.onChangeIngroups(
+                    vicidialUser?.toJSON()?.userId,
+                  );
+                  await new Promise((res) => setTimeout(res, 300));
+                  await this.aloSatService.pauseAgent(
+                    vicidialUser?.toJSON()?.userId,
+                    VicidialPauseCode.WRAP,
+                  );
+
+                  await this.callHistoryRepository.setDurationCall(
+                    vicidialUser?.toJSON()?.userId,
+                    event.seconds,
+                  );
+
+                  await vicidialUser?.update({
+                    channelStateId: ChannelPhoneState.PAUSED,
+                    pauseCode: VicidialPauseCode.WRAP,
+                  });
+                  this.userGateway.notifyPhoneStateUser(
+                    vicidialUser.toJSON().userId,
+                  );
+                }
+              }
+            }
             break;
           case 'Hangup':
-            //console.log(`Hangup:`,event);
+            // console.log('📞 Hangup:', event);
+
             const accept = this.actives.find(
               (ch) =>
                 ch.channel == event.channel || ch.agentChannel == event.channel,
@@ -112,7 +212,7 @@ export class AmiService implements OnModuleInit {
             }
             break;
           case 'CoreShowChannelsComplete':
-            console.log(`canales actuales:`, this.canales);
+            // console.log(`canales actuales:`, this.canales);
             const group = groupBy(this.canales, (channel) => channel.exten);
             for (const item in group) {
               const agent = group[item].find(
@@ -218,7 +318,7 @@ export class AmiService implements OnModuleInit {
 
   private ExtensionStatus() {
     this.ami.on('ExtensionStatus', (event) => {
-      console.log(`ExtensionStatus: ${event}`);
+      // console.log(`ExtensionStatus: ${event}`);
       const sip = event.device.split('/')[1];
       const channaelDevice = this.actives.find((canal) => canal.agent === sip);
       if (channaelDevice) {
@@ -238,7 +338,7 @@ export class AmiService implements OnModuleInit {
   }
 
   private async NewChannel(event: any) {
-    console.log(`Newchannel:`, event);
+    // console.log(`Newchannel:`, event);
     this.RunGetCoreChannelAction();
     /*if(event.accountcode.length>0){
         let nombre='asesor no encontrado'
@@ -272,7 +372,7 @@ export class AmiService implements OnModuleInit {
       if (err) {
         console.error('Error al enviar acción CoreShowChannels:', err);
       } else {
-        console.log('✅ Acción CoreShowChannels enviada correctamente.', res);
+        // console.log('✅ Acción CoreShowChannels enviada correctamente.', res);
       }
     });
   }

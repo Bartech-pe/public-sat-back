@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { GenericCrudRepository } from '@common/repositories/generic-crud.repository';
-import { CitizenContact } from '../entities/citizen-contact.entity';
+import { CitizenContact } from '../../citizen/entities/citizen-contact.entity';
 
 /**
  * Repository for CitizenContact entity.

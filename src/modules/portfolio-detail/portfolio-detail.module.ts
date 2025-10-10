@@ -8,8 +8,8 @@ import { CaseInformation } from '@modules/portfolio-detail/entities/case-informa
 import { CaseInformationRepository } from './repositories/case-information.repository';
 import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
 import { PortfolioAssignmentRepository } from './repositories/portfolio-assignment.repository';
-import { CitizenContactRepository } from './repositories/citizen-contact.repository';
-import { CitizenContact } from './entities/citizen-contact.entity';
+import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
+import { CitizenModule } from '@modules/citizen/citizen.module';
 
 @Module({
   imports: [
@@ -17,8 +17,8 @@ import { CitizenContact } from './entities/citizen-contact.entity';
       PortfolioDetail,
       CaseInformation,
       PortfolioAssignment,
-      CitizenContact,
     ]),
+    CitizenModule,
   ],
   controllers: [PortfolioDetailController],
   providers: [
@@ -26,13 +26,11 @@ import { CitizenContact } from './entities/citizen-contact.entity';
     PortfolioDetailRepository,
     CaseInformationRepository,
     PortfolioAssignmentRepository,
-    CitizenContactRepository,
   ],
   exports: [
     PortfolioDetailRepository,
     CaseInformationRepository,
     PortfolioAssignmentRepository,
-    CitizenContactRepository,
   ],
 })
 export class PortfolioDetailModule {}

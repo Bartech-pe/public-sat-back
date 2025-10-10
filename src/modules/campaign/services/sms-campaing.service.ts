@@ -28,7 +28,7 @@ export class SmsCampaingService {
       limit,
       offset,
       order: [['createdAt', 'ASC']],
-      attributes: ['id', 'senderId', 'contact', 'message', 'createdAt'],
+      attributes: ['id', 'senderId', 'contact', 'message', 'createdAt','excel_data'],
       include: [{ model: Campaign, attributes: ['name'] }],
     });
     const smsData = data.data.map((a) => {
@@ -38,6 +38,7 @@ export class SmsCampaingService {
         senderId: json.senderId,
         contact: json.contact,
         message: json.message,
+        excel_data: json.excel_data,
         createdAt: formatYearTime(json.createdAt),
         name: json.campaign.name,
         campaignStateId: json.campaign.campaignStateId,
@@ -146,12 +147,13 @@ export class SmsCampaingService {
       campaignStateId: body.campaignStateId,
     });
     const result = body.rows.map((inner) => ({ ...inner }));
+
     const createsms = {
       senderId: body.senderId,
       contact: body.contact,
       message: body.message,
       countryCode: body.countryCode,
-      campaign_id: campaing.toJSON().id,
+      campaignId: campaing.toJSON().id,
       excelData: result,
     };
     const sms = await this.smsCampaingDetailRepository.create(createsms);
@@ -162,6 +164,20 @@ export class SmsCampaingService {
     );
     return response;
   }
+
+  private renderTemplate(template: string, contacto: Record<string, any>): string {
+    // Crear una versión en minúsculas del objeto para coincidencias más flexibles
+    const normalizedContact = Object.keys(contacto).reduce((acc, key) => {
+      acc[key.toLowerCase()] = contacto[key];
+      return acc;
+    }, {} as Record<string, any>);
+
+    return template.replace(/\[([^\]]+)\]/g, (_, variable) => {
+      const key = variable.trim().toLowerCase(); // compara en minúsculas
+      return normalizedContact[key] ?? '';
+    });
+  }
+
   readSMSExcel(buffer: Buffer) {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
@@ -197,11 +213,13 @@ export class SmsCampaingService {
     message: string,
     contact: string,
   ) {
+
+
     const rowMessages = this.getMessages(rows, message, contact);
     const newMessages = rowMessages.map((row) => {
       const msg: Message = {
         numTelDestino: row.contact.toString(),
-        mensaje: row.message,
+        mensaje: this.renderTemplate(row.message, row) ,
         codTipDocumento: null,
         valTipDocumento: null,
       };
@@ -213,6 +231,7 @@ export class SmsCampaingService {
       nomTerminal: 'Terminal',
       mensajes: newMessages,
     };
+
     const responseMessage = await this.apiSat(body);
     return responseMessage;
   }
@@ -222,10 +241,13 @@ export class SmsCampaingService {
       const processedMessage = this.processMessage(message, row);
       return {
         contact: row[contact] ?? '',
-        message: processedMessage,
+        message: this.renderTemplate(processedMessage, row),
       };
     });
   }
+
+  
+
   processMessage(message: string, row: Record<string, any>) {
     let result = message;
     Object.entries(row).forEach(([key, value]) => {
@@ -237,6 +259,7 @@ export class SmsCampaingService {
     });
     return result;
   }
+
   async apiSat(body: SmsMessageChannel) {
     return await this.smsChannelService.sendMessages(body);
   }

@@ -18,9 +18,9 @@ import { PortfolioAssignmentRepository } from './repositories/portfolio-assignme
 import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.dto';
 import { col, Op } from 'sequelize';
 import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
-import { CitizenContact } from './entities/citizen-contact.entity';
+import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
 import { CitizenContactDto } from './dto/citizen-contact.dto';
-import { CitizenContactRepository } from './repositories/citizen-contact.repository';
+import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
 
 @Injectable()
 export class PortfolioDetailService {

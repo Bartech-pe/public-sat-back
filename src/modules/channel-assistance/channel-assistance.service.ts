@@ -10,6 +10,9 @@ import { CreateChannelAssistanceDto } from './dto/create-channel-assistance.dto'
 import { UpdateChannelAssistanceDto } from './dto/update-channel-assistance.dto';
 import { User } from '@modules/user/entities/user.entity';
 import { CitizenRepository } from '@modules/citizen/repositories/citizen.repository';
+import { Citizen } from '@modules/citizen/entities/citizen.entity';
+import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
+import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 
 /**
  * Service layer for managing ChannelAssistances.
@@ -201,6 +204,24 @@ export class ChannelAssistanceService {
   restore(id: number): Promise<void> {
     try {
       return this.repository.restore(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
+  }
+
+  findByDocIde(docIde: string): Promise<ChannelAssistance[]> {
+    try {
+      return this.repository.findAll({
+        include: [
+          { model: Citizen, where: { docIde } },
+          { model: CategoryChannel },
+          { model: ConsultType },
+          { model: User, as: 'createdByUser' },
+        ],
+      });
     } catch (error) {
       throw new InternalServerErrorException(
         error,

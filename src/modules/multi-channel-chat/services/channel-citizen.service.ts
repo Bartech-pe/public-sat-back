@@ -29,8 +29,8 @@ import { Channel } from '@modules/channel/entities/channel.entity';
 import { User } from '@modules/user/entities/user.entity';
 
 @Injectable()
-export class CitizenService {
-  private readonly logger = new Logger(CitizenService.name);
+export class ChannelCitizenService {
+  private readonly logger = new Logger(ChannelCitizenService.name);
 
   constructor(
     private citizenRepository: ChannelCitizenRepository,
@@ -214,6 +214,16 @@ export class CitizenService {
               required: true,
               include: [
                 {
+                  model: Inbox,
+                  required: true,
+                  include: [
+                    {
+                      model: Channel,
+                      required: true,
+                    },
+                  ],
+                },
+                {
                   model: ChannelCitizen,
                   required: true,
                   where: {
@@ -233,21 +243,21 @@ export class CitizenService {
             },
           ],
         });
+      this.logger.debug(channelAttentions);
       response.success = true;
       response.message = 'Listado de atenciones del ciudadano';
       response.data = channelAttentions.map((attention) => {
         const attentionParsed = attention.toJSON();
-        const attentionMessages = attention.get('messages') as ChannelMessage[];
-        const attentionChannel = attention.get('channelRoom') as ChannelRoom;
-        const user = attentionChannel.get('user').toJSON() as User;
-        const citizen = attentionChannel
-          .get('citizen')
-          .toJSON() as ChannelCitizen;
-        const channelInbox = attentionChannel.get('inbox') as Inbox;
-        const inboxChannel = channelInbox.get('channel').toJSON() as Channel;
+        this.logger.debug(attentionParsed);
+        const attentionMessages = attentionParsed.messages as ChannelMessage[];
+        const attentionChannel = attentionParsed.channelRoom as ChannelRoom;
+        const user = attentionChannel.user as User;
+        const citizen = attentionChannel.citizen;
+        const channelInbox = attentionChannel.inbox as Inbox;
+        const inboxChannel = channelInbox.channel as Channel;
 
         const advisorIntervention: boolean = attentionMessages.some(
-          (message: ChannelMessage) => message.dataValues.senderType == 'agent',
+          (message: ChannelMessage) => message.senderType == 'agent',
         );
 
         return {
@@ -264,6 +274,8 @@ export class CitizenService {
       return response;
     } catch (error) {
       this.logger.error(error.toString());
+      response.success = false;
+      response.error = error.toString();
       return response;
     }
   }

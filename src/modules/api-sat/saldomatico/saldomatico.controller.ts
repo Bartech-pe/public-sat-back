@@ -21,6 +21,7 @@ export class SaldomaticoController {
       '23',
       '10',
     );
+
     return response;
   }
 
@@ -30,11 +31,16 @@ export class SaldomaticoController {
     @Param('psiTipConsulta') psiTipConsulta: string,
     @Param('pvValor') pvValor: string,
   ) {
-    const response = await this.service.GetImpuestoPredial(
-      pvValor,
+    const response = await this.service.deudasInfo(
       psiTipConsulta,
+      pvValor,
+      '0',
+      '23',
+      '10',
     );
-    return response;
+    return response.filter(
+      (item) => item.cuota != '0' && item.concepto == 'Imp. Predial',
+    );
   }
 
   @Public()
@@ -43,10 +49,33 @@ export class SaldomaticoController {
     @Param('psiTipConsulta') psiTipConsulta: string,
     @Param('pvValor') pvValor: string,
   ) {
-    const response = await this.service.GetPapeletaInfo(
-      pvValor,
+    const response = await this.service.deudasInfo(
       psiTipConsulta,
+      pvValor,
+      '0',
+      '23',
+      '10',
     );
-    return response;
+    return response.filter(
+      (item) => item.cuota != '0' && item.concepto === 'Papeletas',
+    );
+  }
+
+  @Public()
+  @Get('impuestoVehicular/:psiTipConsulta/:pvValor')
+  async impuestoVehicular(
+    @Param('psiTipConsulta') psiTipConsulta: string,
+    @Param('pvValor') pvValor: string,
+  ) {
+    const response = await this.service.deudasInfo(
+      psiTipConsulta,
+      pvValor,
+      '0',
+      '23',
+      '10',
+    );
+    return response.filter(
+      (item) => item.cuota != '0' && item.concepto === 'Imp. Vehicular',
+    );
   }
 }

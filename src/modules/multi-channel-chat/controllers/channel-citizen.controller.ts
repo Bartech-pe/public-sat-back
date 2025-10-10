@@ -9,7 +9,7 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { CitizenService } from '../services/citizen.service';
+import { ChannelCitizenService } from '../services/channel-citizen.service';
 import { UpdateCitizenBasicInformationDto } from '../dto/channel-room/update-citizen-basic-info.dto';
 import { CreateChannelCitizenDto } from '../dto/channel-citizens/create-channel-citizen.dto';
 import { BaseResponseDto } from '@common/dto/base-response.dto';
@@ -25,7 +25,7 @@ import { JwtCitizenGuard } from '@common/guards/jwt-citizen.guard';
 export class ChannelCitizenController {
   constructor(
     private authService: AuthService,
-    private citizenService: CitizenService,
+    private channelCitizenService: ChannelCitizenService,
     private surveyService: SurveyService,
   ) {}
 
@@ -33,7 +33,7 @@ export class ChannelCitizenController {
   @Public()
   async requestAdvisor(@Param('phoneNumber') phoneNumber: string) {
     try {
-      await this.citizenService.requestAdvisor(phoneNumber);
+      await this.channelCitizenService.requestAdvisor(phoneNumber);
       return {
         message: 'Se ha solicitado un asesor.',
         status: 200,
@@ -56,7 +56,9 @@ export class ChannelCitizenController {
     @Param('phoneNumber') phoneNumber: string,
   ): Promise<UpdateCitizenBasicInformationDto> {
     try {
-      return await this.citizenService.getBasicInfoFromCitizen(phoneNumber);
+      return await this.channelCitizenService.getBasicInfoFromCitizen(
+        phoneNumber,
+      );
     } catch (error) {
       throw new HttpException(
         {
@@ -73,7 +75,9 @@ export class ChannelCitizenController {
     @Param('dni') dni: string,
   ): Promise<BaseResponseDto<GetAttentionsOfCitizenDto[]>> {
     try {
-      return await this.citizenService.getCommunicationsHistoryFromCitizen(dni);
+      return await this.channelCitizenService.getCommunicationsHistoryFromCitizen(
+        dni,
+      );
     } catch (error) {
       throw new HttpException(
         {
@@ -107,7 +111,9 @@ export class ChannelCitizenController {
     @Body() payload: UpdateCitizenBasicInformationDto,
   ): Promise<UpdateCitizenBasicInformationDto> {
     try {
-      return await this.citizenService.updateBasicInfoFromCitizen(payload);
+      return await this.channelCitizenService.updateBasicInfoFromCitizen(
+        payload,
+      );
     } catch (error) {
       throw new HttpException(
         {

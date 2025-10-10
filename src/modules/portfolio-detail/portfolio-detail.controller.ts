@@ -24,7 +24,7 @@ import { CaseInformation } from './entities/case-information.entity';
 import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.dto';
 import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
 import { CitizenContactDto } from './dto/citizen-contact.dto';
-import { CitizenContact } from './entities/citizen-contact.entity';
+import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
 
 @Controller('portfolio-details')
 export class PortfolioDetailController {

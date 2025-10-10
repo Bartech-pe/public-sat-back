@@ -8,16 +8,24 @@ import { TypeIdeDoc } from './entities/type-ide-doc.entity';
 import { TypeIdeDocController } from './controllers/type-ide-doc.controller';
 import { TypeIdeDocService } from './services/type-ide-doc.service';
 import { TypeIdeDocRepository } from './repositories/type-ide-doc.repository';
+import { CitizenContactRepository } from './repositories/citizen-contact.repository';
+import { CitizenContact } from './entities/citizen-contact.entity';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Citizen, TypeIdeDoc])],
+  imports: [SequelizeModule.forFeature([Citizen, TypeIdeDoc, CitizenContact])],
   controllers: [CitizenController, TypeIdeDocController],
   providers: [
     CitizenService,
     CitizenRepository,
     TypeIdeDocService,
     TypeIdeDocRepository,
+    CitizenContactRepository,
   ],
-  exports: [CitizenRepository, TypeIdeDocRepository],
+  exports: [
+    CitizenService,
+    CitizenRepository,
+    TypeIdeDocRepository,
+    CitizenContactRepository,
+  ],
 })
 export class CitizenModule {}

@@ -17,12 +17,12 @@ import { Campaign } from './campaign.entity';
   attributes: { exclude: ['deletedAt', 'deletedBy'] },
 }))
 @Table({
-  tableName: 'smscampaingdetails',
+  tableName: 'sms_campaign_details',
   timestamps: true,
   paranoid: true,
   underscored: true,
 })
-export class SmsCampaingDetail extends Model {
+export class SmsCampaingDetail extends  Model {
   @Column({
     field: 'id',
     type: DataType.INTEGER,
@@ -32,69 +32,54 @@ export class SmsCampaingDetail extends Model {
   declare id: number;
 
   @Column({ field: 'sender_id', type: DataType.STRING, allowNull: false })
-  senderId?: string;
+   senderId: string;
 
   @Column({ field: 'contact', type: DataType.STRING, allowNull: false })
-  contact?: string;
+  contact!: string;
 
   @Column({ field: 'country_code', type: DataType.BOOLEAN, allowNull: true })
   countryCode?: boolean | null;
 
-  @Column({
-    type: DataType.TEXT,
-    allowNull: false,
-    field: 'message',
-  })
-  message: string;
+  @Column({ field: 'message', type: DataType.TEXT, allowNull: false })
+  message!: string;
 
-  @Column({
-    type: DataType.JSON,
-    allowNull: false,
-    field: 'excel_data',
-  })
-  excelData: Record<string, any>;
+  @Column({ field: 'excel_data', type: DataType.JSON, allowNull: false })
+  excelData!: Record<string, any>;
 
   @ForeignKey(() => Campaign)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    field: 'campaign_id',
-  })
-  campaignId: number;
+  @Column({ field: 'campaign_id', type: DataType.INTEGER, allowNull: false })
+  campaignId!: number;
 
   @BelongsTo(() => Campaign)
-  campaign: Campaign;
+  campaign?: Campaign;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })
-  declare createdBy: number;
+  createdBy?: number;
 
   @BelongsTo(() => User, 'createdBy')
-  declare createdByUser?: User;
+  createdByUser?: User;
 
   @ForeignKey(() => User)
   @Column({ field: 'updated_by', allowNull: true })
-  declare updatedBy: number;
+  updatedBy?: number;
 
   @BelongsTo(() => User, 'updatedBy')
-  declare updatedByUser?: User;
+  updatedByUser?: User;
 
   @ForeignKey(() => User)
   @Column({ field: 'deleted_by', allowNull: true })
-  declare deletedBy: number;
+  deletedBy?: number;
 
   @BelongsTo(() => User, 'deletedBy')
-  declare deletedByUser?: User;
+  deletedByUser?: User;
 
-  @CreatedAt
-  @Column({ field: 'created_at', allowNull: true })
-  declare createdAt: Date;
+  @CreatedAt @Column({ field: 'created_at', allowNull: true }) 
+  declare createdAt: Date; 
 
-  @UpdatedAt
-  @Column({ field: 'updated_at', allowNull: true })
-  declare updatedAt: Date;
-
-  @DeletedAt
-  @Column({ field: 'deleted_at', allowNull: true })
+  @UpdatedAt @Column({ field: 'updated_at', allowNull: true }) 
+  declare updatedAt: Date; @DeletedAt 
+  
+  @Column({ field: 'deleted_at', allowNull: true }) 
   declare deletedAt: Date;
 }

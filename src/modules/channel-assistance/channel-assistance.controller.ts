@@ -99,4 +99,9 @@ export class ChannelAssistanceController {
   remove(@Param('id') id: number) {
     return this.service.remove(+id);
   }
+
+  @Get('findByDocIde/:docIde')
+  findByDocIde(@Param('docIde') docIde: string): Promise<ChannelAssistance[]> {
+    return this.service.findByDocIde(docIde);
+  }
 }

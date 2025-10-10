@@ -80,7 +80,7 @@ export const EmailTicketList = async (
       from: json.emailAttention.emailCitizen,
       name: json.name,
       state: json.emailAttention.assistanceState,
-      advisor: json.emailAttention?.advisor?.name,
+      advisor: json.emailAttention?.advisor,
       createdAt: json.createdAt,
     };
   });

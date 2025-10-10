@@ -11,89 +11,97 @@ import {
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { User } from '@modules/user/entities/user.entity';
-import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
+import { User } from './user.entity';
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
 }))
 @Scopes(() => ({}))
 @Table({
-  tableName: 'assistance_states',
+  tableName: 'call_history',
   timestamps: true,
   paranoid: true,
-  underscored: true,
 })
-export class AssistanceState extends Model {
+export class CallHistory extends Model {
   @Column({
     field: 'id',
     type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
-    comment: 'Identificador del estado de atención',
   })
   declare id: number;
 
-  @Column({
-    field: 'name',
-    type: DataType.STRING,
-    allowNull: false,
-    comment: 'Nombre del estado de atención',
-  })
-  name: string;
+  @ForeignKey(() => User)
+  @Column({ field: 'user_id', allowNull: false })
+  userId: number;
+
+  @BelongsTo(() => User)
+  user?: User;
 
   @Column({
-    field: 'description',
+    field: 'lead_id',
+    type: DataType.INTEGER,
+    allowNull: false,
+  })
+  leadId: number;
+
+  @Column({
+    field: 'caller_id',
     type: DataType.STRING,
+    allowNull: false,
+  })
+  callerId: string;
+
+  @Column({
+    field: 'user_code',
+    type: DataType.STRING,
+    allowNull: false,
+  })
+  userCode: string;
+
+  @Column({
+    field: 'phone_number',
+    type: DataType.STRING,
+    allowNull: false,
+  })
+  phoneNumber: string;
+
+  @Column({
+    field: 'channel',
+    type: DataType.STRING,
+    allowNull: false,
+  })
+  channel: number;
+
+  @Column({
+    field: 'entry_date',
+    type: DataType.DATE,
+    allowNull: false,
+  })
+  entryDate: Date;
+
+  @Column({
+    field: 'seconds',
+    type: DataType.INTEGER,
     allowNull: true,
-    comment: 'Descripción del estado de atención',
+    defaultValue: 0,
   })
-  description: string;
+  seconds: number;
 
   @Column({
-    field: 'color',
+    field: 'call_status',
     type: DataType.STRING,
     allowNull: false,
-    comment: 'Color del estado de atención',
   })
-  color: string;
+  callStatus: string;
 
   @Column({
-    field: 'icon',
-    type: DataType.STRING,
-    allowNull: true,
-    defaultValue: 'oui:dot',
-    comment: 'Icono de estado de atención',
-  })
-  icon: string;
-
-  @ForeignKey(() => CategoryChannel)
-  @Column({
-    field: 'category_id',
-    type: DataType.BIGINT,
+    field: 'call_basic_info',
+    type: DataType.TEXT,
     allowNull: false,
-    comment: 'Parametro para identificar el canal al que pertenece el estado',
   })
-  categoryId: number;
-
-  @BelongsTo(() => CategoryChannel)
-  category: CategoryChannel;
-
-  @Column({
-    field: 'inmutable',
-    type: DataType.BOOLEAN,
-    defaultValue: false,
-    comment: 'Campo para habilitar o inhabilitar la edición de un registro',
-  })
-  inmutable: boolean;
-
-  @Column({
-    field: 'status',
-    type: DataType.BOOLEAN,
-    defaultValue: true,
-    comment: 'Campo para habilitar o inhabilitar un registro',
-  })
-  status: boolean;
+  callBasicInfo: string;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

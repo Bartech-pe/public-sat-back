@@ -7,12 +7,14 @@ import {
   DefaultScope,
   DeletedAt,
   ForeignKey,
+  HasOne,
   Model,
   Scopes,
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { PortfolioDetail } from './portfolio-detail.entity';
+import { PortfolioDetail } from '../../portfolio-detail/entities/portfolio-detail.entity';
+import { Citizen } from './citizen.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -79,6 +81,13 @@ export class CitizenContact extends Model {
     comment: 'Campo para habilitar o inhabilitar un registro',
   })
   status: boolean;
+
+  @HasOne(() => Citizen, {
+    foreignKey: 'docIde',
+    sourceKey: 'docIde',
+    as: 'citizen',
+  })
+  citizen: Citizen;
 
   @BelongsTo(() => PortfolioDetail, {
     foreignKey: 'docIde',

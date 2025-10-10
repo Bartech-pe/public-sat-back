@@ -13,18 +13,20 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
 import { LoginDTO } from './dto/login.dto';
-import { RoleService } from '@modules/role/role.service';
 import { VerifyScreenDTO } from './dto/verify-screen.dto';
 import { Public } from '@common/decorators/public.decorator';
 import { ScreenService } from '@modules/screen/screen.service';
-import { Screen } from '@modules/screen/entities/screen.entity';
+import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
+import { AloSatService } from '@modules/vicidial/central-telefonica/services/alo-sat.service';
+import { ChannelPhoneState } from '@common/enums/status-call.enum';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private service: AuthService,
-    private roleService: RoleService,
     private screenService: ScreenService,
+    private readonly vicidialUserRepository: VicidialUserRepository,
+    private readonly aloSatService: AloSatService,
   ) {}
 
   @UseGuards(AuthGuard('local'))
@@ -49,23 +51,10 @@ export class AuthController {
   @Post('verify-access')
   verifyAccess(@CurrentUser() user: User, @Body() dto: VerifyScreenDTO) {
     return this.screenService.getScreenByIdAndScreen(
-        user.roleId,
-        user.officeId,
-        dto?.url,
-      );
-    // if (user.roleId === 1) {
-    //   return this.screenService.getScreenByIdAndScreen(
-    //     user.roleId,
-    //     user.officeId,
-    //     dto?.url,
-    //   );
-    // } else {
-    //   return this.roleService.getScreenByIdAndScreen(
-    //     user.roleId,
-    //     user.officeId,
-    //     dto?.url,
-    //   );
-    // }
+      user.roleId,
+      user.officeId,
+      dto?.url,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
@@ -73,19 +62,23 @@ export class AuthController {
   @Get('screens')
   screensByRole(@CurrentUser() user: User): Promise<any[]> {
     return this.screenService.getScreensByRoleAndOffice(
-        user.roleId,
-        user.officeId,
-      );
-    // if (user.roleId === 1) {
-    //   return this.screenService.getScreensByRoleAndOffice(
-    //     user.roleId,
-    //     user.officeId,
-    //   );
-    // } else {
-    //   return this.roleService.getScreensByRoleAndOffice(
-    //     user.roleId,
-    //     user.officeId,
-    //   );
-    // }
+      user.roleId,
+      user.officeId,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('logout')
+  async logout(@CurrentUser() user: User) {
+    const res = await this.aloSatService.agentLogout(user.id);
+    const vicidialUser = await this.vicidialUserRepository.findOne({
+      where: { userId: user.id },
+    });
+    await vicidialUser?.update({
+      channelStateId: ChannelPhoneState.OFFLINE,
+      pauseCode: null,
+    });
+    return res;
   }
 }

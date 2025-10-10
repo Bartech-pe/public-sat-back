@@ -16,7 +16,7 @@ import {
 import { User } from '@modules/user/entities/user.entity';
 import { CaseInformation } from './case-information.entity';
 import { Portfolio } from '@modules/portfolio/entities/portfolio.entity';
-import { CitizenContact } from './citizen-contact.entity';
+import { CitizenContact } from '../../citizen/entities/citizen-contact.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica

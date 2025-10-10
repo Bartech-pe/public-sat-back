@@ -77,7 +77,7 @@ export class SaldomaticoService {
       config,
     );
     if (res.status == 200) {
-      return res.data.map((d) => cleanAttributes(d));
+      return res.data.map((d) => cleanAttributes(d) as PapeletaDto);
     } else if (res.status == 401) {
       throw new UnauthorizedException('Token api sat inválido');
     } else {

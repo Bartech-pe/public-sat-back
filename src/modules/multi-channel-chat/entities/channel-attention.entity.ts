@@ -15,6 +15,7 @@ import {
 import { ChannelMessage } from './channel-message.entity';
 import { ChannelRoom } from './channel-room.entity';
 import { User } from '@modules/user/entities/user.entity';
+import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 
 export enum ChannelAttentionStatus {
   IDENTITY_VERIFICATION = 'identity_verification',
@@ -47,6 +48,14 @@ export class ChannelAttention extends Model<ChannelAttention> {
   })
   channelRoomId: number;
 
+  @ForeignKey(() => ConsultType)
+  @Column({
+    field: 'consult_type_id',
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  consultTypeId?: number;
+
   @Column({
     field: 'status',
     type: DataType.ENUM(...Object.values(ChannelAttentionStatus)),
@@ -76,6 +85,9 @@ export class ChannelAttention extends Model<ChannelAttention> {
 
   @BelongsTo(() => ChannelRoom)
   channelRoom: ChannelRoom;
+
+  @BelongsTo(() => ConsultType)
+  consultType: ConsultType;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

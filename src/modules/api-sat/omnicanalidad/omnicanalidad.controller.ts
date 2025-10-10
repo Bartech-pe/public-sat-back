@@ -10,13 +10,19 @@ import { apiSatConfig } from 'config/env';
 import { ContactoDto } from './dto/Contacto.dto';
 import { AuthSatService } from '../auth-sat/auth-sat.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { Public } from '@common/decorators/public.decorator';
+import { Citizen } from '@modules/citizen/entities/citizen.entity';
+import { CitizenService } from '@modules/citizen/services/citizen.service';
 
-@ApiBearerAuth()
+@Public()
 @Controller('omnicanalidad')
 export class OmnicanalidadController {
   private client: AxiosInstance;
 
-  constructor(private authSatService: AuthSatService) {
+  constructor(
+    private readonly authSatService: AuthSatService,
+    private readonly citizenService: CitizenService,
+  ) {
     this.client = axios.create({
       baseURL: apiSatConfig.url,
       timeout: 50000,
@@ -28,28 +34,43 @@ export class OmnicanalidadController {
 
   @Get('contacto/listado/:psiTipConsulta/:piValPar1/:pvValPar2')
   async infoContactoCelular(
-    @Param('psiTipConsulta') psiTipConsulta: 1 | 2,
-    @Param('piValPar1') piValPar1: 1 | 2 | number,
+    @Param('psiTipConsulta') psiTipConsulta: '1' | '2',
+    @Param('piValPar1') piValPar1: '1' | '2' | string,
     @Param('pvValPar2') pvValPar2: 'empty' | string,
   ) {
+    console.log('infoContactoCelular');
     try {
+      const token = await this.authSatService.getToken();
+      console.log('token', token);
       const res: AxiosResponse<ContactoDto[]> = await this.client.get(
         `/contacto/listado/${psiTipConsulta}/${piValPar1}/${pvValPar2}`,
-        // { ...this.config },
+        // {
+        //   headers: {
+        //     Authorization: `Bearer ${token}`,
+        //   },
+        //   validateStatus: () => true,
+        // },
       );
-      //   console.log('res', res);
+      console.log('res', res);
       if (res.status == 200) {
-        return res.data;
+        return res.data.map(
+          (d) =>
+            ({
+              tipDoc: d.vtipDoc,
+              docIde: d.vdocIde,
+            }) as Citizen,
+        );
       } else if (res.status == 401) {
         throw new UnauthorizedException('Token api sat inválido');
       } else {
         throw new InternalServerErrorException();
       }
     } catch (error) {
-      console.error(error.response?.data || error.message);
-      throw new InternalServerErrorException(
-        error.response?.data || error.message,
-      );
+      // console.error(error);
+      return this.citizenService.getBasicInfoFromCitizen(piValPar1);
+      // throw new InternalServerErrorException(
+      //   error.response?.data || error.message,
+      // );
     }
   }
 

@@ -12,6 +12,7 @@ import { ScreenModule } from '@modules/screen/screen.module';
 import { jwtConfig } from 'config/env';
 import { JwtCitizenStrategy } from './strategies/jwt-citizen.strategy';
 import { MultiChannelChatModule } from '@modules/multi-channel-chat/multi-channel-chat.module';
+import { CentralTelefonicaModule } from '@modules/vicidial/central-telefonica/central-telefonica.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MultiChannelChatModule } from '@modules/multi-channel-chat/multi-channe
     UserModule,
     ScreenModule,
     forwardRef(() => MultiChannelChatModule),
+    CentralTelefonicaModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, JwtCitizenStrategy],

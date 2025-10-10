@@ -1,6 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { MonitorService } from './monitor.service';
 import { MonitorVicidialService } from './monitor-vicidial.service';
+import { ChannelType } from '@common/interfaces/channel-connector/messaging.interface';
 
 @Controller('monitor')
 export class MonitorController {
@@ -26,17 +27,17 @@ export class MonitorController {
 
   @Get('monitorAdvisorsMail')
   async monitorAdvisorsMail() {
-    return await this.monitorService.getMailAdvisors();
+    return await this.monitorService.getMonitoringEmailUsers();
   }
 
   @Get('monitorAdvisorsChat')
   async monitorAdvisorsChat() {
-    return await this.monitorService.getChatAdvisors();
+    return await this.monitorService.getMonitoringMultiChannel(ChannelType.CHATSAT);
   }
 
   @Get('monitorAdvisorsChatWsp')
   async monitorAdvisorsChatWsp() {
-    return await this.monitorService.chatWspAdvisors();
+    return await this.monitorService.getMonitoringMultiChannel(ChannelType.WHATSAPP);
   }
 
   @Get('monitorVicidialCount')

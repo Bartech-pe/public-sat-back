@@ -12,10 +12,10 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { User } from '@modules/user/entities/user.entity';
 import { Office } from '@modules/office/entities/office.entity';
 import { PortfolioDetail } from '@modules/portfolio-detail/entities/portfolio-detail.entity';
-import { CitizenContactRepository } from '@modules/portfolio-detail/repositories/citizen-contact.repository';
 import { col, Op } from 'sequelize';
-import { CitizenContact } from '@modules/portfolio-detail/entities/citizen-contact.entity';
+import { CitizenContact } from '@modules/citizen/entities/citizen-contact.entity';
 import { CitizenRepository } from '@modules/citizen/repositories/citizen.repository';
+import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
 
 @Injectable()
 export class PortfolioService {

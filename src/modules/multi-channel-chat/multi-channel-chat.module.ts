@@ -25,7 +25,7 @@ import { MessageBufferService } from './services/message-buffer.service';
 import { BasicInfoService } from './services/basic-info.service';
 import { ChannelAttention } from './entities/channel-attention.entity';
 import { ChannelAttentionRepository } from './repositories/channel-attention.repository';
-import { CitizenService } from './services/citizen.service';
+import { ChannelCitizenService } from './services/channel-citizen.service';
 import { ChannelAttentionService } from './services/channel-attention.service';
 import { ChannelCitizenController } from './controllers/channel-citizen.controller';
 import { ChannelAttentionController } from './controllers/channel-assistance.controller';
@@ -69,7 +69,7 @@ import { SurveyModule } from '@modules/survey/survey.module';
     RedisProvider,
     ChannelCitizenRepository,
     ChannelAttentionRepository,
-    CitizenService,
+    ChannelCitizenService,
     MultiChannelChatGateway,
     BasicInfoService,
     MessageBufferService,

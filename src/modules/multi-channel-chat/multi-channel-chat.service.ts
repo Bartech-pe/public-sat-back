@@ -41,7 +41,7 @@ import {
   ChannelAttention,
   ChannelAttentionStatus,
 } from './entities/channel-attention.entity';
-import { CitizenService } from './services/citizen.service';
+import { ChannelCitizenService } from './services/channel-citizen.service';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
 import { col, fn, Op } from 'sequelize';
 import { User } from '@modules/user/entities/user.entity';
@@ -74,8 +74,8 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     private basicInfoService: BasicInfoService,
     @Inject(forwardRef(() => MultiChannelChatGateway))
     private multiChannelChatGateway: MultiChannelChatGateway,
-    @Inject(forwardRef(() => CitizenService))
-    private citizenService: CitizenService,
+    @Inject(forwardRef(() => ChannelCitizenService))
+    private channelCitizenService: ChannelCitizenService,
     @Inject(forwardRef(() => MessageBufferService))
     private messageBufferService: MessageBufferService,
     private channelMessageAttachmentRepository: ChannelMessageAttachmentRepository,
@@ -155,12 +155,11 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           }
           
           const citizen =
-            await this.citizenService.createCitizenFromMessage(data);
+            await this.channelCitizenService.createCitizenFromMessage(data);
           const channelRoom = await this.createChannelRoom(
             data,
             citizen?.id as number,
           );
-          this.logger.debug(channelRoom);
           const assistance = await this.createAssistance(
             channelRoom.dataValues.id,
             data.payload.channel == ChannelType.WHATSAPP,
@@ -333,7 +332,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
 
   private async checkCitizenToken(token?: string): Promise<boolean>
   {
-      this.logger.debug(token)
       if (!token || !token.startsWith('Bearer ')) {
         return false
       }
@@ -535,7 +533,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
         }
       )
 
-      if (channelRoomExists[0].dataValues.status == 'completado' && attentions.length > 0) {
+      if (channelRoomExists[0].dataValues.status == 'completado' || (channelRoomExists[0].dataValues.status == 'completado' && attentions.length > 0)) {
         const [_, [updatedRoom]] = await this.channelRoomRepository.update(
             channelRoomExists[0].dataValues.id,
             {
@@ -543,7 +541,9 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
               userId: selectedUserId,
             },
           );
+          this.logger.debug("diavlo: ",updatedRoom);
           return updatedRoom;
+
       }
       return channelRoomExists[0];
     }

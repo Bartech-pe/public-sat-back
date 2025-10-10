@@ -20,7 +20,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UserRepository } from '@modules/user/repositories/user.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { Role } from '@modules/role/entities/role.entity';
-import { CitizenService } from './services/citizen.service';
+import { ChannelCitizenService } from './services/channel-citizen.service';
 import { changeChannelRoomStatusDto } from './dto/channel-room/change-channel-room-status.dto';
 import { MultiChannelChatService } from './multi-channel-chat.service';
 import { forwardRef, Inject } from '@nestjs/common';
@@ -45,7 +45,7 @@ export class MultiChannelChatGateway
   constructor(
     private jwtService: JwtService,
     private userRepository: UserRepository,
-    private citizenService: CitizenService,
+    private channelCitizenService: ChannelCitizenService,
     private channelRoomService: ChannelRoomService,
     @Inject(forwardRef(() => MultiChannelChatService))
     private multiChannelService: MultiChannelChatService,
@@ -132,7 +132,7 @@ export class MultiChannelChatGateway
   ) {
     const user = client.user as User;
     console.log('Usuario actual:', user);
-    this.citizenService.requestAdvisor(phoneNumber);
+    this.channelCitizenService.requestAdvisor(phoneNumber);
   }
   // @SubscribeMessage('chat.advisor.request')
   // handleRequestAdvisor(@MessageBody() phoneNumber: string) {

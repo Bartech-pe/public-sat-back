@@ -99,6 +99,14 @@ export class VicidialUser extends Model {
   @BelongsTo(() => ChannelState)
   channelState: ChannelState;
 
+  @Column({
+    field: 'pause_code',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'Código de pausa vicidial',
+  })
+  pauseCode: string | null;
+
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })
   declare createdBy: number;

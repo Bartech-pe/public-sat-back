@@ -161,8 +161,6 @@ export class VicidialApiService {
 
   async agentLogin(user, pass, phoneLogin, phonePass, campaign) {
     const payload = new URLSearchParams({
-      version: '2.14',
-      source: 'crm',
       phone_login: phoneLogin,
       phone_pass: phonePass,
       VD_login: user,
@@ -186,6 +184,55 @@ export class VicidialApiService {
     }
   }
 
+  async agentRelogin(
+    user: string,
+    pass: string,
+    campaign: string,
+    sessionName: string,
+    exten: string,
+    phoneLogin: string,
+    extension: string,
+    campaignCID: string,
+  ) {
+    const payload = new URLSearchParams({
+      server_ip: vicidialConfig.privateIP,
+      session_name: sessionName,
+      user,
+      pass,
+      campaign,
+      exten,
+      ACTION: 'OriginateVDRelogin',
+      format: 'text',
+      channel: extension,
+      queryCID: this.buildQueryCIDRelogin(user),
+      ext_context: 'default',
+      ext_priority: '1',
+      extension: phoneLogin,
+      protocol: 'SIP',
+      enable_sipsak_messages: '0',
+      allow_sipsak_messages: '0',
+      outbound_cid: campaignCID,
+    });
+
+    const url = `https://${amiConfig.host}/agc/manager_send.php`;
+
+    try {
+      const res = await axios.post(url, payload.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      });
+
+      console.log('resRelogin', res);
+
+      const data = res.data;
+
+      return { data };
+    } catch (error) {
+      console.error('Error:', error.response?.data || error.message);
+      throw new Error(error.response?.data || error.message);
+    }
+  }
+
   async hangupCall(agentUser: string) {
     const queryParams = new URLSearchParams();
     queryParams.append('source', 'crm');
@@ -201,16 +248,9 @@ export class VicidialApiService {
     const data = response.data;
   }
 
-  async changeIngroups(
-    user,
-    pass,
-    phoneLogin,
-    campaign,
-    serverIp,
-    sessionName,
-  ) {
+  async changeIngroups(user, pass, phoneLogin, campaign, sessionName) {
     const payload = new URLSearchParams({
-      server_ip: serverIp,
+      server_ip: vicidialConfig.privateIP,
       session_name: sessionName,
       ACTION: 'regCLOSER',
       format: 'text',
@@ -218,7 +258,7 @@ export class VicidialApiService {
       pass,
       comments: '',
       closer_blended: '0',
-      campaign,
+      campaign: campaign,
       qm_phone: '',
       qm_extension: phoneLogin,
       dial_method: 'INBOUND_MAN',
@@ -245,12 +285,11 @@ export class VicidialApiService {
     pass,
     phoneLogin,
     campaign,
-    serverIp,
     sessionName,
     agendLogId,
   ) {
     const payload = new URLSearchParams();
-    payload.append('server_ip', serverIp);
+    payload.append('server_ip', vicidialConfig.privateIP);
     payload.append('session_name', sessionName);
     payload.append('ACTION', 'VDADready');
     payload.append('user', user);
@@ -272,6 +311,8 @@ export class VicidialApiService {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
+      const data = res.data;
+      return { data };
     } catch (error) {
       console.error('Error:', error.response?.data || error.message);
       throw new Error('Error:', error.response?.data || error.message);
@@ -283,12 +324,11 @@ export class VicidialApiService {
     pass,
     phoneLogin,
     campaign,
-    serverIp,
     sessionName,
     agendLogId,
   ) {
     const payload = new URLSearchParams();
-    payload.append('server_ip', serverIp);
+    payload.append('server_ip', vicidialConfig.privateIP);
     payload.append('session_name', sessionName);
     payload.append('ACTION', 'VDADpause');
     payload.append('user', user);
@@ -324,25 +364,23 @@ export class VicidialApiService {
     pass,
     phoneLogin,
     campaign,
-    serverIp,
     sessionName,
     agendLogId,
-    // phoneIp,
+    confExten,
   ) {
     const payload = new URLSearchParams();
-    payload.append('server_ip', serverIp);
+    payload.append('server_ip', vicidialConfig.privateIP);
     payload.append('session_name', sessionName);
     payload.append('ACTION', 'userLOGout');
     payload.append('format', 'text');
     payload.append('user', user);
     payload.append('pass', pass);
     payload.append('campaign', campaign);
-    payload.append('conf_exten', '8600053');
+    payload.append('conf_exten', confExten);
     payload.append('extension', phoneLogin);
     payload.append('protocol', 'SIP');
     payload.append('agent_log_id', agendLogId);
     payload.append('no_delete_sessions', '1');
-    // payload.append('phone_ip', phoneIp);
     payload.append('enable_sipsak_messages', '0');
     payload.append('LogouTKicKAlL', '1');
     payload.append('ext_context', 'default');
@@ -454,12 +492,11 @@ export class VicidialApiService {
     user: string,
     pass: string,
     campaign: string,
-    serverIp: string,
     sessionName: string,
     confExten: string,
   ) {
     const payload = new URLSearchParams({
-      server_ip: serverIp,
+      server_ip: vicidialConfig.privateIP,
       session_name: sessionName,
       user,
       pass,
@@ -529,11 +566,66 @@ export class VicidialApiService {
     }
   }
 
+  async transferCall(
+    user: string,
+    pass: string,
+    campaign: string,
+    sessionName: string,
+    exten: string,
+    sessionId: string,
+    uniqueId: string,
+    leadId: string,
+    channel: string,
+    callerid: string,
+    secondS: string = '0',
+  ) {
+    const payload = new URLSearchParams({
+      server_ip: vicidialConfig.privateIP,
+      session_name: sessionName,
+      user,
+      pass,
+      campaign: campaign,
+      exten: exten,
+      ACTION: 'RedirectVD',
+      format: 'text',
+      channel: channel,
+      queryCID: this.buildQueryCID(user),
+      ext_context: 'default',
+      ext_priority: '1',
+      auto_dial_level: '1',
+      uniqueid: uniqueId,
+      lead_id: leadId,
+      secondS: secondS,
+      session_id: sessionId,
+      nodeletevdac: '0',
+      preset_name: '',
+      CalLCID: callerid,
+      customerparked: '0',
+    });
+
+    const url = `https://${amiConfig.host}/agc/manager_send.php`;
+
+    try {
+      const res = await axios.post(url, payload.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      });
+
+      console.log('resTransfer', res);
+
+      const data = res.data;
+
+      return { data };
+    } catch (error) {
+      console.error('Error:', error.response?.data || error.message);
+      throw new Error(error.response?.data || error.message);
+    }
+  }
+
   async endCall(
     user: string,
     pass: string,
     campaign: string,
-    serverIp: string,
     sessionName: string,
     uniqueId: string,
     leadId: string,
@@ -548,7 +640,7 @@ export class VicidialApiService {
   ) {
     const payload = new URLSearchParams({
       format: 'text',
-      server_ip: serverIp,
+      server_ip: vicidialConfig.privateIP,
       session_name: sessionName,
       ACTION: 'manDiaLlogCaLL',
       stage: 'end',
@@ -636,5 +728,16 @@ export class VicidialApiService {
       timeout: 5000,
     });
     return String(data);
+  }
+
+  private buildQueryCID(user: string) {
+    const random = Math.random().toString(36).substring(2, 6); // 4 chars aleatorios
+    const epoch = Math.floor(Date.now() / 1000);
+    return `XB${random}${epoch}${user.repeat(4)}`;
+  }
+
+  private buildQueryCIDRelogin(user: string) {
+    const timestamp = Math.floor(Date.now() / 1000);
+    return `ACagcW${timestamp}${user.repeat(4)}`;
   }
 }

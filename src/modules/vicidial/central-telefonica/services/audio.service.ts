@@ -16,8 +16,8 @@ export class AudioService {
 
   private vicidialHost = '195.26.249.9';
   private vicidialPort = 23022;
-  private vicidialUser = 'superadmin';
-  private vicidialPass = 'ASJDasdugas7862652kASAISIASpa';
+  private vicidialUser = 'custom';
+  private vicidialPass = 'cxbQc5VxrfRTte0Wh3tLbOs1XA';
   private remotePath = '/var/lib/asterisk/sounds';
 
   constructor(

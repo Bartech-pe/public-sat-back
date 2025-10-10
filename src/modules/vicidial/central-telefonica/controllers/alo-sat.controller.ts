@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  forwardRef,
+  Get,
+  Inject,
+  InternalServerErrorException,
+  Post,
+} from '@nestjs/common';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
 import { AloSatService } from '../services/alo-sat.service';
@@ -7,12 +15,19 @@ import { PauseAgentDto } from '../dto/pause-agent.dto';
 import { LoginAgentDto } from '../dto/login-agent.dto';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelPhoneState } from '@common/enums/status-call.enum';
+import { UserGateway } from '@modules/user/user.gateway';
+import { CallHistoryRepository } from '@modules/user/repositories/call-history.repository';
+import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 
 @Controller('alosat')
 export class AloSatController {
   constructor(
     private readonly service: AloSatService,
     private readonly vicidialUserRepository: VicidialUserRepository,
+    @Inject(forwardRef(() => UserGateway))
+    private readonly userGateway: UserGateway,
+    private readonly callHistoryRepository: CallHistoryRepository,
   ) {}
 
   @Get('campaigns')
@@ -21,9 +36,16 @@ export class AloSatController {
   }
 
   @Get('agent-status')
-  async agentStatus(@CurrentUser() user: User): Promise<ChannelState> {
-    return (await this.vicidialUserRepository.getAloSatState(user))?.toJSON()
-      ?.channelState;
+  async agentStatus(
+    @CurrentUser() user: User,
+  ): Promise<{ state?: ChannelState; pauseCode?: string }> {
+    const res = (
+      await this.vicidialUserRepository.getAloSatState(user)
+    )?.toJSON();
+    return {
+      state: res?.channelState,
+      pauseCode: res.pauseCode,
+    };
   }
 
   @Post('agent-login')
@@ -37,32 +59,115 @@ export class AloSatController {
       where: { userId: user.id },
     });
     await vicidialUser?.update({
-      channelStateId: 1,
+      channelStateId: ChannelPhoneState.PAUSED,
+      pauseCode: null,
     });
+    this.userGateway.notifyPhoneStateUser(user.id);
+    return res;
+  }
+
+  @Get('agent-relogin')
+  async agentRelogin(@CurrentUser() user: User): Promise<any> {
+    const res = await this.service.agentRelogin(user.id);
+    const vicidialUser = await this.vicidialUserRepository.findOne({
+      where: { userId: user.id },
+    });
+    await vicidialUser?.update({
+      channelStateId: ChannelPhoneState.PAUSED,
+      pauseCode: null,
+    });
+    this.userGateway.notifyPhoneStateUser(user.id);
     return res;
   }
 
   @Get('agent-logout')
-  agentLogout(@CurrentUser() user: User): Promise<any> {
-    return this.service.agentLogout(user.id);
+  async agentLogout(@CurrentUser() user: User): Promise<any> {
+    try {
+      const res = await this.service.agentLogout(user.id);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: user.id },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.OFFLINE,
+        pauseCode: null,
+      });
+      this.userGateway.notifyPhoneStateUser(user.id);
+      return res;
+    } catch (error) {
+      console.log('error', error);
+      throw new InternalServerErrorException('Error al desloguear usuario');
+    }
   }
 
   @Post('pause-agent')
-  pauseAgent(
+  async pauseAgent(
     @CurrentUser() user: User,
     @Body() dto: PauseAgentDto,
   ): Promise<any> {
-    return this.service.pauseAgent(user.id, dto.pauseCode);
+    try {
+      const res = await this.service.pauseAgent(user.id, dto.pauseCode);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: user.id },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.PAUSED,
+        pauseCode: dto.pauseCode,
+      });
+      this.userGateway.notifyPhoneStateUser(user.id);
+      return res;
+    } catch (error) {
+      console.log('error', error);
+      throw new InternalServerErrorException(
+        'Error al cambiar usuario a pausado',
+      );
+    }
   }
 
   @Get('resume-agent')
-  resumeAgent(@CurrentUser() user: User): Promise<any> {
-    return this.service.resumeAgent(user.id);
+  async resumeAgent(@CurrentUser() user: User): Promise<any> {
+    try {
+      const res = await this.service.resumeAgent(user.id);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: user.id },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.READY,
+        pauseCode: null,
+      });
+      this.userGateway.notifyPhoneStateUser(user.id);
+      return res;
+    } catch (error) {
+      console.log('error', error);
+      throw new InternalServerErrorException(
+        'Error al cambiar usuario a pausado',
+      );
+    }
+  }
+
+  @Get('call-info')
+  async callInfo(@CurrentUser() user: User): Promise<any> {
+    const res = await this.service.getCallInfo(user.id);
+    await this.callHistoryRepository.setDurationCall(user.id);
+    return res;
+  }
+
+  @Get('last-call-info')
+  lastCallInfo(@CurrentUser() user: User): Promise<any> {
+    return this.callHistoryRepository.getLastCallOfTheDay(user.id);
   }
 
   @Get('end-call')
-  endCall(@CurrentUser() user: User): Promise<any> {
-    return this.service.endCall(user.id);
+  async endCall(@CurrentUser() user: User): Promise<any> {
+    const res = await this.service.endCall(user.id);
+    // const vicidialUser = await this.vicidialUserRepository.findOne({
+    //   where: { userId: user.id },
+    // });
+    // await vicidialUser?.update({
+    //   channelStateId: ChannelPhoneState.PAUSED,
+    //   pauseCode: VicidialPauseCode.WRAP,
+    // });
+    this.userGateway.notifyPhoneStateUser(user.id);
+    return res;
   }
 
   @Post('transfer-call')

@@ -19,6 +19,7 @@ import { User } from '@modules/user/entities/user.entity';
 import { InboxUser } from './inbox-user.entity';
 import { ChannelRoom } from '@modules/multi-channel-chat/entities/channel-room.entity';
 import { InboxCredential } from './inbox-credential.entity';
+import { EmailCredential } from '@modules/email/entities/email-credentials.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -92,6 +93,9 @@ export class Inbox extends Model {
 
   @HasMany(() => ChannelRoom)
   channelRooms: ChannelRoom[];
+
+  @HasOne(() => EmailCredential, { foreignKey: 'inboxId' })
+  emailCredentials: EmailCredential;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

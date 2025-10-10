@@ -9,6 +9,8 @@ import { Citizen } from '../entities/citizen.entity';
 import { CreateCitizenDto } from '../dto/create-citizen.dto';
 import { UpdateCitizenDto } from '../dto/update-citizen.dto';
 import { User } from '@modules/user/entities/user.entity';
+import { CitizenContact } from '../entities/citizen-contact.entity';
+import { ContactoDto } from '@modules/api-sat/omnicanalidad/dto/Contacto.dto';
 
 /**
  * Service layer for managing Citizens.
@@ -179,6 +181,36 @@ export class CitizenService {
         error,
         'Error interno del servidor',
       );
+    }
+  }
+
+  async getBasicInfoFromCitizen(phoneNumber: string) {
+    try {
+      const result = await this.repository.findAll({
+        include: [
+          {
+            model: CitizenContact,
+            as: 'citizenContacts',
+            required: true,
+            where: { contactType: 'PHONE', value: phoneNumber },
+          },
+        ],
+      });
+
+      return result.flatMap((r) => {
+        const { citizenContacts, ...citizen } = r.toJSON();
+        return citizenContacts.map(
+          (c: CitizenContact) =>
+            ({
+              vtipDoc: c.tipDoc,
+              vdocIde: c.docIde,
+              vnumTel: c.value,
+              vcontacto: citizen.name,
+            }) as ContactoDto,
+        );
+      });
+    } catch (error) {
+      throw error;
     }
   }
 }
