@@ -18,6 +18,8 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
+import { CitizenContactDto } from '../dto/citizen-contact.dto';
+import { CitizenContact } from '../entities/citizen-contact.entity';
 
 /**
  * Controller for managing Citizens.
@@ -98,5 +100,29 @@ export class CitizenController {
   @Delete(':id')
   remove(@Param('id') id: number) {
     return this.service.remove(+id);
+  }
+
+  @Post('citizen-contacts/multiple')
+  createCitizenContactMultiple(
+    @Body() dtoList: CitizenContactDto[],
+  ): Promise<CitizenContact[]> {
+    return this.service.createCitizenContactMultiple(dtoList);
+  }
+
+  @Get('citizen-contacts/:tipDoc/:docIde') getCitizenContactsByTipDocAndDocIde(
+    @Param('tipDoc') tipDoc: string,
+    @Param('docIde') docIde: string,
+  ): Promise<CitizenContact[]> {
+    return this.service.getCitizenContactsByTipDocAndDocIde(tipDoc, docIde);
+  }
+
+  /**
+   * Deletes (soft delete) a contact citizen by its ID.
+   * @param id Citizen identifier
+   * @returns void
+   */
+  @Delete('citizen-contacts/:id')
+  removeContact(@Param('id') id: number) {
+    return this.service.removeContact(+id);
   }
 }

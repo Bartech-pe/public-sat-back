@@ -10,6 +10,7 @@ import { CreateChannelStateDto } from './dto/create-channel-state.dto';
 import { UpdateChannelStateDto } from './dto/update-channel-state.dto';
 import { User } from '@modules/user/entities/user.entity';
 import { emailCategoryId } from '@common/constants/channel.constant';
+import { Inbox } from '@modules/inbox/entities/inbox.entity';
 
 /**
  * Service layer for managing ChannelState.
@@ -224,6 +225,12 @@ export class ChannelStateService {
             where: {
               id: user.id,
             },
+          },
+          {
+            model: Inbox,
+            as: 'inboxes',
+            through: { attributes: [] },
+            required: true,
           },
         ],
       });

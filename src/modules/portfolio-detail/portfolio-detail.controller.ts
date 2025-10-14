@@ -22,9 +22,6 @@ import { ReasignPortfolioDetailListDto } from './dto/reasign-portfolio-detail.dt
 import { CaseInformationDto } from './dto/case-information.dto';
 import { CaseInformation } from './entities/case-information.entity';
 import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.dto';
-import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
-import { CitizenContactDto } from './dto/citizen-contact.dto';
-import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
 
 @Controller('portfolio-details')
 export class PortfolioDetailController {
@@ -110,24 +107,11 @@ export class PortfolioDetailController {
     return this.service.createMultiple(dtoList);
   }
 
-  @Get('portfolio-assignments/details/:userId')
+  @Get('portfolio-assignments/details/:userId/:portfolioId')
   findAssignmentByUserId(
     @Param('userId', ParseIntPipe) userId: number,
-  ): Promise<PortfolioAssignment[]> {
-    return this.service.findAssignmentByUserId(userId);
-  }
-
-  @Post('citizen-contacts/multiple')
-  createCitizenContactMultiple(
-    @Body() dtoList: CitizenContactDto[],
-  ): Promise<CitizenContact[]> {
-    return this.service.createCitizenContactMultiple(dtoList);
-  }
-
-  @Get('citizen-contacts/:tipDoc/:docIde') getCitizenContactsByTipDocAndDocIde(
-    @Param('tipDoc') tipDoc: string,
-    @Param('docIde') docIde: string,
-  ): Promise<CitizenContact[]> {
-    return this.service.getCitizenContactsByTipDocAndDocIde(tipDoc, docIde);
+    @Param('portfolioId', ParseIntPipe) portfolioId: number,
+  ): Promise<PortfolioDetail[]> {
+    return this.service.findByUserId(userId, portfolioId);
   }
 }

@@ -27,6 +27,9 @@ export class VicidialUserService {
   }>{
       const { campaign_id, campaign_name } = body;
 
+      console.log("=============================================");
+      console.log(body);
+
       const existing = await this.campaignModel.findOne({ where: { campaign_id } });
 
       if (existing) {

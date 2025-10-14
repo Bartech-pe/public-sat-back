@@ -10,11 +10,11 @@ export class CreateSmsCampaing {
   @IsString()
   name: string;
 
-  @IsNumber()
-  departmentId: number;
+  // @IsNumber()
+  // departmentId?: number;
 
-  @IsNumber()
-  campaignStateId: number;
+  // @IsNumber()
+  // campaignStateId?: number;
 
   @IsNumber()
   createUser: number;

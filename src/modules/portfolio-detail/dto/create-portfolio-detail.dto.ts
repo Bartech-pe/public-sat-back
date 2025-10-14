@@ -9,7 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
-import { CitizenContactDto } from './citizen-contact.dto';
+import { CitizenContactDto } from '../../citizen/dto/citizen-contact.dto';
 import { Type } from 'class-transformer';
 
 export class CreatePortfolioDetailDto {

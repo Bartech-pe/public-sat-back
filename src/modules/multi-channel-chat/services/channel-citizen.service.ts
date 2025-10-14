@@ -27,6 +27,7 @@ import { BaseResponseDto } from '@common/dto/base-response.dto';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { User } from '@modules/user/entities/user.entity';
+import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 
 @Injectable()
 export class ChannelCitizenService {
@@ -241,6 +242,10 @@ export class ChannelCitizenService {
               model: ChannelMessage,
               required: true,
             },
+            {
+              model: ConsultType,
+              required: false
+            }
           ],
         });
       this.logger.debug(channelAttentions);
@@ -254,6 +259,7 @@ export class ChannelCitizenService {
         const user = attentionChannel.user as User;
         const citizen = attentionChannel.citizen;
         const channelInbox = attentionChannel.inbox as Inbox;
+        const attentionConsultType = attentionParsed.consultType as ConsultType;
         const inboxChannel = channelInbox.channel as Channel;
 
         const advisorIntervention: boolean = attentionMessages.some(
@@ -267,7 +273,7 @@ export class ChannelCitizenService {
           advisorIntervention: advisorIntervention,
           user: advisorIntervention ? user.displayName : '',
           category: '',
-          type: '',
+          type: attentionConsultType?.name,
           email: citizen.email,
         };
       });

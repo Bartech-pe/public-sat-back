@@ -11,6 +11,9 @@ import { UpdateCitizenDto } from '../dto/update-citizen.dto';
 import { User } from '@modules/user/entities/user.entity';
 import { CitizenContact } from '../entities/citizen-contact.entity';
 import { ContactoDto } from '@modules/api-sat/omnicanalidad/dto/Contacto.dto';
+import { CitizenContactRepository } from '../repositories/citizen-contact.repository';
+import { Op } from 'sequelize';
+import { CitizenContactDto } from '../dto/citizen-contact.dto';
 
 /**
  * Service layer for managing Citizens.
@@ -21,7 +24,10 @@ import { ContactoDto } from '@modules/api-sat/omnicanalidad/dto/Contacto.dto';
  */
 @Injectable()
 export class CitizenService {
-  constructor(private readonly repository: CitizenRepository) {}
+  constructor(
+    private readonly repository: CitizenRepository,
+    private readonly citizenContactRepository: CitizenContactRepository,
+  ) {}
 
   /**
    * Retrieves a paginated list of citizens.
@@ -211,6 +217,81 @@ export class CitizenService {
       });
     } catch (error) {
       throw error;
+    }
+  }
+
+  async createCitizenContactMultiple(
+    citizenContactList: CitizenContactDto[],
+  ): Promise<CitizenContact[]> {
+    // Eliminamos duplicados dentro del propio array (opcional pero recomendado)
+    const uniqueContacts = citizenContactList.filter(
+      (contact, index, self) =>
+        index ===
+        self.findIndex(
+          (c) =>
+            c.tipDoc === contact.tipDoc &&
+            c.docIde === contact.docIde &&
+            c.contactType === contact.contactType &&
+            c.value === contact.value,
+        ),
+    );
+    // Buscamos en BD cuáles ya existen
+    const existingContacts = await this.citizenContactRepository.findAll({
+      where: {
+        [Op.or]: uniqueContacts.map((c) => ({
+          tipDoc: c.tipDoc,
+          docIde: c.docIde,
+          contactType: c.contactType,
+          value: c.value,
+        })),
+      },
+    });
+
+    console.log('existingContacts', existingContacts);
+
+    // Armamos un set para búsqueda rápida
+    const existingSet = new Set(
+      existingContacts
+        .map((c) => c.toJSON())
+        .map((c) => `${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`),
+    );
+
+    // Filtramos los que NO existen
+    const contactsToCreate = uniqueContacts.filter(
+      (c) =>
+        !existingSet.has(`${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`),
+    );
+
+    // Insertamos solo los que faltan
+    if (contactsToCreate.length > 0) {
+      return this.citizenContactRepository.bulkCreate(contactsToCreate);
+    } else {
+      return [];
+    }
+  }
+
+  getCitizenContactsByTipDocAndDocIde(
+    tipDoc: string,
+    docIde: string,
+  ): Promise<CitizenContact[]> {
+    return this.citizenContactRepository.findAll({
+      where: { tipDoc, docIde, status: true },
+    });
+  }
+
+  /**
+   * Deletes (soft delete) a contact citizen by its ID.
+   * @param id Citizen identifier
+   * @returns void
+   */
+  removeContact(id: number): Promise<void> {
+    try {
+      return this.citizenContactRepository.delete(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
     }
   }
 }

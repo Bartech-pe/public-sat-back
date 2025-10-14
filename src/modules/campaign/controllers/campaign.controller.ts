@@ -98,5 +98,5 @@ export class CampaignController {
   @Delete(':id')
   remove(@Param('id') id: number) {
     return this.service.remove(+id);
-  }
+  }  
 }

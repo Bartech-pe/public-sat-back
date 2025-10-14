@@ -154,11 +154,11 @@ export class Campaign extends Model {
 
   @Column({
     field: 'vd_campaign_id',
-    type: DataType.STRING,
+    type: DataType.INTEGER, // 👈 cambia STRING por INTEGER
     allowNull: true,
     comment: 'Identificador de la campaña en un sistema externo (VD)',
   })
-  vdCampaignId: number;
+  vdCampaignId?: number;
 
   @Column({
     field: 'status',

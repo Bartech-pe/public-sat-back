@@ -12,6 +12,10 @@ export class SmsMessageChannel {
 
   @IsArray()
   mensajes: Message[];
+  
+  @IsString()
+  name?: string;
+
 }
 
 export class Message {

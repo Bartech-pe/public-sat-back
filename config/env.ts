@@ -38,6 +38,7 @@ const envSchema = Joi.object({
   ARI_USERNAME: Joi.string().required(),
   ARI_PASSWORD: Joi.string().required(),
   // # API VICIdial Config
+  VICIDIAL_HOST: Joi.string().required(),
   VICIDIAL_PUBLIC_IP: Joi.string().required(),
   VICIDIAL_PRIVATE_IP: Joi.string().required(),
   VICIDIAL_USER: Joi.string().required(),
@@ -120,6 +121,7 @@ export const ariConfig = {
 };
 
 export const vicidialConfig = {
+  host: ev.VICIDIAL_HOST,
   publicIP: ev.VICIDIAL_PUBLIC_IP,
   privateIP: ev.VICIDIAL_PRIVATE_IP,
   user: ev.VICIDIAL_USER,

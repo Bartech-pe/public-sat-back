@@ -439,9 +439,6 @@ export class EmailCenterService implements OnModuleInit {
       });
       if (!ibox) throw new NotFoundException('No se encontro la credencial');
       const inboxId = ibox.toJSON().id;
-      console.log('inboxId', inboxId);
-      console.log('stateAvalibleJson.id', stateAvalibleJson.id);
-      console.log('roleIdAsesor', roleIdAsesor);
       const emailUsers = await this.inboxUserRepository.findAll({
         where: { channelStateId: stateAvalibleJson.id, inboxId: inboxId },
         include: [
@@ -453,7 +450,6 @@ export class EmailCenterService implements OnModuleInit {
         ],
         attributes: ['userId'],
       });
-      console.log('emailUsers', emailUsers);
       const emailUserJson = emailUsers.map((a) => a.toJSON());
       if (emailUserJson.length == 0) {
         throw new NotFoundException(

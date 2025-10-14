@@ -91,7 +91,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       where: { userId: user.id },
     });
 
-    const inboxes = currentUserInboxes.map((x) => x.dataValues.idInbox);
+    const inboxes = currentUserInboxes.map((x) => x.dataValues.inboxId);
 
     const assistances = await this.assistanceRepository.findAll({
       ...(query.chatStatus === 'completado'
@@ -112,10 +112,15 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         {
           model: ChannelRoom,
           required: true,
-          ...(currentUserRole.name !== 'administrador'
-            ? { where: { userId: user.id } }
-            : {}),
-          ...(query.chatStatus ? { where: { status: query.chatStatus } } : {}),
+          where:
+            currentUserRole.name !== 'administrador'
+              ? {
+                  userId: user.id,
+                  ...(query.chatStatus ? { status: query.chatStatus } : {}),
+                }
+              : query.chatStatus
+              ? { status: query.chatStatus }
+              : {},
           include: [
             {
               model: ChannelCitizen,
@@ -123,13 +128,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
               ...(query.search
                 ? { where: { name: { [Op.like]: `%${query.search}%` } } }
                 : {}),
-              attributes: [
-                'id',
-                'name',
-                'fullName',
-                'avatarUrl',
-                'phoneNumber',
-              ],
+              attributes: ['id', 'name', 'fullName', 'avatarUrl', 'phoneNumber'],
             },
             {
               model: User,
@@ -185,7 +184,9 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const citizen = channelRoom?.get('citizen')?.toJSON() as ChannelCitizen;
       const advisor = channelRoom?.get('user')?.toJSON() as User;
 
+      // ✅ Validaciones: sin mensaje, o asesor distinto (solo si no es admin)
       if (!lastMessage) continue;
+      if (currentUserRole.name !== 'administrador' && chatroom?.userId !== user.id) continue;
 
       const unreadCount = await this.channelMessageRepository.findAndCountAll({
         where: {
@@ -229,18 +230,44 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       });
     }
 
+    // 🧩 Orden base por timestamp
     if (result.length) {
       result.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
     }
 
-    if (query.messageStatus) {
-      return result.filter(
-        (channel) => channel.lastMessage.status == query.messageStatus,
-      );
+    // 🧠 NUEVA LÓGICA DE FILTRADO FINAL
+    /**
+     * Reglas:
+     * 1️⃣ Si chatStatus está definido → filtra por él, ignorando messageStatus.
+     * 2️⃣ Si no hay chatStatus pero sí messageStatus → filtra por messageStatus.
+     * 3️⃣ Si no hay ninguno → mostrar unread y prioridad (prioridad primero).
+     */
+
+    // 1️⃣ chatStatus explícito
+    if (query.chatStatus) {
+      return result.filter((ch) => ch.status === query.chatStatus);
     }
 
-    return result;
+    // 2️⃣ Solo messageStatus
+    if (!query.chatStatus && query.messageStatus) {
+      return result.filter((ch) => ch.lastMessage.status === query.messageStatus);
+    }
+
+    // 3️⃣ Estado inicial → unread + prioridad
+    const filtered = result.filter(
+      (ch) => ch.lastMessage.status === 'unread' || ch.status === 'prioridad',
+    );
+
+    // 🏁 Prioridad primero, luego timestamp
+    filtered.sort((a, b) => {
+      if (a.status === 'prioridad' && b.status !== 'prioridad') return -1;
+      if (b.status === 'prioridad' && a.status !== 'prioridad') return 1;
+      return b.lastMessage.timestamp - a.lastMessage.timestamp;
+    });
+
+    return filtered;
   }
+
 
   async getChannelRoomsForSubscribe(
     user: User,

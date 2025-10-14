@@ -329,9 +329,16 @@ export class InboxService {
     }
   }
 
-  remove(id: number): Promise<void> {
+  async remove(id: number): Promise<void> {
     try {
-      return this.repository.delete(id);
+      await this.inboxUserRepository.bulkDestroy({
+        where: {
+          inboxId: id,
+        },
+      });
+      const res = await this.repository.delete(id);
+
+      return res;
     } catch (error) {
       throw new InternalServerErrorException(
         error,

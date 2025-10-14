@@ -1,6 +1,7 @@
 import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
+import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { User } from '@modules/user/entities/user.entity';
 import {
   BelongsTo,
@@ -82,6 +83,9 @@ export class ChannelState extends Model {
 
   @BelongsToMany(() => User, () => InboxUser)
   users: User[];
+
+  @BelongsToMany(() => Inbox, () => InboxUser)
+  inboxes: Inbox[];
 
   @Column({
     field: 'status',

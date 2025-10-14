@@ -28,8 +28,8 @@ export class SmsCampaingService {
       limit,
       offset,
       order: [['createdAt', 'ASC']],
-      attributes: ['id', 'senderId', 'contact', 'message', 'createdAt','excel_data'],
-      include: [{ model: Campaign, attributes: ['name'] }],
+      attributes: ['id', 'senderId', 'contact', 'message', 'createdAt','excel_data','campaignName'],
+      // include: [{ model: Campaign, attributes: ['name'] }],
     });
     const smsData = data.data.map((a) => {
       const json = a.toJSON();
@@ -40,9 +40,9 @@ export class SmsCampaingService {
         message: json.message,
         excel_data: json.excel_data,
         createdAt: formatYearTime(json.createdAt),
-        name: json.campaign.name,
-        campaignStateId: json.campaign.campaignStateId,
-        departmentId: json.campaign.departmentId,
+        name: json.campaignName,
+        // campaignStateId: json.campaign.campaignStateId,
+        // departmentId: json.campaign.departmentId,
       };
     });
     const paginated = {
@@ -57,12 +57,12 @@ export class SmsCampaingService {
     try {
       const exist = await this.smsCampaingDetailRepository.findOne({
         where: { id: id },
-        include: [
-          {
-            model: Campaign,
-            attributes: ['name', 'departmentId', 'campaignStateId'],
-          },
-        ],
+        // include: [
+        //   {
+        //     model: Campaign,
+        //     attributes: ['name', 'departmentId', 'campaignStateId'],
+        //   },
+        // ],
         attributes: [
           'id',
           'senderId',
@@ -108,22 +108,24 @@ export class SmsCampaingService {
       throw new NotFoundException('Campaña no encontrado');
     }
     const updateSms: Partial<SmsCampaingDetail> = {
-      senderId: body.senderId,
-      contact: body.contact,
-      countryCode: body.countryCode,
-      message: body.message,
+        senderId: body.senderId,
+        contact: body.contact,
+        countryCode: body.countryCode,
+        message: body.message,
+        campaignName:body.name
     };
+
     if (body.rows) {
       const result = body.rows.map((inner) => ({ ...inner }));
       updateSms.excelData = result;
     }
     await this.smsCampaingDetailRepository.update(id, updateSms);
-    const updateCampaing: Partial<Campaign> = {
-      name: body.name,
-      departmentId: body.departmentId,
-      campaignStateId: body.campaignStateId,
-    };
-    await this.repository.update(exist.toJSON().campaign_id, updateCampaing);
+    // const updateCampaing: Partial<Campaign> = {
+    //   name: body.name,
+    //   departmentId: body.departmentId,
+    //   campaignStateId: body.campaignStateId,
+    // };
+    // await this.repository.update(exist.toJSON().campaign_id, updateCampaing);
 
     return this.findOne(id);
   }
@@ -140,12 +142,12 @@ export class SmsCampaingService {
   async createSmsCampaing(body: CreateSmsCampaing) {
     const type = await this.campaingTypeRepository.getSMS();
     if (!type) throw new NotFoundException('tipo sms no encontrado');
-    const campaing = await this.repository.create({
-      name: body.name,
-      campaignTypeId: type.toJSON().id,
-      departmentId: body.departmentId,
-      campaignStateId: body.campaignStateId,
-    });
+    // const campaing = await this.repository.create({
+    //   name: body.name,
+    //   campaignTypeId: type.toJSON().id,
+    //   departmentId: body.departmentId,
+    //   campaignStateId: body.campaignStateId,
+    // });
     const result = body.rows.map((inner) => ({ ...inner }));
 
     const createsms = {
@@ -153,7 +155,7 @@ export class SmsCampaingService {
       contact: body.contact,
       message: body.message,
       countryCode: body.countryCode,
-      campaignId: campaing.toJSON().id,
+      campaignName:body.name,
       excelData: result,
     };
     const sms = await this.smsCampaingDetailRepository.create(createsms);

@@ -52,7 +52,7 @@ export class ChannelAttention extends Model<ChannelAttention> {
   @Column({
     field: 'consult_type_id',
     type: DataType.INTEGER,
-    allowNull: true,
+    allowNull: true
   })
   consultTypeId?: number;
 

@@ -111,7 +111,8 @@ export class AloSatService {
           JOIN vicidial_user_groups vug 
               ON vu.user_group = vug.user_group
           WHERE 
-              vug.allowed_campaigns LIKE '%-ALL-CAMPAIGNS-%'
+              vc.active = 'Y'
+              AND vug.allowed_campaigns LIKE '%-ALL-CAMPAIGNS-%'
               OR vc.campaign_id IN (
                   SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(vug.allowed_campaigns, ' ', numbers.n), ' ', -1) AS campaign_id
                   FROM (
@@ -869,5 +870,60 @@ export class AloSatService {
     if (pauseRes) {
       await this.pauseAgent(userId, VicidialPauseCode.WRAP);
     }
+  }
+
+  async parkCall(userId: number, putOn: boolean): Promise<any> {
+    /* Obtenemos las credenciales del agente a partir del id del usuario */
+    const { agentUser, userPass } = await this.getAgent(userId);
+
+    const [agentData]: any = await this.db.query(
+      `
+        SELECT 
+            vsd.session_name,
+            vla.uniqueid,
+            vla.lead_id,
+            vla.channel,
+            vl.list_id,
+            vla.campaign_id,
+            vla.extension,
+            vla.conf_exten,
+            vla.agent_log_id,
+            vac.callerid,
+            vl.called_count
+        FROM vicidial_live_agents vla
+        LEFT JOIN vicidial_session_data vsd 
+              ON vsd.user = vla.user
+        LEFT JOIN vicidial_users vu 
+              ON vu.user = vla.user
+        LEFT JOIN vicidial_list vl 
+              ON vl.lead_id = vla.lead_id
+        LEFT JOIN vicidial_auto_calls vac 
+              ON vac.lead_id = vla.lead_id
+        LEFT JOIN call_log cl
+              ON cl.uniqueid = vla.uniqueid
+        WHERE vla.user = ?
+        ORDER BY vla.last_update_time DESC
+        LIMIT 1;
+      `,
+      {
+        replacements: [agentUser],
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    const res: any = await this.vicidialApiService.sendParkAction(
+      putOn,
+      agentUser,
+      userPass,
+      agentData.campaign_id,
+      agentData.session_name,
+      agentData.uniqueid,
+      agentData.lead_id,
+      agentData.extension,
+      agentData.channel,
+      agentData.conf_exten,
+      agentData.callerid,
+    );
+    console.log('res', res);
   }
 }

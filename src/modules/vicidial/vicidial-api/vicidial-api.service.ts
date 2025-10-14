@@ -2,14 +2,17 @@ import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 import { VicidialUserDto } from '@modules/user/dto/vicidial-user.dto';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
-import { amiConfig, vicidialConfig } from 'config/env';
+import { vicidialConfig } from 'config/env';
 
 @Injectable()
 export class VicidialApiService {
-  private urlNonAgentApi = `https://${amiConfig.host}/vicidial/non_agent_api.php`;
-  private urlAgentApi = `https://${amiConfig.host}/agc/api.php`;
-  private user = vicidialConfig.user;
-  private pass = vicidialConfig.pass;
+  private readonly urlNonAgentApi = `${vicidialConfig.host}/vicidial/non_agent_api.php`;
+  private readonly urlAgentApi = `${vicidialConfig.host}/agc/api.php`;
+  private readonly vicidialApi = `${vicidialConfig.host}/agc/vicidial.php`;
+  private readonly managerSendApi = `${vicidialConfig.host}/agc/manager_send.php`;
+  private readonly vdcDbQueryApi = `${vicidialConfig.host}/agc/vdc_db_query.php`;
+  private readonly user = vicidialConfig.user;
+  private readonly pass = vicidialConfig.pass;
 
   async createAgent(dto: VicidialUserDto): Promise<any> {
     const queryParams = new URLSearchParams();
@@ -168,9 +171,8 @@ export class VicidialApiService {
       VD_campaign: campaign,
     });
 
-    const url = `https://${amiConfig.host}/agc/vicidial.php`;
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.vicidialApi, payload.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -204,7 +206,7 @@ export class VicidialApiService {
       ACTION: 'OriginateVDRelogin',
       format: 'text',
       channel: extension,
-      queryCID: this.buildQueryCIDRelogin(user),
+      queryCID: this.buildQueryCID(user, 'AC', 'agcW'),
       ext_context: 'default',
       ext_priority: '1',
       extension: phoneLogin,
@@ -214,10 +216,8 @@ export class VicidialApiService {
       outbound_cid: campaignCID,
     });
 
-    const url = `https://${amiConfig.host}/agc/manager_send.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.managerSendApi, payload.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -265,10 +265,8 @@ export class VicidialApiService {
       closer_choice: ' colain -',
     });
 
-    const url = `https://${amiConfig.host}/agc/vdc_db_query.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -303,10 +301,8 @@ export class VicidialApiService {
     payload.append('comments', '');
     payload.append('qm_extension', phoneLogin);
 
-    const url = `https://${amiConfig.host}/agc/vdc_db_query.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -342,10 +338,8 @@ export class VicidialApiService {
     payload.append('comments', '');
     payload.append('qm_extension', phoneLogin);
 
-    const url = `https://${amiConfig.host}/agc/vdc_db_query.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -390,10 +384,8 @@ export class VicidialApiService {
     payload.append('dial_method', 'INBOUND_MAN');
     payload.append('pause_max_url_trigger', '');
 
-    const url = `https://${amiConfig.host}/agc/vdc_db_query.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -510,7 +502,7 @@ export class VicidialApiService {
       dead_count: '0',
     });
 
-    const url = `https://${amiConfig.host}/agc/conf_exten_check.php`;
+    const url = `${vicidialConfig.host}/agc/conf_exten_check.php`;
 
     try {
       const res = await axios.post(url, payload.toString(), {
@@ -589,7 +581,7 @@ export class VicidialApiService {
       ACTION: 'RedirectVD',
       format: 'text',
       channel: channel,
-      queryCID: this.buildQueryCID(user),
+      queryCID: this.buildQueryCID(user, 'XB'),
       ext_context: 'default',
       ext_priority: '1',
       auto_dial_level: '1',
@@ -603,10 +595,8 @@ export class VicidialApiService {
       customerparked: '0',
     });
 
-    const url = `https://${amiConfig.host}/agc/manager_send.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.managerSendApi, payload.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -684,10 +674,8 @@ export class VicidialApiService {
       channelrec: '',
     });
 
-    const url = `https://${amiConfig.host}/agc/vdc_db_query.php`;
-
     try {
-      const res = await axios.post(url, payload.toString(), {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -700,44 +688,110 @@ export class VicidialApiService {
     }
   }
 
-  async keepaliveB(server_ip, session_id, agent_user) {
-    const qp = new URLSearchParams({
-      AJAX: '1',
-      ACTION: 'update_fields',
-      server_ip,
-      session_name: session_id,
-      user: agent_user,
-      format: 'json',
+  async sendParkAction(
+    putOn: boolean,
+    user: string,
+    pass: string,
+    campaign: string,
+    sessionName: string,
+    uniqueId: string,
+    leadId: string,
+    extension: string,
+    channel: string,
+    confExten: string,
+    callerId: string,
+  ) {
+    const payload = new URLSearchParams({
+      server_ip: vicidialConfig.privateIP,
+      session_name: sessionName,
+      user: user,
+      pass: pass,
+      ACTION: putOn ? 'RedirectToPark' : 'RedirectFromPark',
+      format: 'text',
+      channel: channel,
+      call_server_ip: vicidialConfig.privateIP,
+      queryCID: this.buildQueryCID(user, 'LP', 'vdcW'),
+      exten: putOn ? '8301' : confExten,
+      ext_context: 'default',
+      ext_priority: '1',
+      extenName: 'park',
+      parkedby: extension,
+      session_id: confExten,
+      CalLCID: callerId,
+      uniqueid: uniqueId,
+      lead_id: leadId,
+      campaign: campaign,
+      group_id: 'colain',
     });
-    const { data } = await axios.get(
-      `https://${amiConfig.host}/agc/vicidial.php?${qp.toString()}`,
-      { timeout: 5000 },
-    );
-    return data;
+
+    console.log("payload", payload)
+
+    try {
+      const res = await axios.post(this.managerSendApi, payload.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      });
+      return res.data;
+    } catch (error) {
+      console.error(error.response?.data || error.message);
+      throw new Error(
+        'No se pudo configurar los grupos de cierre para el agente.',
+      );
+    }
   }
 
-  async keepaliveA(agent_user) {
-    const qp = new URLSearchParams({
-      source: 'CRM',
-      user: this.user,
-      pass: this.pass,
-      agent_user,
-      function: 'AGENT_KEEPALIVE',
+  async callFromPark(
+    user: string,
+    pass: string,
+    campaign: string,
+    sessionName: string,
+    uniqueId: string,
+    leadId: string,
+    extension: string,
+    channel: string,
+    confExten: string,
+    callerId: string,
+  ) {
+    const payload = new URLSearchParams({
+      server_ip: vicidialConfig.privateIP,
+      session_name: sessionName,
+      user: user,
+      pass: pass,
+      ACTION: 'RedirectFromPark',
+      format: 'text',
+      channel: channel,
+      call_server_ip: vicidialConfig.privateIP,
+      queryCID: this.buildQueryCID(user, 'LP', 'vdcW'),
+      exten: extension,
+      ext_context: 'default',
+      ext_priority: '1',
+      extenName: 'park',
+      parkedby: extension,
+      session_id: confExten,
+      CalLCID: callerId,
+      uniqueid: uniqueId,
+      lead_id: leadId,
+      campaign: campaign,
+      group_id: 'colain',
     });
-    const { data } = await axios.get(`${this.urlAgentApi}?${qp.toString()}`, {
-      timeout: 5000,
-    });
-    return String(data);
+
+    try {
+      const res = await axios.post(this.managerSendApi, payload.toString(), {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      });
+      return res.data;
+    } catch (error) {
+      console.error(error.response?.data || error.message);
+      throw new Error(
+        'No se pudo configurar los grupos de cierre para el agente.',
+      );
+    }
   }
 
-  private buildQueryCID(user: string) {
-    const random = Math.random().toString(36).substring(2, 6); // 4 chars aleatorios
+  private buildQueryCID(user: string, prefix: string, sufix?: string) {
+    const random = sufix ?? Math.random().toString(36).substring(2, 6); // 4 chars aleatorios
     const epoch = Math.floor(Date.now() / 1000);
-    return `XB${random}${epoch}${user.repeat(4)}`;
-  }
-
-  private buildQueryCIDRelogin(user: string) {
-    const timestamp = Math.floor(Date.now() / 1000);
-    return `ACagcW${timestamp}${user.repeat(4)}`;
+    return `${prefix}${random}${epoch}${user.repeat(4)}`;
   }
 }

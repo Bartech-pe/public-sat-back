@@ -70,7 +70,7 @@ export class ChannelCitizenController {
       );
     }
   }
-  @Get(':dni/attentions')
+  @Get(':dni/attentions/')
   async getCommunicationsHistoryFromCitizen(
     @Param('dni') dni: string,
   ): Promise<BaseResponseDto<GetAttentionsOfCitizenDto[]>> {

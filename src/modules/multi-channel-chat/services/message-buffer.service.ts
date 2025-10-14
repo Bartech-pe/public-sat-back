@@ -110,9 +110,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
 
       if (botMustAnswer) {
         await this.redisClient.rpush(this.bufferKey, JSON.stringify(message));
-        this.logger.debug(
-          `Mensaje agregado al buffer: ${message.data.payload.message.body}`,
-        );
         await this.redisClient.set(
           `buffered_message:${senderId}`,
           JSON.stringify(message),
@@ -137,16 +134,13 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
       'EX',
       this.timeoutDuration,
     );
-    this.logger.debug(`Timeout establecido para usuario: ${senderId}`);
   }
 
-  // CORREGIDO: Método onMessageBufferTimeout con lógica original que funciona
   private async onMessageBufferTimeout(senderId: string) {
     try {
       console.log('onMessageBufferTimeout init');
       this.logger.log(`Timeout alcanzado para usuario: ${senderId}`);
 
-      // CORREGIDO: Usar buffered_message como en la versión original
       const bufferedMessageStr = await this.redisClient.get(
         `buffered_message:${senderId}`,
       );
@@ -222,7 +216,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
       ];
       await this.redisClient.del(...keysToDelete);
       await this.removeUserMessagesFromBuffer(senderId);
-      this.logger.debug(`Cleanup Message Buffer realizado para ${senderId}`);
+      // this.logger.debug(`Cleanup Message Buffer realizado para ${senderId}`);
     } catch (error) {
       this.logger.error(
         `Error en cleanup Message Buffer para ${senderId}:`,
@@ -261,9 +255,9 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
       await multi.exec();
 
       const removedCount = messages.length - filteredMessages.length;
-      this.logger.debug(
-        `Buffer cleanup: ${removedCount} mensajes removidos para usuario ${senderId}`,
-      );
+      // this.logger.debug(
+      //   `Buffer cleanup: ${removedCount} mensajes removidos para usuario ${senderId}`,
+      // );
     } catch (error) {
       this.logger.error(
         `Error en cleanup de buffer compartido para ${senderId}:`,
@@ -282,9 +276,9 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
         this.processBufferedMessages();
       }
     }, this.waitTime);
-    this.logger.debug(
-      `Temporizador reiniciado, procesará en ${this.waitTime}ms`,
-    );
+    // this.logger.debug(
+    //   `Temporizador reiniciado, procesará en ${this.waitTime}ms`,
+    // );
   }
 
   private async processBufferedMessages() {
@@ -473,6 +467,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
 
   public async clearUserTimeout(senderId: string) {
     await this.redisClient.del(`message_buffer_timeout:${senderId}`);
-    this.logger.debug(`Timeout limpiado para usuario: ${senderId}`);
+    // this.logger.debug(`Timeout limpiado para usuario: ${senderId}`);
   }
 }

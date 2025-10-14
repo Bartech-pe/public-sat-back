@@ -38,10 +38,8 @@ export class OmnicanalidadController {
     @Param('piValPar1') piValPar1: '1' | '2' | string,
     @Param('pvValPar2') pvValPar2: 'empty' | string,
   ) {
-    console.log('infoContactoCelular');
     try {
       const token = await this.authSatService.getToken();
-      console.log('token', token);
       const res: AxiosResponse<ContactoDto[]> = await this.client.get(
         `/contacto/listado/${psiTipConsulta}/${piValPar1}/${pvValPar2}`,
         // {
@@ -51,7 +49,6 @@ export class OmnicanalidadController {
         //   validateStatus: () => true,
         // },
       );
-      console.log('res', res);
       if (res.status == 200) {
         return res.data.map(
           (d) =>
@@ -89,7 +86,6 @@ export class OmnicanalidadController {
           validateStatus: () => true,
         },
       );
-      //   console.log('res', res);
       if (res.status == 200) {
         return res.data;
       } else if (res.status == 401) {
@@ -150,7 +146,6 @@ export class OmnicanalidadController {
           validateStatus: () => true,
         },
       );
-      //   console.log('res', res);
       if (res.status == 200) {
         return res.data;
       } else if (res.status == 401) {

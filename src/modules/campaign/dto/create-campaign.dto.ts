@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsDate,
   IsBoolean,
+  IsInt,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -89,8 +90,9 @@ export class CreateCampaignDto {
 
   @ApiProperty({
     description: 'Identificador de campaña en sistema externo (VD)',
+    type: Number, // 👈 opcional, pero ayuda a Swagger
   })
-  @IsString({ message: v.isString('vdCampaignId') })
+  @IsInt({ message: v.isInt('vdCampaignId') }) // 👈 cambia IsString por IsInt
   @IsOptional()
   vdCampaignId?: number;
 

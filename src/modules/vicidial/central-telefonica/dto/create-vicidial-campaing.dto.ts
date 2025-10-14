@@ -4,7 +4,7 @@ export class CreateVicidialCampaignDto {
   
   @IsString()
   @Length(1, 50)
-  campaign_id: number;
+  campaign_id: string;
 
   @IsOptional()
   @IsString()

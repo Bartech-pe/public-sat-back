@@ -19,6 +19,8 @@ import { ChannelPhoneState } from '@common/enums/status-call.enum';
 import { UserGateway } from '@modules/user/user.gateway';
 import { CallHistoryRepository } from '@modules/user/repositories/call-history.repository';
 import { VicidialPauseCode } from '@common/enums/pause-code.enum';
+import { TransferCallDto } from '../dto/transfer-call.dto';
+import { ParkCallDto } from '../dto/park-call.dto';
 
 @Controller('alosat')
 export class AloSatController {
@@ -159,20 +161,40 @@ export class AloSatController {
   @Get('end-call')
   async endCall(@CurrentUser() user: User): Promise<any> {
     const res = await this.service.endCall(user.id);
-    // const vicidialUser = await this.vicidialUserRepository.findOne({
-    //   where: { userId: user.id },
-    // });
-    // await vicidialUser?.update({
-    //   channelStateId: ChannelPhoneState.PAUSED,
-    //   pauseCode: VicidialPauseCode.WRAP,
-    // });
+    const vicidialUser = await this.vicidialUserRepository.findOne({
+      where: { userId: user.id },
+    });
+    await vicidialUser?.update({
+      channelStateId: ChannelPhoneState.PAUSED,
+      pauseCode: VicidialPauseCode.WRAP,
+    });
     this.userGateway.notifyPhoneStateUser(user.id);
     return res;
   }
 
   @Post('transfer-call')
-  transferCall(@CurrentUser() user: User, @Body() dto: any): Promise<any> {
+  transferCall(
+    @CurrentUser() user: User,
+    @Body() dto: TransferCallDto,
+  ): Promise<any> {
     console.log('dto', dto);
     return this.service.transferCall(user.id, dto.userId);
+  }
+
+  @Post('park-call')
+  async parkCall(
+    @CurrentUser() user: User,
+    @Body() dto: ParkCallDto,
+  ): Promise<any> {
+    const res = await this.service.parkCall(user.id, dto.putOn);
+    const vicidialUser = await this.vicidialUserRepository.findOne({
+      where: { userId: user.id },
+    });
+    await vicidialUser?.update({
+      channelStateId: ChannelPhoneState.INCALL,
+      pauseCode: dto.putOn ? VicidialPauseCode.PARK : null,
+    });
+    this.userGateway.notifyPhoneStateUser(user.id);
+    return res;
   }
 }

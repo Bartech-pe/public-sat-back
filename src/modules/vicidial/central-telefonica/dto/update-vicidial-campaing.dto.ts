@@ -5,5 +5,5 @@ import { IsString, IsOptional, Length } from 'class-validator';
 export class UpdateVicidialCampaignDto extends PartialType(CreateVicidialCampaignDto) {
     @IsString()
     @Length(1, 50)
-    campaign_id: number;
+    campaign_id: string;
 }

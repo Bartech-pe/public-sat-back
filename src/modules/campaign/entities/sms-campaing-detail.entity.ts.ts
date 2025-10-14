@@ -46,12 +46,9 @@ export class SmsCampaingDetail extends  Model {
   @Column({ field: 'excel_data', type: DataType.JSON, allowNull: false })
   excelData!: Record<string, any>;
 
-  @ForeignKey(() => Campaign)
-  @Column({ field: 'campaign_id', type: DataType.INTEGER, allowNull: false })
-  campaignId!: number;
+  @Column({ field: 'campaign_name', type: DataType.STRING, allowNull: true })
+  campaignName?: string;
 
-  @BelongsTo(() => Campaign)
-  campaign?: Campaign;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

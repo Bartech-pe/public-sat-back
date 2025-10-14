@@ -13,6 +13,7 @@ import { centralDBConfig } from 'config/env';
       username: centralDBConfig.user,
       password: centralDBConfig.pass,
       database: centralDBConfig.name,
+      autoLoadModels: true,
       pool: {
         max: 10,
         min: 0,

@@ -149,7 +149,7 @@ export class EmailFeaturesService {
       refreshToken: credential.toJSON().refreshToken,
     };
     if (body.html) {
-      mail.html = body.html;
+      mail.html = JSON.parse(body.html);
     }
     const email = await this.emailChannelService.sendEmail(mail);
     return email;

@@ -66,7 +66,7 @@ export class AmiService implements OnModuleInit {
         // console.log('✅ Conectado al AMI');
       });
       this.ami.on('error', (err) => {
-        console.error('Error en AMI:', err);
+        // console.error('Error en AMI:', err);
       });
       this.ami.on('managerevent', async (event) => {
         // console.log('📥 Evento AMI recibido (Manager):', event);
@@ -110,7 +110,7 @@ export class AmiService implements OnModuleInit {
             break;
           case 'MeetmeJoin':
             if (/^SIP\/[^-]+-\w+$/.test(event.channel)) {
-              console.log(`MeetmeLeave:`, event);
+              console.log(`MeetmeJoin:`, event);
               console.log(`meetme:`, event.meetme);
               const username = await aloSatService.getAgentNameByConfExten(
                 event.meetme,
@@ -137,10 +137,9 @@ export class AmiService implements OnModuleInit {
             }
             break;
           case 'MeetmeLeave':
-            console.log(`MeetmeLeave:`, event);
             if (
               /^SIP\/[^-]+-\w+$/.test(event.channel) &&
-              event.context == 'default'
+              event.context !== 'default' && event.exten !== '8301'
             ) {
               console.log(`MeetmeLeave:`, event);
               const username = await aloSatService.getAgentNameByConfExten(

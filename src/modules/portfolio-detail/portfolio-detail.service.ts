@@ -19,7 +19,7 @@ import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.
 import { col, Op } from 'sequelize';
 import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
 import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
-import { CitizenContactDto } from './dto/citizen-contact.dto';
+import { CitizenContactDto } from '../citizen/dto/citizen-contact.dto';
 import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
 
 @Injectable()
@@ -367,64 +367,5 @@ export class PortfolioDetailService {
 
     // Si no hay resultados, se retorna un array vacío (detalles será [])
     return detalles;
-  }
-
-  async createCitizenContactMultiple(
-    citizenContactList: CitizenContactDto[],
-  ): Promise<CitizenContact[]> {
-    // Eliminamos duplicados dentro del propio array (opcional pero recomendado)
-    const uniqueContacts = citizenContactList.filter(
-      (contact, index, self) =>
-        index ===
-        self.findIndex(
-          (c) =>
-            c.tipDoc === contact.tipDoc &&
-            c.docIde === contact.docIde &&
-            c.contactType === contact.contactType &&
-            c.value === contact.value,
-        ),
-    );
-    // Buscamos en BD cuáles ya existen
-    const existingContacts = await this.citizenContactRepository.findAll({
-      where: {
-        [Op.or]: uniqueContacts.map((c) => ({
-          tipDoc: c.tipDoc,
-          docIde: c.docIde,
-          contactType: c.contactType,
-          value: c.value,
-        })),
-      },
-    });
-
-    console.log('existingContacts', existingContacts);
-
-    // Armamos un set para búsqueda rápida
-    const existingSet = new Set(
-      existingContacts
-        .map((c) => c.toJSON())
-        .map((c) => `${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`),
-    );
-
-    // Filtramos los que NO existen
-    const contactsToCreate = uniqueContacts.filter(
-      (c) =>
-        !existingSet.has(`${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`),
-    );
-
-    // Insertamos solo los que faltan
-    if (contactsToCreate.length > 0) {
-      return this.citizenContactRepository.bulkCreate(contactsToCreate);
-    } else {
-      return [];
-    }
-  }
-
-  getCitizenContactsByTipDocAndDocIde(
-    tipDoc: string,
-    docIde: string,
-  ): Promise<CitizenContact[]> {
-    return this.citizenContactRepository.findAll({
-      where: { tipDoc, docIde, status: true },
-    });
   }
 }

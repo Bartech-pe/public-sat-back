@@ -7,7 +7,7 @@ import {
 import {
   PapeletaInfoDto,
   TributoInfoDto,
-} from '../../call/dto/papeleta-info.dto';
+} from '@modules/call/dto/papeleta-info.dto';
 import { cleanAttributes } from '@common/helpers/object-atribute.helper';
 import { PapeletaDto } from '@common/proxy/sat/dto/PapeletaDto';
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
