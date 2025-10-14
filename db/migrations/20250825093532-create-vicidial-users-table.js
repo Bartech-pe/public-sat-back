@@ -52,7 +52,11 @@ module.exports = {
         allowNull: true,
         comment: 'Id del estado del canal',
       },
-
+      pause_code: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        comment: 'Código de pausa vicidial',
+      },
       // Auditoría con FK hacia users
       created_by: {
         type: Sequelize.BIGINT,

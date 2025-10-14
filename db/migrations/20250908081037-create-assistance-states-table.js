@@ -31,6 +31,11 @@ module.exports = {
         allowNull: false,
         comment: 'ID del canal al que pertenece el estado',
       },
+      inmutable: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+        comment: 'Campo para habilitar o inhabilitar la edición de un registro',
+      },
       status: {
         type: Sequelize.BOOLEAN,
         allowNull: false,

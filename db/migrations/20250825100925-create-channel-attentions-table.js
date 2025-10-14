@@ -15,6 +15,16 @@ module.exports = {
         allowNull: false,
         comment: 'FK hacia la sala de conversación (channel_rooms)',
       },
+      consult_type_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        comment: 'FK hacia el tipo de consulta (consult_types)',
+      },
+      attention_detail: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        comment: 'Detalle de atención',
+      },
       status: {
         type: Sequelize.ENUM('identity_verification', 'in_progress', 'closed'),
         allowNull: false,
@@ -32,7 +42,6 @@ module.exports = {
         allowNull: true,
         comment: 'Fecha de finalización de la attención (si aplica)',
       },
-
       // Auditoría
       created_by: {
         type: Sequelize.BIGINT,
@@ -79,6 +88,18 @@ module.exports = {
       name: 'fk_channel_attentions_channel_room_id',
       references: {
         table: 'channel_rooms',
+        field: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT',
+    });
+
+    await queryInterface.addConstraint('channel_attentions', {
+      fields: ['consult_type_id'],
+      type: 'foreign key',
+      name: 'fk_channel_attentions_consult_type_id',
+      references: {
+        table: 'consult_types',
         field: 'id',
       },
       onUpdate: 'CASCADE',

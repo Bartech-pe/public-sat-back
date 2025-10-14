@@ -12,12 +12,12 @@ module.exports = {
         comment: 'Identificador del usuario',
       },
       name: {
-        type: Sequelize.STRING(20),
+        type: Sequelize.STRING,
         allowNull: false,
         comment: 'Nombre completo del usuario',
       },
       display_name: {
-        type: Sequelize.TEXT('long'),
+        type: Sequelize.STRING,
         allowNull: true,
         comment: 'Nombre a mostrar en las conversaciones',
       },

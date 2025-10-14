@@ -3,41 +3,56 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('email_attachments_campaigns', {
+    await queryInterface.createTable('call_history', {
       id: {
         type: Sequelize.BIGINT,
         autoIncrement: true,
         primaryKey: true,
+        comment: 'Identificador del recordatorio',
       },
-      campaign_email_id: {
+      user_id: {
         type: Sequelize.BIGINT,
         allowNull: false,
-        references: { model: 'campaign_emails', key: 'id' },
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+        comment: 'Id del usuario',
       },
-      file_name: {
+      lead_id: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      caller_id: {
         type: Sequelize.STRING,
         allowNull: false,
-        comment: 'nombreArchivo',
       },
-      file_type_code: {
+      user_code: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      phone_number: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      channel: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      entry_date: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+      seconds: {
         type: Sequelize.INTEGER,
-        allowNull: false,
-        comment: 'codTipoArchivo',
+        allowNull: true,
       },
-      order: {
-        type: Sequelize.INTEGER,
+      call_status: {
+        type: Sequelize.STRING,
         allowNull: false,
-        comment: 'orden',
       },
-      base64: {
-        type: Sequelize.TEXT('long'),
+      call_basic_info: {
+        type: Sequelize.TEXT,
         allowNull: false,
-        comment: 'contenido base64',
       },
 
-      // Campos de auditoría
+      // Auditoría
       created_by: {
         type: Sequelize.BIGINT,
         allowNull: true,
@@ -77,10 +92,10 @@ module.exports = {
      * ------------------------- */
 
     // Relación con users (created_by)
-    await queryInterface.addConstraint('email_attachments_campaigns', {
+    await queryInterface.addConstraint('call_history', {
       fields: ['created_by'],
       type: 'foreign key',
-      name: 'fk_email_attachments_campaigns_created_by',
+      name: 'fk_call_history_created_by',
       references: {
         table: 'users',
         field: 'id',
@@ -90,10 +105,10 @@ module.exports = {
     });
 
     // Relación con users (updated_by)
-    await queryInterface.addConstraint('email_attachments_campaigns', {
+    await queryInterface.addConstraint('call_history', {
       fields: ['updated_by'],
       type: 'foreign key',
-      name: 'fk_email_attachments_campaigns_updated_by',
+      name: 'fk_call_history_updated_by',
       references: {
         table: 'users',
         field: 'id',
@@ -103,10 +118,10 @@ module.exports = {
     });
 
     // Relación con users (deleted_by)
-    await queryInterface.addConstraint('email_attachments_campaigns', {
+    await queryInterface.addConstraint('call_history', {
       fields: ['deleted_by'],
       type: 'foreign key',
-      name: 'fk_email_attachments_campaigns_deleted_by',
+      name: 'fk_call_history_deleted_by',
       references: {
         table: 'users',
         field: 'id',
@@ -117,6 +132,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('email_attachments_campaigns');
+    await queryInterface.dropTable('call_history');
   },
 };
