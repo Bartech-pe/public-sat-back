@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { GenericCrudRepository } from '@common/repositories/generic-crud.repository';
-import { CallHistory } from '../entities/call_history.entity';
+import { CallHistory } from '../entities/call-history.entity';
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -44,13 +44,34 @@ export class CallHistoryRepository extends GenericCrudRepository<CallHistory> {
       where: { userId },
       order: [['id', 'DESC']],
     });
-    if (history) {
+    if (history && !history.toJSON().seconds) {
       await history.update({
         seconds:
           seconds ??
           (new Date().getTime() -
             new Date(history.toJSON().entryDate).getTime()) /
             1000,
+      });
+    }
+  }
+
+  async setDurationCallAndFinalstatus(
+    userId: number,
+    seconds: number,
+    callStatus?: string,
+  ) {
+    const history = await this.model.findOne<CallHistory>({
+      where: { userId },
+      order: [['id', 'DESC']],
+    });
+    if (history && !history.toJSON().seconds) {
+      await history.update({
+        seconds:
+          seconds ??
+          (new Date().getTime() -
+            new Date(history.toJSON().entryDate).getTime()) /
+            1000,
+        callStatus,
       });
     }
   }

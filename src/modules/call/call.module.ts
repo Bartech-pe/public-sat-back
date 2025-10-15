@@ -15,10 +15,12 @@ import { UserModule } from '@modules/user/user.module';
 import { AmiModule } from '@modules/vicidial/ami/ami.module';
 import { CentralTelefonicaModule } from '@modules/vicidial/central-telefonica/central-telefonica.module';
 import { SaldomaticoModule } from '@modules/api-sat/saldomatico/saldomatico.module';
+import { CallHistory } from './entities/call-history.entity';
+import { CallHistoryRepository } from './repositories/call-history.repository';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([Call, CallState]),
+    SequelizeModule.forFeature([Call, CallState, CallHistory]),
     UserModule,
     HttpModule,
     forwardRef(() => CentralTelefonicaModule),
@@ -33,7 +35,8 @@ import { SaldomaticoModule } from '@modules/api-sat/saldomatico/saldomatico.modu
     CallStateRepository,
     CallRepository,
     CallStateService,
+    CallHistoryRepository,
   ],
-  exports: [RasaService, RasaProxy, CallService],
+  exports: [RasaService, RasaProxy, CallService, CallHistoryRepository],
 })
 export class CallModule {}

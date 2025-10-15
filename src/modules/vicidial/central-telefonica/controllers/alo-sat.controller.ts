@@ -17,10 +17,11 @@ import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';
 import { UserGateway } from '@modules/user/user.gateway';
-import { CallHistoryRepository } from '@modules/user/repositories/call-history.repository';
+import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
 import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 import { TransferCallDto } from '../dto/transfer-call.dto';
 import { ParkCallDto } from '../dto/park-call.dto';
+import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 
 @Controller('alosat')
 export class AloSatController {
@@ -48,6 +49,11 @@ export class AloSatController {
       state: res?.channelState,
       pauseCode: res.pauseCode,
     };
+  }
+
+  @Get('all-agent-status')
+  async allAgentStatus(@CurrentUser() user: User): Promise<VicidialUser[]> {
+    return await this.vicidialUserRepository.getAllAloSatState();
   }
 
   @Post('agent-login')
@@ -149,13 +155,14 @@ export class AloSatController {
   @Get('call-info')
   async callInfo(@CurrentUser() user: User): Promise<any> {
     const res = await this.service.getCallInfo(user.id);
-    await this.callHistoryRepository.setDurationCall(user.id);
     return res;
   }
 
   @Get('last-call-info')
-  lastCallInfo(@CurrentUser() user: User): Promise<any> {
-    return this.callHistoryRepository.getLastCallOfTheDay(user.id);
+  async lastCallInfo(@CurrentUser() user: User): Promise<any> {
+    const res = await this.callHistoryRepository.getLastCallOfTheDay(user.id);
+    // await this.callHistoryRepository.setDurationCall(user.id);
+    return res;
   }
 
   @Get('end-call')

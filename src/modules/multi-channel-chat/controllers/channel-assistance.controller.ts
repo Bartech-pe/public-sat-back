@@ -18,6 +18,7 @@ import {
 import { Public } from '@common/decorators/public.decorator';
 import { JwtSecretRequestType } from '@nestjs/jwt';
 import { JwtCitizenGuard } from '@common/guards/jwt-citizen.guard';
+import { AssignAttentionDetailDto } from '../dto/channel-attentions/assign-attention-detail.dto';
 
 @Controller('channel-room/assistances')
 export class ChannelAttentionController {
@@ -35,6 +36,15 @@ export class ChannelAttentionController {
     @Param('assistanceId') assistanceId: number,
   ): Promise<BaseResponseDto<MessagesResponseDto>> {
     return this.assistanceService.getMessagesFromChannelAttention(assistanceId);
+  }
+
+  @Put(':assistanceId/attention-detail')
+  async assignAttentionDetail(
+    @Param('assistanceId') assistanceId: number,
+    @Body() payload: AssignAttentionDetailDto,
+  ): Promise<BaseResponseDto> {
+    payload.attentionId = assistanceId
+    return this.assistanceService.assignAttentionDetail(payload);
   }
 
   @Get(':channelRoomId/assistance/retrieve')

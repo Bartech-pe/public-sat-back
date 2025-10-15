@@ -9,28 +9,16 @@ import { VicidialUserRepository } from './repositories/vicidial-user.repository'
 import { VicidialApiModule } from '@modules/vicidial/vicidial-api/vicidial-api.module';
 import { UserGateway } from './user.gateway';
 import { AuthModule } from '@modules/auth/auth.module';
-import { CallHistory } from './entities/call_history.entity';
-import { CallHistoryRepository } from './repositories/call-history.repository';
+import { VicidialUserHistory } from './entities/vicidial-user-history.model';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, VicidialUser, CallHistory]),
+    SequelizeModule.forFeature([User, VicidialUser, VicidialUserHistory]),
     VicidialApiModule,
     forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
-  providers: [
-    UserService,
-    UserRepository,
-    VicidialUserRepository,
-    CallHistoryRepository,
-    UserGateway,
-  ],
-  exports: [
-    UserRepository,
-    VicidialUserRepository,
-    CallHistoryRepository,
-    UserGateway,
-  ],
+  providers: [UserService, UserRepository, VicidialUserRepository, UserGateway],
+  exports: [UserRepository, VicidialUserRepository, UserGateway],
 })
 export class UserModule {}

@@ -1,4 +1,5 @@
 import {
+  BeforeUpdate,
   BelongsTo,
   Column,
   CreatedAt,
@@ -10,12 +11,16 @@ import {
   Scopes,
   Table,
   UpdatedAt,
+  HasMany,
+  AfterCreate,
 } from 'sequelize-typescript';
 import { User } from './user.entity';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { VicidialUserHistory } from './vicidial-user-history.model';
+import { Op } from 'sequelize';
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
+  attributes: { exclude: ['deletedAt', 'deletedBy'] },
 }))
 @Scopes(() => ({}))
 @Table({
@@ -107,6 +112,9 @@ export class VicidialUser extends Model {
   })
   pauseCode: string | null;
 
+  @HasMany(() => VicidialUserHistory)
+  history?: VicidialUserHistory[];
+
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })
   declare createdBy: number;
@@ -139,4 +147,71 @@ export class VicidialUser extends Model {
   @DeletedAt
   @Column({ field: 'deleted_at', allowNull: true })
   declare deletedAt: Date;
+
+  // ========================================================
+  // HOOK: Registrar historial al CREAR un usuario
+  // ========================================================
+  @AfterCreate
+  static async registerInitialHistory(vUser: VicidialUser) {
+    try {
+      await VicidialUserHistory.create({
+        vicidialUserId: vUser.toJSON().id,
+        oldChannelStateId: null,
+        newChannelStateId: vUser.toJSON().channelStateId ?? null,
+        oldPauseCode: null,
+        newPauseCode: vUser.toJSON().pauseCode ?? null,
+        startTime: new Date(),
+      });
+    } catch (err) {
+      console.error('Error al registrar historial inicial:', err);
+    }
+  }
+
+  // ========================================================
+  // HOOK: Registrar historial al ACTUALIZAR usuario
+  // ========================================================
+  @BeforeUpdate
+  static async registerHistory(vUser: VicidialUser) {
+    const changed = vUser.changed();
+    const instance = vUser?.toJSON();
+    if (!changed) return;
+
+    const hasStateChange =
+      changed.includes('channelStateId') ||
+      changed.includes('channel_state_id');
+    const hasPauseChange =
+      changed.includes('pauseCode') || changed.includes('pause_code');
+
+    if (!hasStateChange && !hasPauseChange) return;
+
+    const previous = await VicidialUser.findByPk(instance.id, { raw: true });
+    if (!previous) return;
+
+    // 🔹 Cerrar último historial activo
+    const lastHistory = await VicidialUserHistory.findOne({
+      where: {
+        vicidialUserId: instance.id,
+        endTime: { [Op.is]: null },
+      },
+      order: [['startTime', 'DESC']],
+    });
+
+    if (lastHistory) {
+      const endTime = new Date();
+      const duration = Math.floor(
+        (endTime.getTime() - lastHistory.toJSON().startTime.getTime()) / 1000,
+      );
+      await lastHistory.update({ endTime, duration });
+    }
+
+    // 🔹 Crear nuevo registro de historial
+    await VicidialUserHistory.create({
+      vicidialUserId: instance.id,
+      oldChannelStateId: previous.channelStateId,
+      newChannelStateId: instance.channelStateId,
+      oldPauseCode: previous.pauseCode,
+      newPauseCode: instance.pauseCode,
+      startTime: new Date(),
+    });
+  }
 }

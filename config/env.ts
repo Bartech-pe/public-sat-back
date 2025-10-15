@@ -69,6 +69,10 @@ const envSchema = Joi.object({
   AUTH_CLIENT_SECRET: Joi.string().required(),
   AUTH_REALM: Joi.string().required(),
   AUTH_GRANT_TYPE: Joi.string().required(),
+
+  // # METABASE
+  METABASE_SITE_URL: Joi.string().required(),
+  METABASE_SECRET_KEY: Joi.string().required(),
 }).unknown();
 
 const { error, value: ev } = envSchema.validate(process.env);
@@ -159,4 +163,9 @@ export const apiSatConfig = {
   authRealm: ev.AUTH_REALM,
   authGrantType: ev.AUTH_GRANT_TYPE,
   emailUrl: ev.URL_API_SAT,
+};
+
+export const metabaseConfig = {
+  url: ev.METABASE_SITE_URL,
+  secret: ev.METABASE_SECRET_KEY,
 };

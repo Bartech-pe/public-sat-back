@@ -45,6 +45,7 @@ import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-ass
 import { TemplateEmailModule } from './modules/template-email/template-email.module';
 import { CampaignEmailModule } from './modules/campaign-email/campaign-email.module';
 import { CampaingEmailConfigModule } from './modules/campaing-email-config/campaing-email-config.module';
+import { MetabaseModule } from './modules/metabase/metabase.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { CampaingEmailConfigModule } from './modules/campaing-email-config/campa
     TemplateEmailModule,
     CampaignEmailModule,
     CampaingEmailConfigModule,
+    MetabaseModule,
   ],
   providers: [
     {

@@ -285,4 +285,37 @@ export class ChannelCitizenService {
       return response;
     }
   }
+
+  async getCitizenInformationByChannelRoomAssigned(channelRoomId: number): Promise<BaseResponseDto<ChannelCitizen>>
+  {
+    let response: BaseResponseDto<ChannelCitizen> = {
+      message: "",
+      success: false
+    } 
+    try {
+      const channelRoomInformation = await this.channelRoomRepository.findOne({
+        where: {
+          id: channelRoomId
+        },
+        include:[
+          {
+            model: ChannelCitizen,
+            required: true 
+          }
+        ],
+        throwIfNotFound: false       
+      })
+
+      if(channelRoomInformation){
+        response.data = channelRoomInformation.get('citizen').toJSON() as ChannelCitizen;
+        response.message = "Datos del ciudadano";
+        response.success = true;
+      }
+      return response;
+    } catch (error) {
+      response.error = error.toString();
+      return response;
+      this.logger.error(error.toString())
+    }
+  }
 }

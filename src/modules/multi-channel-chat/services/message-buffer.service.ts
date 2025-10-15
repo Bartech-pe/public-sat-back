@@ -422,7 +422,10 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
 
     let newMessage: ChannelRoomNewMessageDto = {
       channelRoomId: message.channelRoom.id,
-      assistanceId: message.assistance.id,
+      attention:
+      {
+        id: message.assistance.id,
+      }, 
       externalRoomId: message.data.payload.chat_id as string,
       channel: message.data.payload.channel,
       advisor: message.user,

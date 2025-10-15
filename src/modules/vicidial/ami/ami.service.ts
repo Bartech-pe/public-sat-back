@@ -31,7 +31,7 @@ import { amiConfig } from 'config/env';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';
 import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 import { UserGateway } from '@modules/user/user.gateway';
-import { CallHistoryRepository } from '@modules/user/repositories/call-history.repository';
+import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
 const AsteriskManager = require('asterisk-manager');
 
 @Injectable()
@@ -63,7 +63,7 @@ export class AmiService implements OnModuleInit {
       this.ami.keepConnected();
       // console.log('📦 Inicializando módulo AMI...');
       this.ami.on('connect', () => {
-        // console.log('✅ Conectado al AMI');
+        // console.log('Conectado al AMI');
       });
       this.ami.on('error', (err) => {
         // console.error('Error en AMI:', err);
@@ -137,11 +137,11 @@ export class AmiService implements OnModuleInit {
             }
             break;
           case 'MeetmeLeave':
+            console.log(`MeetmeLeave:`, event);
             if (
               /^SIP\/[^-]+-\w+$/.test(event.channel) &&
-              event.context !== 'default' && event.exten !== '8301'
+              event.exten !== '8301'
             ) {
-              console.log(`MeetmeLeave:`, event);
               const username = await aloSatService.getAgentNameByConfExten(
                 event.meetme,
               );
@@ -163,10 +163,24 @@ export class AmiService implements OnModuleInit {
                     VicidialPauseCode.WRAP,
                   );
 
-                  await this.callHistoryRepository.setDurationCall(
+                  const lastCall = await this.callHistoryRepository.getLastCall(
                     vicidialUser?.toJSON()?.userId,
-                    event.seconds,
                   );
+
+                  if (lastCall) {
+                    const finalStatus =
+                      await this.aloSatService.getFinalStatusByLeadId(
+                        lastCall.toJSON().leadId,
+                      );
+                    await lastCall.update({
+                      seconds: !Number.isNaN(event.duration)
+                        ? Number(event.duration)
+                        : (new Date().getTime() -
+                            new Date(lastCall.toJSON().entryDate).getTime()) /
+                          1000,
+                      callStatus: finalStatus,
+                    });
+                  }
 
                   await vicidialUser?.update({
                     channelStateId: ChannelPhoneState.PAUSED,
@@ -180,7 +194,7 @@ export class AmiService implements OnModuleInit {
             }
             break;
           case 'Hangup':
-            // console.log('📞 Hangup:', event);
+            console.log('📞 Hangup:', event);
 
             const accept = this.actives.find(
               (ch) =>
@@ -371,7 +385,7 @@ export class AmiService implements OnModuleInit {
       if (err) {
         console.error('Error al enviar acción CoreShowChannels:', err);
       } else {
-        // console.log('✅ Acción CoreShowChannels enviada correctamente.', res);
+        // console.log('Acción CoreShowChannels enviada correctamente.', res);
       }
     });
   }
@@ -562,7 +576,7 @@ export class AmiService implements OnModuleInit {
             console.error('Error al iniciar grabación:', err);
             return reject(err);
           }
-          console.log('✅ Grabación iniciada:', res);
+          console.log('Grabación iniciada:', res);
           resolve({ file: archivo, channel: body.channel });
         },
       );
@@ -581,7 +595,7 @@ export class AmiService implements OnModuleInit {
             console.error('Error al iniciar grabación:', err);
             return reject(err);
           }
-          console.log('✅ Grabación finalizada:', res);
+          console.log('Grabación finalizada:', res);
           resolve({ res });
         },
       );

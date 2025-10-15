@@ -40,11 +40,11 @@ export class CentralDatabaseService implements OnModuleInit, OnModuleDestroy {
       this.sequelize = sequelize;
       if (!this.connected) {
         this.connected = true;
-        this.logger.log('✅ Conectado a la DB Central');
+        this.logger.log('Conectado a la DB Central');
       }
     } catch (error) {
       if (this.connected) {
-        this.logger.warn('⚠️ Conexión con DB Central perdida');
+        this.logger.warn('Conexión con DB Central perdida');
       } else {
         this.logger.warn('DB Central no disponible, intentando reconectar...');
       }

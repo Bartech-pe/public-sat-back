@@ -20,6 +20,7 @@ import { Survey } from '@modules/survey/entities/survey.entity';
 import { SurveyService } from '@modules/survey/survey.service';
 import { AuthService } from '@modules/auth/auth.service';
 import { JwtCitizenGuard } from '@common/guards/jwt-citizen.guard';
+import { ChannelCitizen } from '../entities/channel-citizen.entity';
 
 @Controller('channel-citizen')
 export class ChannelCitizenController {
@@ -38,6 +39,25 @@ export class ChannelCitizenController {
         message: 'Se ha solicitado un asesor.',
         status: 200,
       };
+    } catch (error) {
+      throw new HttpException(
+        {
+          message:
+            error.message ||
+            'Error al obtener la informacion básica del ciudadano.',
+        },
+        error.status || HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Get('channel-room/:channelRoomId')
+  @Public()
+  async getCitizenInformationByChannelRoomAssigned(
+    @Param('channelRoomId') channelRoomId: number,
+  ): Promise<BaseResponseDto<ChannelCitizen>> {
+    try {
+      return await this.channelCitizenService.getCitizenInformationByChannelRoomAssigned(channelRoomId);
     } catch (error) {
       throw new HttpException(
         {
@@ -70,6 +90,7 @@ export class ChannelCitizenController {
       );
     }
   }
+  
   @Get(':dni/attentions/')
   async getCommunicationsHistoryFromCitizen(
     @Param('dni') dni: string,

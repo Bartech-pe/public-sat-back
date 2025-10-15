@@ -11,7 +11,7 @@ import {
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { User } from './user.entity';
+import { User } from '../../user/entities/user.entity';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 
 @DefaultScope(() => ({

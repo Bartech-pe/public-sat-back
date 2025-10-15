@@ -8,7 +8,7 @@ import {
 
 export class ChannelRoomSummaryDto {
   channelRoomId: number;
-  assistanceId: number;
+  attention: ChannelAttentionSummariesDTO;
   externalRoomId?: string;
   channel: string;
   lastMessage: LastMessage;
@@ -16,6 +16,13 @@ export class ChannelRoomSummaryDto {
   advisor: AdvisorAssigned;
   unreadCount: number;
   botStatus: BotStatus;
+}
+
+export interface ChannelAttentionSummariesDTO{
+  id: number;
+  endDate?: Date | null;
+  consultTypeId?: number | null;
+  attentionDetail?: string |  null;
 }
 export interface AdvisorAssigned {
   id: number;
@@ -36,7 +43,7 @@ export interface ChannelRoomViewStatusDto {
 
 export class ChannelRoomNewMessageDto {
   channelRoomId: number;
-  assistanceId: number;
+  attention: ChannelAttentionSummariesDTO;
   externalRoomId?: string;
   channel?: string;
   advisor: AdvisorAssigned;

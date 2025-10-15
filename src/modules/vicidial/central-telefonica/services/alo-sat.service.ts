@@ -1,6 +1,4 @@
 import {
-  forwardRef,
-  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -13,11 +11,9 @@ import { format, parse } from 'date-fns';
 import { VicidialAgentStatus } from '@common/enums/status-call.enum';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { VicidialApiService } from '@modules/vicidial/vicidial-api/vicidial-api.service';
-import { AmiService } from '@modules/vicidial/ami/ami.service';
 import { vicidialConfig } from 'config/env';
-import { CallHistoryRepository } from '@modules/user/repositories/call-history.repository';
-import { User } from '@modules/user/entities/user.entity';
-import { CallHistory } from '@modules/user/entities/call_history.entity';
+import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
+import { CallHistory } from '@modules/call/entities/call-history.entity';
 import { stripPeruCode } from '@common/helpers/phone.helper';
 
 interface TransactionExtended extends Transaction {
@@ -112,6 +108,7 @@ export class AloSatService {
               ON vu.user_group = vug.user_group
           WHERE 
               vc.active = 'Y'
+              AND vc.dial_method = 'INBOUND_MAN'
               AND vug.allowed_campaigns LIKE '%-ALL-CAMPAIGNS-%'
               OR vc.campaign_id IN (
                   SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(vug.allowed_campaigns, ' ', numbers.n), ' ', -1) AS campaign_id
@@ -414,7 +411,7 @@ export class AloSatService {
 
     if (!agentData?.session_name) {
       console.error(
-        '❌ No se encontró sesión activa para el agente:',
+        'No se encontró sesión activa para el agente:',
         agentUser,
       );
       return;
@@ -429,7 +426,7 @@ export class AloSatService {
       agentData.session_name,
     );
 
-    console.log(`✅ Grupo 'colain -' asignado. Ahora READY...`);
+    console.log(`Grupo 'colain -' asignado. Ahora READY...`);
     const response = await this.vicidialApiService.setAgentReady(
       agentUser,
       userPass,
@@ -925,5 +922,22 @@ export class AloSatService {
       agentData.callerid,
     );
     console.log('res', res);
+  }
+
+  async getFinalStatusByLeadId(leadId: string): Promise<string | undefined> {
+    const [result]: any = await this.db.query(
+      `
+    SELECT status
+    FROM (
+      SELECT status, call_date FROM vicidial_log WHERE lead_id = ?
+      UNION ALL
+      SELECT status, call_date FROM vicidial_closer_log WHERE lead_id = ?
+    ) tmp
+    ORDER BY call_date DESC
+    LIMIT 1;
+    `,
+      { replacements: [leadId, leadId], type: QueryTypes.SELECT },
+    );
+    return result?.status;
   }
 }

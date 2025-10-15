@@ -7,15 +7,12 @@ import {
   Post,
   Put,
   Query,
-  Req,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
 
 import { CallDTO, InterferCallDTO } from './dto/call.dto';
 import { EndDTO } from './dto/end.dto';
-import { SMSIndividualDto, SMSMAsivoDto } from '../sms/dto/sms.dto';
 import { CreateConversationDto } from '@common/proxy/rasa/dto/Conversation';
 import { RasaService } from './rasa.service';
 import {
@@ -30,6 +27,9 @@ import { AMIFilter } from '../vicidial/ami/dto/ami.dto';
 import { AmiService } from '@modules/vicidial/ami/ami.service';
 import { SaldomaticoService } from '@modules/api-sat/saldomatico/saldomatico.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
+import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { CallHistory } from './entities/call-history.entity';
 
 /**
  * Controller for managing Calls.
@@ -47,6 +47,14 @@ export class CallController {
     private readonly saldomaticoService: SaldomaticoService,
     private readonly rasaService: RasaService,
   ) {}
+
+  @Get()
+  async getCalls(
+    @Query() q: PaginationQueryDto,
+  ): Promise<PaginatedResponse<CallHistory>> {
+    const response = await this.callService.getCallHistory(q.limit, q.offset);
+    return response;
+  }
 
   @Post('start-call')
   async statCall(@Body() body: CallDTO) {
@@ -195,14 +203,6 @@ export class CallController {
   @Post('webhook/whatsapp')
   async whatsappWebhook(@Body() body: SendMessageHookDto) {
     const response = await this.rasaService.whastappWebHook(body);
-    return response;
-  }
-
-  //@ApiBearerAuth()
-  //@UseGuards(JwtAuthGuard)
-  @Get()
-  async getCalls(@Query() query: CallFilter) {
-    const response = await this.callService.getCallsFromVicidial(query);
     return response;
   }
 

@@ -4,10 +4,15 @@ import { UpdateCampaingEmailConfigDto } from './dto/update-campaing-email-config
 import { CampaignEmailConfigRepository } from './repositories/campaign-email-config.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { CampaignEmailConfig } from './entities/campaing-email-config.entity';
+import { TemplateEmail } from '@modules/template-email/entities/template-email.entity';
+import { CampaignEmail } from '@modules/campaign-email/entities/campaign-email.entity';
+import { CampaignEmailRepository } from '@modules/campaign-email/repositories/campaign-email.repository';
 
 @Injectable()
 export class CampaingEmailConfigService {
-  constructor(private readonly repository: CampaignEmailConfigRepository) {}
+  constructor(private readonly repository: CampaignEmailConfigRepository,
+     private readonly repositoryCampaignEmail: CampaignEmailRepository
+  ) {}
   
     async findAll(
       limit: number,
@@ -18,6 +23,13 @@ export class CampaingEmailConfigService {
           limit,
           offset,
           order: [['id', 'DESC']],
+            include: [
+            {
+              model: TemplateEmail,
+              as: 'template',
+              attributes: ['id', 'name', 'template'], 
+            },
+          ],
         });
       } catch (error) {
         throw new InternalServerErrorException(
@@ -35,6 +47,23 @@ export class CampaingEmailConfigService {
         }
         return exist;
       } catch (error) {
+        throw new InternalServerErrorException(
+          error,
+          'Error interno del servidor',
+        );
+      }
+    }
+
+    async findOneAll(id: number): Promise<CampaignEmail[]> {
+      try {
+        return await this.repositoryCampaignEmail.findAll({
+          where: {
+            idCampaignEmailConfig: id,
+          },
+          order: [['id', 'DESC']]
+        });
+      } catch (error) {
+        console.error('Error en findOneAll:', error);
         throw new InternalServerErrorException(
           error,
           'Error interno del servidor',

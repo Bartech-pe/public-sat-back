@@ -57,7 +57,7 @@ export class EmailProcessor extends WorkerHost {
     } catch (error) {
 
       this.logger.error(
-        `❌ Error al enviar correo a ${email.to} (Job ID: ${job.id}): ${
+        `Error al enviar correo a ${email.to} (Job ID: ${job.id}): ${
           error.response?.data?.message || error.message
         }`,
       );

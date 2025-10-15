@@ -58,7 +58,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         console.log(`📤 Alerta enviada a ${userId}`);
       } else {
-        console.warn(`⚠️ Usuario ${userId} no está conectado`);
+        console.warn(`Usuario ${userId} no está conectado`);
       }
     }
   }

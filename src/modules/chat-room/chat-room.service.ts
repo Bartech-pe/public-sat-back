@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateChatRoomDto } from './dto/create-chat-room.dto';
 import { UpdateChatRoomDto } from './dto/update-chat-room.dto';
 import { ChatRoomRepository } from './repositories/chat-room.repository';
@@ -11,9 +11,12 @@ import { UserRepository } from '@modules/user/repositories/user.repository';
 import { ChatRoomMessage } from './entities/chat-room-message.entity';
 import { Op } from 'sequelize';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { MultiChannelChatService } from '@modules/multi-channel-chat/multi-channel-chat.service';
 
 @Injectable()
 export class ChatRoomService {
+  private readonly logger = new Logger(MultiChannelChatService.name);
+  
   constructor(
     private readonly roomRepository: ChatRoomRepository,
     private readonly userRoomRepository: UserChatRoomRepository,
@@ -102,22 +105,30 @@ export class ChatRoomService {
     otherUserIds: number[],
     name?: string,
   ) {
-    const allUserIds = [currentUserId, ...otherUserIds];
-    const isGroup = allUserIds.length > 2; // 👈 Lo determinamos aquí
+    try {
 
-    const room = await this.roomRepository.create({
-      name: isGroup ? name : undefined,
-      isGroup,
-    });
-
-    const associations = allUserIds.map((userId) => ({
-      userId,
-      chatRoomId: room.get().id,
-    }));
-
-    await this.userRoomRepository.bulkCreate(associations);
-
-    return room;
+      const filteredOtherUserIds = otherUserIds.filter(
+        (id) => id !== currentUserId,
+      );
+      const allUserIds = [currentUserId, ...filteredOtherUserIds];
+      const isGroup = allUserIds.length > 2;  
+  
+      const room = await this.roomRepository.create({
+        name: isGroup ? name : undefined,
+        isGroup,
+      });
+  
+      const associations = allUserIds.map((userId) => ({
+        userId,
+        chatRoomId: room.get().id,
+      }));
+  
+      await this.userRoomRepository.bulkCreate(associations);
+  
+      return room;
+    } catch (error) {
+      this.logger.error(error.toString())
+    }
   }
 
   async getOrCreatePrivateRoom(
@@ -219,14 +230,11 @@ export class ChatRoomService {
 
   //eliminar mensajes de la tabla userchatrooms
 
-  removeUserGroup(id: number): Promise<void> {
+  async removeUserGroup(id: number): Promise<void> {
     try {
-      return this.userRoomRepository.delete(id);
+      return await this.userRoomRepository.delete(id);
     } catch (error) {
-      throw new InternalServerErrorException(
-        error,
-        'Error interno del servidor',
-      );
+      this.logger.error(error.toString())
     }
   }
 

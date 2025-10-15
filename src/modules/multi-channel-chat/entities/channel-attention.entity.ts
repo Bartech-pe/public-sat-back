@@ -57,6 +57,14 @@ export class ChannelAttention extends Model<ChannelAttention> {
   consultTypeId?: number;
 
   @Column({
+    field: 'attention_detail',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'detalle de atención',
+  })
+  attentionDetail?: string;
+
+  @Column({
     field: 'status',
     type: DataType.ENUM(...Object.values(ChannelAttentionStatus)),
     allowNull: false,

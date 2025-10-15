@@ -143,6 +143,6 @@ export class ChatRoomController {
 
   @Delete('room/userGroup/:id')
   removeUserGroup(@Param('id') id: number) {
-    return this.chatService.removeUserGroup(+id);
+    return this.chatService.removeUserGroup(id);
   }
 }

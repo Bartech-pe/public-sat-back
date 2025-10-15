@@ -15,6 +15,7 @@ import { UpdateCampaingEmailConfigDto } from './dto/update-campaing-email-config
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { CampaignEmailConfig } from './entities/campaing-email-config.entity';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
+import { CampaignEmail } from '@modules/campaign-email/entities/campaign-email.entity';
 
 @Controller('campaing-email-config')
 export class CampaingEmailConfigController {
@@ -30,6 +31,11 @@ export class CampaingEmailConfigController {
     @Get(':id')
     findOne(@Param('id') id: number): Promise<CampaignEmailConfig> {
       return this.service.findOne(+id);
+    }
+
+    @Get('progress/:id')
+    findOneAll(@Param('id') id: number): Promise<CampaignEmail[]> {
+      return this.service.findOneAll(+id);
     }
   
     @Post()

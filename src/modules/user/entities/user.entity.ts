@@ -7,6 +7,7 @@ import {
   DefaultScope,
   DeletedAt,
   ForeignKey,
+  HasMany,
   HasOne,
   Model,
   Scopes,
@@ -23,6 +24,7 @@ import { SkillUser } from '@modules/skill/entities/skill-user.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { CallHistory } from '@modules/call/entities/call-history.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['password', 'deletedAt', 'deletedBy'] }, // Excluir password y campo de eliminación lógica
@@ -134,6 +136,9 @@ export class User extends Model {
 
   @BelongsToMany(() => ChannelState, () => InboxUser)
   channelStates: ChannelState[];
+
+  @HasMany(() => CallHistory)
+  callHistory: CallHistory[];
 
   @Column({
     field: 'status',

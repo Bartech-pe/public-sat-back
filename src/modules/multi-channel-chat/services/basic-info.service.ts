@@ -161,7 +161,10 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     let newMessage: ChannelRoomNewMessageDto = {
       channelRoomId: message.channelRoom.id,
       unreadCount: countUnreadMessages.total,
-      assistanceId: message.assistance.id,
+      attention:
+      {
+          id: message.assistance.id,
+      },
       externalRoomId: message.data.payload.chat_id as string,
       channel: message.data.payload.channel,
       advisor: message.user,

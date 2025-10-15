@@ -42,6 +42,7 @@ import {
 import * as dayjs from 'dayjs';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
+import { AssignAttentionDetailDto } from '../dto/channel-attentions/assign-attention-detail.dto';
 
 @Injectable()
 export class ChannelAttentionService {
@@ -63,6 +64,35 @@ export class ChannelAttentionService {
     private readonly multiChannelChatGateway: MultiChannelChatGateway,
   ) {
     this.subscriber = new Redis();
+  }
+
+  async assignAttentionDetail(payload: AssignAttentionDetailDto): Promise<BaseResponseDto>
+  {
+    let response :BaseResponseDto ={
+      success: false,
+      message: ""
+    }
+    try {
+      if(payload.attentionId)
+      {
+        const attentionUpdated = await this.assistanceRepository.update(payload.attentionId, {
+          attentionDetail: payload.attentionDetail,
+          consultTypeId: payload.consultTypeId
+        });
+
+        this.multiChannelChatGateway.notifyAttentionDetailChanged({
+          assistanceId: payload.attentionId
+        })
+
+        response.message = "Se ha creado el detalle de atención correctamente";
+        response.success = true;
+      }
+      return response
+    } catch (error) {
+      response.error = error.toString();
+      return response;
+      this.logger.error(error.toString())      
+    }
   }
 
   async closeChannelAttention(

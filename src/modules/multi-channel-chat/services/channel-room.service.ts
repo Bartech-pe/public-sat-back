@@ -93,7 +93,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
 
     const inboxes = currentUserInboxes.map((x) => x.dataValues.inboxId);
 
-    const assistances = await this.assistanceRepository.findAll({
+    const attentions = await this.assistanceRepository.findAll({
       ...(query.chatStatus === 'completado'
         ? {
             where: {
@@ -173,24 +173,24 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
 
     const result: ChannelRoomSummaryDto[] = [];
 
-    for (const assistance of assistances) {
-      const assistanceData = assistance.toJSON();
-      const channelRoom = assistance.get('channelRoom') as ChannelRoom;
+    for (const attention of attentions) {
+      const attentionParsed = attention.toJSON();
+      const channelRoom = attention.get('channelRoom') as ChannelRoom;
       const chatroom = channelRoom?.toJSON();
       const inbox = channelRoom?.get('inbox') as Inbox;
       const channel = inbox?.get('channel')?.toJSON() as Channel;
-      const messages = assistance?.get('messages')[0] as ChannelMessage;
+      const messages = attention?.get('messages')[0] as ChannelMessage;
       const lastMessage = !messages ? null : messages.toJSON();
       const citizen = channelRoom?.get('citizen')?.toJSON() as ChannelCitizen;
       const advisor = channelRoom?.get('user')?.toJSON() as User;
 
-      // ✅ Validaciones: sin mensaje, o asesor distinto (solo si no es admin)
+      // Validaciones: sin mensaje, o asesor distinto (solo si no es admin)
       if (!lastMessage) continue;
       if (currentUserRole.name !== 'administrador' && chatroom?.userId !== user.id) continue;
 
       const unreadCount = await this.channelMessageRepository.findAndCountAll({
         where: {
-          assistanceId: assistance.id,
+          assistanceId: attention.id,
           status: 'unread',
           senderType: 'citizen',
         },
@@ -198,7 +198,12 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
 
       result.push({
         channelRoomId: chatroom?.id,
-        assistanceId: assistanceData.id,
+        attention: {
+          id: attentionParsed.id,
+          attentionDetail: attentionParsed?.attentionDetail,
+          consultTypeId: attentionParsed?.consultTypeId,
+          endDate: attentionParsed.endDate
+        },
         externalRoomId: chatroom?.externalChannelRoomId,
         channel: channel?.name,
         status: chatroom?.status,
@@ -230,35 +235,21 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       });
     }
 
-    // 🧩 Orden base por timestamp
     if (result.length) {
       result.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
     }
 
-    // 🧠 NUEVA LÓGICA DE FILTRADO FINAL
-    /**
-     * Reglas:
-     * 1️⃣ Si chatStatus está definido → filtra por él, ignorando messageStatus.
-     * 2️⃣ Si no hay chatStatus pero sí messageStatus → filtra por messageStatus.
-     * 3️⃣ Si no hay ninguno → mostrar unread y prioridad (prioridad primero).
-     */
-
-    // 1️⃣ chatStatus explícito
     if (query.chatStatus) {
       return result.filter((ch) => ch.status === query.chatStatus);
     }
 
-    // 2️⃣ Solo messageStatus
     if (!query.chatStatus && query.messageStatus) {
       return result.filter((ch) => ch.lastMessage.status === query.messageStatus);
     }
-
-    // 3️⃣ Estado inicial → unread + prioridad
     const filtered = result.filter(
       (ch) => ch.lastMessage.status === 'unread' || ch.status === 'prioridad',
     );
 
-    // 🏁 Prioridad primero, luego timestamp
     filtered.sort((a, b) => {
       if (a.status === 'prioridad' && b.status !== 'prioridad') return -1;
       if (b.status === 'prioridad' && a.status !== 'prioridad') return 1;
@@ -375,6 +366,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     const credentials = inbox?.get('credentials').toJSON() as InboxCredential;
     const citizen = room.get('citizen')?.toJSON() as ChannelCitizen;
     const assistance = room?.get('assistances')[0] as ChannelAttention;
+    const attentionParsed = assistance.toJSON()
     const messages = assistance?.get('messages') as ChannelMessage[];
 
     // Parse mensajes
@@ -422,6 +414,12 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     return {
       assistanceId: assistance.id,
       channelRoomId: room.id,
+      attention:{
+        id: attentionParsed.id,
+        attentionDetail: attentionParsed.attentionDetail,
+        consultTypeId: attentionParsed.consultTypeId,
+        endDate: attentionParsed.endDate,
+      },
       externalRoomId: chatroom.externalChannelRoomId,
       citizen: {
         id: citizen.id,
@@ -490,6 +488,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       if (!assistance) {
         throw new NotFoundException('No se encontraron datos del chat');
       }
+      const attentionParsed = assistance.toJSON();
       const channelRoom = assistance.get('channelRoom') as ChannelRoom;
       const inbox = channelRoom.get('inbox') as Inbox;
       const citizen = channelRoom.get('citizen').toJSON() as ChannelCitizen;
@@ -576,7 +575,12 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       let newMessage: ChannelRoomNewMessageDto = {
         channelRoomId: channelRoom.dataValues.id,
         botStatus: 'paused',
-        assistanceId: assistance.dataValues.id,
+        attention: {
+          id: attentionParsed.id,
+          attentionDetail: attentionParsed?.attentionDetail,
+          consultTypeId: attentionParsed?.consultTypeId,
+          endDate: attentionParsed?.endDate
+        },
         advisor: {
           id: channelUser.id,
           name: channelUser.name,

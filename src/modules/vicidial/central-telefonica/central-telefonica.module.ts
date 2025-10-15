@@ -7,7 +7,6 @@ import { VicidialCampaign } from './entities/vicidial-campaign.entity';
 import { AudioController } from './audio.controller';
 import { AudioService } from './services/audio.service';
 import { AudioStoreDetails } from './entities/audio-store-details.entity';
-
 import { VicidialLead } from './entities/vicidial-list.entity';
 import { VicidialLists } from './entities/vicidial-lists.entity';
 import { AloSatController } from './controllers/alo-sat.controller';

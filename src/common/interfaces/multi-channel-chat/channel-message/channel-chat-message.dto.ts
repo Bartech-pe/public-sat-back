@@ -1,5 +1,7 @@
 import { Attachment } from '@common/interfaces/channel-connector/incoming/incoming.interface';
 import { ChannelCitizen } from '../channel-citizen/channel-citizen.interface';
+import { ChannelAttentionDto } from '@modules/multi-channel-chat/dto/channel-attentions/get-assistance.dto';
+import { ChannelAttentionSummariesDTO } from '../channel-room/channel-room-summary.dto';
 
 export type ChatStatus = 'pendiente' | 'prioridad' | 'completado';
 export type MessageStatus = 'read' | 'unread';
@@ -18,7 +20,7 @@ export class ChannelChatDetail {
   channelRoomId: number;
   channel: Channels;
   status: ChatStatus;
-  assistanceId: number;
+  attention: ChannelAttentionSummariesDTO;
   externalRoomId: string;
   botStatus: BotStatus;
   citizen: ChannelCitizen;

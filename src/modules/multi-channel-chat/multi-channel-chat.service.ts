@@ -97,11 +97,11 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
   }
 
   private connect() {
-    ((this.socket = io(channelConnectorConfig.baseUrl,{
+    ((this.socket = io(channelConnectorConfig.baseUrl, {
       auth: {
-        token: channelConnectorConfig.verifyToken
-      }
-      })),
+        token: channelConnectorConfig.verifyToken,
+      },
+    })),
       {
         transports: ['websocket'],
       });
@@ -131,7 +131,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       ) => {
         let result: IChannelChatInformation = {
           registered: false,
-          error: "",
+          error: '',
           assistanceId: null,
           channelCitizenId: null,
           channelRoomId: null,
@@ -139,21 +139,19 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
         };
         try {
           if (data.type !== MessageType.INCOMING) return null;
-          
-          if(data.payload.channel == ChannelType.CHATSAT)
-          {
+
+          if (data.payload.channel == ChannelType.CHATSAT) {
             this.logger.debug(data);
-            const isValidToken = await this.checkCitizenToken(data?.token)
-            if(!isValidToken)
-            {
-              result.error = "No autorizado."
+            const isValidToken = await this.checkCitizenToken(data?.token);
+            if (!isValidToken) {
+              result.error = 'No autorizado.';
               if (typeof callback === 'function') {
                 callback(result);
               }
               return;
             }
           }
-          
+
           const citizen =
             await this.channelCitizenService.createCitizenFromMessage(data);
           const channelRoom = await this.createChannelRoom(
@@ -220,7 +218,9 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
 
           let newMessage: ChannelRoomNewMessageDto = {
             channelRoomId: channelRoomParsed.id,
-            assistanceId: assistance.id,
+            attention: {
+              id: assistance.id,
+            },
             externalRoomId: channelRoomParsed.externalChannelRoomId,
             channel: data.payload.channel,
             advisor: {
@@ -292,7 +292,8 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           if (
             data.payload.channel == ChannelType.CHATSAT ||
             (!needVerify &&
-              assistance.status !== ChannelAttentionStatus.IDENTITY_VERIFICATION)
+              assistance.status !==
+                ChannelAttentionStatus.IDENTITY_VERIFICATION)
           ) {
             await this.messageBufferService.addMessageToBuffer(bufferedMessage);
           }
@@ -318,11 +319,11 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     );
 
     this.socket.on('disconnect', () => {
-      this.logger.warn('🔌 Desconectado de Socket.IO');
+      this.logger.warn('Desconectado de Socket.IO');
     });
 
     this.socket.on('connect_error', (err) => {
-      // this.logger.error('❗ Error de conexión a Socket.IO:', err.message);
+      this.logger.error('Error de conexión a Socket.IO:', err.message);
     });
   }
 
@@ -330,22 +331,23 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  private async checkCitizenToken(token?: string): Promise<boolean>
-  {
-      if (!token || !token.startsWith('Bearer ')) {
-        return false
-      }
-      const cleanToken = token.split(' ')[1];
-      
-      try {
-        const reponse = await this.jwtService.verifyAsync(cleanToken, {secret: jwtConfig.secretCitizen});
-        
-        return !!reponse;
-      } catch (error) {
-        this.logger.error(error);
-        return false;
-      }
-  } 
+  private async checkCitizenToken(token?: string): Promise<boolean> {
+    if (!token || !token.startsWith('Bearer ')) {
+      return false;
+    }
+    const cleanToken = token.split(' ')[1];
+
+    try {
+      const reponse = await this.jwtService.verifyAsync(cleanToken, {
+        secret: jwtConfig.secretCitizen,
+      });
+
+      return !!reponse;
+    } catch (error) {
+      this.logger.error(error);
+      return false;
+    }
+  }
 
   handleChatCompletedEvent(payload: IChannelChatInformation) {
     try {
@@ -464,6 +466,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     channelCitizenId: number,
   ): Promise<ChannelRoom> {
     const message = newMessage.payload;
+    console.log(newMessage);
 
     let inboxCredential: InboxCredential | null =
       await this.inboxCredentialRepository.findOne({
@@ -524,26 +527,27 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       });
 
     if (channelRoomExists.length) {
-      const attentions = await this.ChannelAttentionRepository.findAll(
-      {
-          where: {
-            channelRoomId: channelRoomExists[0].dataValues.id, 
-            status: ChannelAttentionStatus.IN_PROGRESS
-          }
-        }
-      )
+      const attentions = await this.ChannelAttentionRepository.findAll({
+        where: {
+          channelRoomId: channelRoomExists[0].dataValues.id,
+          status: ChannelAttentionStatus.IN_PROGRESS,
+        },
+      });
 
-      if (channelRoomExists[0].dataValues.status == 'completado' || (channelRoomExists[0].dataValues.status == 'completado' && attentions.length > 0)) {
+      if (
+        channelRoomExists[0].dataValues.status == 'completado' ||
+        (channelRoomExists[0].dataValues.status == 'completado' &&
+          attentions.length > 0)
+      ) {
         const [_, [updatedRoom]] = await this.channelRoomRepository.update(
-            channelRoomExists[0].dataValues.id,
-            {
-              status: 'pendiente',
-              userId: selectedUserId,
-            },
-          );
-          this.logger.debug("diavlo: ",updatedRoom);
-          return updatedRoom;
-
+          channelRoomExists[0].dataValues.id,
+          {
+            status: 'pendiente',
+            userId: selectedUserId,
+          },
+        );
+        this.logger.debug('diavlo: ', updatedRoom);
+        return updatedRoom;
       }
       return channelRoomExists[0];
     }
@@ -559,7 +563,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
 
     return this.channelRoomRepository.create(channelRoomDto);
   }
-
 
   public async createChannelMessage(
     payload: CreateChannelMessageDto,
@@ -600,7 +603,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     if (this.socket && this.socket.connected) {
       this.socket.emit(event, data);
     } else {
-      this.logger.warn('⚠️ Socket no conectado. No se puede emitir mensaje.');
+      this.logger.warn('Socket no conectado. No se puede emitir mensaje.');
     }
   }
 

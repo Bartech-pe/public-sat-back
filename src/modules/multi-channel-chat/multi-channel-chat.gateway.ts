@@ -26,8 +26,8 @@ import { MultiChannelChatService } from './multi-channel-chat.service';
 import { forwardRef, Inject } from '@nestjs/common';
 
 export interface ChannelRoomAssistance {
-  channelRoomId: number;
-  assistanceId: number;
+  channelRoomId?: number;
+  assistanceId?: number;
   userId?: number;
 }
 
@@ -96,6 +96,10 @@ export class MultiChannelChatGateway
 
   notifyChannelRoomStatusChanged(payload: changeChannelRoomStatusDto) {
     this.server.emit('chat.status.change', payload);
+  }
+
+  notifyAttentionDetailChanged(payload: ChannelRoomAssistance) {
+    this.server.emit('chat.attention.detail.modified', payload);
   }
 
   notifyAdvisorRequest(

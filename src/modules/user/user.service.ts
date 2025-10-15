@@ -18,6 +18,7 @@ import { Channel } from '@modules/channel/entities/channel.entity';
 import { Op } from 'sequelize';
 import { roleIdAdministrador } from '@common/constants/role.constant';
 import { VicidialUserRepository } from './repositories/vicidial-user.repository';
+import { ChannelPhoneState } from '@common/enums/status-call.enum';
 
 @Injectable()
 export class UserService {
@@ -177,7 +178,10 @@ export class UserService {
       const dataToCreate: any = { ...restoDto };
 
       if (vicidial) {
-        dataToCreate.vicidial = vicidial; // No castees el tipo
+        dataToCreate.vicidial = {
+          ...vicidial,
+          channelStateId: ChannelPhoneState.OFFLINE,
+        }; // No castees el tipo
       }
 
       return this.repository.create(dataToCreate, {
@@ -235,6 +239,7 @@ export class UserService {
           await this.vicidialUserRepository.create({
             ...dto.vicidial,
             userId: id,
+            channelStateId: ChannelPhoneState.OFFLINE,
           });
         }
       }

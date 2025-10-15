@@ -15,7 +15,7 @@ module.exports = {
         comment: 'nombre Campaña',
       },
 
-      id_template_id: {
+      id_template: {
         type: Sequelize.BIGINT,
         allowNull: false,
         references: { model: 'template_emails', key: 'id' },
