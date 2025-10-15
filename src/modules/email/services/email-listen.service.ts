@@ -12,6 +12,9 @@ export class EmailListenService implements OnModuleInit {
 
   onModuleInit() {
     this.socket = io(channelConnectorConfig.baseUrl, {
+      auth: {
+        token: channelConnectorConfig.verifyToken,
+      },
       transports: ['websocket'], // fuerza WebSocket puro
     });
 
@@ -23,6 +26,10 @@ export class EmailListenService implements OnModuleInit {
 
     this.socket.on('disconnect', () => {
       this.logger.log('Cliente NestJS desconectado');
+    });
+
+    this.socket.on('connect_error', (err) => {
+      this.logger.error('Error de conexión a Socket.IO:', err.message);
     });
 
     // Escuchar evento del Gateway
