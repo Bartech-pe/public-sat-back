@@ -9,18 +9,13 @@ export class PortfolioQueueProcessor extends WorkerHost {
   }
 
   async process(job: Job<any>) {
-
     const { portfolioId, detalles } = job.data;
 
     try {
-     
       await this.portfolioService.savePortfolioDetails(portfolioId, detalles);
-      console.log(`✅ Detalles registrados para cartera ID ${portfolioId}`);
-    
+      console.log(`Detalles registrados para cartera ID ${portfolioId}`);
     } catch (error) {
-      console.error(`❌ Error procesando cartera ${portfolioId}:`, error);
+      console.error(`Error procesando cartera ${portfolioId}:`, error);
     }
   }
-
-
 }

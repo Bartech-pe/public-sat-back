@@ -5,6 +5,7 @@ import {
   Get,
   Inject,
   InternalServerErrorException,
+  Param,
   Post,
 } from '@nestjs/common';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -107,6 +108,25 @@ export class AloSatController {
     }
   }
 
+  @Get('agent-logout/:userId')
+  async agentLogoutByUserId(@Param('userId') userId: number): Promise<any> {
+    try {
+      const res = await this.service.agentLogout(userId);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: userId },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.OFFLINE,
+        pauseCode: null,
+      });
+      this.userGateway.notifyPhoneStateUser(userId);
+      return res;
+    } catch (error) {
+      console.log('error', error);
+      throw new InternalServerErrorException('Error al desloguear usuario');
+    }
+  }
+
   @Post('pause-agent')
   async pauseAgent(
     @CurrentUser() user: User,
@@ -179,6 +199,20 @@ export class AloSatController {
     return res;
   }
 
+  @Get('end-call/:userId')
+  async endCallByUserId(@Param('userId') userId: number): Promise<any> {
+    const res = await this.service.endCall(userId);
+    const vicidialUser = await this.vicidialUserRepository.findOne({
+      where: { userId: userId },
+    });
+    await vicidialUser?.update({
+      channelStateId: ChannelPhoneState.PAUSED,
+      pauseCode: VicidialPauseCode.WRAP,
+    });
+    this.userGateway.notifyPhoneStateUser(userId);
+    return res;
+  }
+
   @Post('transfer-call')
   transferCall(
     @CurrentUser() user: User,
@@ -186,6 +220,15 @@ export class AloSatController {
   ): Promise<any> {
     console.log('dto', dto);
     return this.service.transferCall(user.id, dto.userId);
+  }
+
+  @Post('transfer-call-me')
+  transferCallMe(
+    @CurrentUser() user: User,
+    @Body() dto: TransferCallDto,
+  ): Promise<any> {
+    console.log('dto', dto);
+    return this.service.transferCall(dto.userId, user.id);
   }
 
   @Post('park-call')

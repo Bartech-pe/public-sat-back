@@ -19,6 +19,8 @@ import { CreateInboxCredentialDto } from './dto/create-inbox-credential.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { InvalidateInboxCredentialDto } from './dto/invalidate-inbox-credentials.dto';
 import { InboxCredential } from './entities/inbox-credential.entity';
+import { EmailStateEnum } from '@modules/email/enum/email-state.enum';
+import { ChannelStateEnum } from '@common/enums/channel-state.enum';
 
 @Injectable()
 export class InboxService {
@@ -112,9 +114,13 @@ export class InboxService {
   ): Promise<InboxUser[]> {
     try {
       const securedDtoList = await Promise.all(
-        dtoList.map(async (dto) => ({
-          ...dto,
-        })),
+        dtoList.map(
+          async (dto) =>
+            ({
+              ...dto,
+              channelStateId: ChannelStateEnum.OFFLINE,
+            }) as InboxUser,
+        ),
       );
 
       await this.inboxUserRepository.bulkDestroy({
@@ -161,6 +167,7 @@ export class InboxService {
       const securedDtoList = await Promise.all(
         dtoList.map(async (dto) => ({
           ...dto,
+          channelStateId: ChannelStateEnum.OFFLINE,
         })),
       );
 

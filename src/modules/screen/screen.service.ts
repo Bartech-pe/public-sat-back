@@ -133,6 +133,7 @@ export class ScreenService {
 
   async findAllByOffice(officeId: string): Promise<Screen[]> {
     const modulos = await this.repository.findAll({
+      where: { status: true },
       include: [
         {
           model: Role,

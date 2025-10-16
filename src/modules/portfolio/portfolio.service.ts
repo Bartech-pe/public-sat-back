@@ -28,12 +28,12 @@ export class PortfolioService {
     private readonly repository: PortfolioRepository,
     private readonly cityzenRepository: CitizenRepository,
     private readonly citizenContactRepository: CitizenContactRepository,
-    private readonly userRepository:UserRepository,
-    
+    private readonly userRepository: UserRepository,
+
     private readonly repositoryDetail: PortfolioDetailRepository,
     @InjectQueue('portfolio-detail-queue')
     private readonly portfolioQueue: Queue,
-     private readonly gateway: PortfolioGateway,
+    private readonly gateway: PortfolioGateway,
   ) {}
 
   ///private readonly PortfolioDetailRepository: PortfolioDetailRepository
@@ -102,7 +102,6 @@ export class PortfolioService {
     }
   }
 
-  
   getCitizenContacts(row: any): CitizenContact[] {
     const tipDoc = row['TIPO DOC. IDE.'];
     const docIde = row['N° DOC. IDE.'];
@@ -169,29 +168,39 @@ export class PortfolioService {
       .filter((item) => !!item.value);
   }
 
-  async create(dto: Omit<CreatePortfolioDto, 'file'>, file: Express.Multer.File): Promise<Portfolio> {
+  async create(
+    dto: Omit<CreatePortfolioDto, 'file'>,
+    file: Express.Multer.File,
+  ): Promise<Portfolio> {
     try {
-
       if (!file) {
-          throw new BadRequestException('Debe subir un archivo Excel.');
+        throw new BadRequestException('Debe subir un archivo Excel.');
       }
 
-        // Leer el archivo Excel
+      // Leer el archivo Excel
       const workbook = XLSX.read(file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-      const listUsers = (await this.userRepository.findAll()).map(item => item.toJSON());
+      const listUsers = (await this.userRepository.findAll()).map((item) =>
+        item.toJSON(),
+      );
 
       if (!data.length) {
         throw new BadRequestException('El archivo Excel está vacío.');
       }
 
       // Mapeo de datos
-      const data_detalles: PortfolioDetail[] = data.map((item): PortfolioDetail => {
-        // Obtener contactos del ciudadano
-        const citizenContacts: CitizenContact[] = this.getCitizenContacts(item);
-        const user = listUsers.find(u => u.name?.trim().toLowerCase() == item['SECTORISTA']?.trim().toLowerCase())
+      const data_detalles: PortfolioDetail[] = data
+        .map((item): PortfolioDetail => {
+          // Obtener contactos del ciudadano
+          const citizenContacts: CitizenContact[] =
+            this.getCitizenContacts(item);
+          const user = listUsers.find(
+            (u) =>
+              u.name?.trim().toLowerCase() ==
+              item['SECTORISTA']?.trim().toLowerCase(),
+          );
           return {
             userId: user?.id,
             segment: item['SEGMENTO'],
@@ -200,22 +209,22 @@ export class PortfolioService {
             taxpayerType: item['TIPO DE CONTRIBUYENTE'],
             tipDoc: item['TIPO DOC. IDE.'],
             docIde: String(item['N° DOC. IDE.']),
-            code: String(item['CODIGO DE CONTRIBUYENTE'] ),
+            code: String(item['CODIGO DE CONTRIBUYENTE']),
             debt: parseFloat(item['DEUDA']),
             currentDebt: parseFloat(item['DEUDA']),
             citizenContacts,
           } as PortfolioDetail;
-      }).filter(fil => fil.userId);
+        })
+        .filter((fil) => fil.userId);
 
       const result = await this.repository.create({ ...dto });
 
-     await this.portfolioQueue.add('register-details', {
+      await this.portfolioQueue.add('register-details', {
         portfolioId: result.id,
         detalles: data_detalles,
       });
-       
-      return result;
 
+      return result;
     } catch (error) {
       throw new InternalServerErrorException(
         error,
@@ -224,108 +233,108 @@ export class PortfolioService {
     }
   }
 
-  
-  async savePortfolioDetails(portfolioId: number, detallesComplete: PortfolioDetail[]) {
-
+  async savePortfolioDetails(
+    portfolioId: number,
+    detallesComplete: PortfolioDetail[],
+  ) {
     const BATCH_SIZE = 500;
 
     const total = detallesComplete.length;
     let processed = 0;
-   
+
     for (let i = 0; i < detallesComplete.length; i += BATCH_SIZE) {
+      const detalles = detallesComplete.slice(i, i + BATCH_SIZE);
 
+      // Procesar contactos ciudadanos
+      const citizenContactList = detalles.flatMap(
+        (det) => det.citizenContacts ?? [],
+      );
 
-        const detalles = detallesComplete.slice(i, i + BATCH_SIZE);
-
-          // Procesar contactos ciudadanos
-        const citizenContactList = detalles.flatMap((det) => det.citizenContacts ?? []);
-
-        // Eliminar duplicados
-        const uniqueContacts = citizenContactList.filter(
-          (contact, index, self) =>
-            index ===
-            self.findIndex(
-              (c) =>
-                c.tipDoc === contact.tipDoc &&
-                c.docIde === contact.docIde &&
-                c.contactType === contact.contactType &&
-                c.value === contact.value,
-            ),
-        );
-
-        // Buscar contactos existentes
-        const existingContacts = await this.citizenContactRepository.findAll({
-          where: {
-            [Op.or]: uniqueContacts.map((c) => ({
-              tipDoc: c.tipDoc,
-              docIde: c.docIde,
-              contactType: c.contactType,
-              value: c.value,
-            })),
-          },
-        });
-
-        // Crear los que no existen
-        const existingSet = new Set(
-          existingContacts.map(
-            (c) => `${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`,
+      // Eliminar duplicados
+      const uniqueContacts = citizenContactList.filter(
+        (contact, index, self) =>
+          index ===
+          self.findIndex(
+            (c) =>
+              c.tipDoc === contact.tipDoc &&
+              c.docIde === contact.docIde &&
+              c.contactType === contact.contactType &&
+              c.value === contact.value,
           ),
+      );
+
+      // Buscar contactos existentes
+      const existingContacts = await this.citizenContactRepository.findAll({
+        where: {
+          [Op.or]: uniqueContacts.map((c) => ({
+            tipDoc: c.tipDoc,
+            docIde: c.docIde,
+            contactType: c.contactType,
+            value: c.value,
+          })),
+        },
+      });
+
+      // Crear los que no existen
+      const existingSet = new Set(
+        existingContacts.map(
+          (c) => `${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`,
+        ),
+      );
+
+      const contactsToCreate = uniqueContacts.filter(
+        (c) =>
+          !existingSet.has(
+            `${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`,
+          ),
+      );
+
+      if (contactsToCreate.length > 0) {
+        await this.citizenContactRepository.bulkCreate(contactsToCreate);
+      }
+
+      //Crear ciudadanos (evitar duplicados)
+      const uniqueCitizen = detalles.filter(
+        (contact, index, self) =>
+          index ===
+          self.findIndex(
+            (c) =>
+              c.tipDoc === contact.tipDoc &&
+              c.docIde === contact.docIde &&
+              c.taxpayerName === contact.taxpayerName,
+          ),
+      );
+
+      if (uniqueCitizen.length !== 0) {
+        await this.cityzenRepository.bulkCreate(
+          uniqueCitizen.map((cit) => ({
+            tipDoc: cit.tipDoc,
+            docIde: cit.docIde,
+            name: cit.taxpayerName,
+          })),
+          {
+            updateOnDuplicate: ['name'],
+          },
         );
+      }
 
-        const contactsToCreate = uniqueContacts.filter(
-          (c) =>
-            !existingSet.has(`${c.tipDoc}-${c.docIde}-${c.contactType}-${c.value}`),
-        );
+      //Guardar los detalles de cartera
+      for (const det of detalles) {
+        det.portfolioId = portfolioId;
+      }
 
-        if (contactsToCreate.length > 0) {
-          await this.citizenContactRepository.bulkCreate(contactsToCreate);
-        }
+      // Insertar o actualizar detalles
+      await this.repositoryDetail.bulkCreate(detalles, {
+        updateOnDuplicate: ['debt', 'currentDebt'],
+      });
 
-        //Crear ciudadanos (evitar duplicados)
-        const uniqueCitizen = detalles.filter(
-          (contact, index, self) =>
-            index ===
-            self.findIndex(
-              (c) =>
-                c.tipDoc === contact.tipDoc &&
-                c.docIde === contact.docIde &&
-                c.taxpayerName === contact.taxpayerName,
-            ),
-        );
+      processed += detalles.length;
 
-        if (uniqueCitizen.length !== 0) {
-          await this.cityzenRepository.bulkCreate(
-            uniqueCitizen.map((cit) => ({
-              tipDoc: cit.tipDoc,
-              docIde: cit.docIde,
-              name: cit.taxpayerName,
-            })),
-            {
-              updateOnDuplicate: ['name'],
-            },
-          );
-        }
-
-        //Guardar los detalles de cartera
-        for (const det of detalles) {
-          det.portfolioId = portfolioId;
-        }
-
-        // Insertar o actualizar detalles
-        await this.repositoryDetail.bulkCreate(detalles, {
-          updateOnDuplicate: ['debt', 'currentDebt'],
-        });
-
-        processed += detalles.length;
-        
-        this.gateway.sendProgress(portfolioId, processed, total);
-
+      this.gateway.sendProgress(portfolioId, processed, total);
     }
 
-        this.gateway.sendComplete(portfolioId);
+    this.gateway.sendComplete(portfolioId);
   }
-
-  
 
   async bulkCreate(dtoList: Partial<Portfolio>[]): Promise<Portfolio[]> {
     try {

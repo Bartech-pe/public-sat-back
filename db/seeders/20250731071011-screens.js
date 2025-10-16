@@ -86,7 +86,8 @@ module.exports = {
         {
           id: 8,
           name: 'Atenciones/No Atenciones',
-          description: 'Pantalla de reportes de Atenciones/No Atenciones AlóSAT',
+          description:
+            'Pantalla de reportes de Atenciones/No Atenciones AlóSAT',
           path: '/reports/attention-non-attention',
           icon: null,
           parent_id: 4,
@@ -101,7 +102,7 @@ module.exports = {
           path: '/reports/intern-chat',
           icon: null,
           parent_id: 4,
-          status: true,
+          status: false,
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -420,8 +421,8 @@ module.exports = {
         },
         {
           id: 38,
-          name: 'Respuestas rápidas',
-          description: 'Pantalla de respuestas rápidas',
+          name: 'Respuestas predefinidas',
+          description: 'Pantalla de respuestas predefinidas',
           path: '/settings/predefined-response',
           icon: 'ph:chat-circle-dots',
           parent_id: 29,

@@ -5,6 +5,7 @@ import { VicidialUser } from '../entities/vicidial-user.entity';
 import { User } from '../entities/user.entity';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { CallHistory } from '@modules/call/entities/call-history.entity';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class VicidialUserRepository extends GenericCrudRepository<VicidialUser> {
@@ -23,6 +24,10 @@ export class VicidialUserRepository extends GenericCrudRepository<VicidialUser> 
   }
 
   getAllAloSatState(): Promise<VicidialUser[]> {
+    const startDay = new Date();
+    startDay.setHours(0, 0, 0);
+    const endDay = new Date();
+    endDay.setHours(23, 59, 59);
     return this.model.findAll<VicidialUser>({
       include: [
         {
@@ -32,11 +37,16 @@ export class VicidialUserRepository extends GenericCrudRepository<VicidialUser> 
             {
               model: CallHistory,
               as: 'callHistory',
-              separate: true, // hace una consulta separada
-              limit: 1, // solo trae 1 registro
-              order: [['createdAt', 'DESC']], // el último por fecha
+              where: {
+                createdAt: {
+                  [Op.between]: [startDay, endDay],
+                },
+              },
+              required: false,
+              order: [['createdAt', 'DESC']],
             },
           ],
+          required: false,
         },
         ChannelState,
       ],

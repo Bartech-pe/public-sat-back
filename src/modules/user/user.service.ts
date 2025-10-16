@@ -34,6 +34,7 @@ export class UserService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<User>> {
     try {
+      const officeId = q?.officeId;
       const whereOpts =
         user.roleId == roleIdAdministrador
           ? {
@@ -65,8 +66,11 @@ export class UserService {
                   : {}),
               },
             };
-      const whereOffice =
-        user.roleId == roleIdAdministrador
+      const whereOffice = officeId
+        ? {
+            id: officeId,
+          }
+        : user.roleId == roleIdAdministrador
           ? { status: true }
           : {
               id: user.officeId,
@@ -82,7 +86,7 @@ export class UserService {
           {
             model: Office,
             where: whereOffice,
-            required: !!user.officeId,
+            required: officeId ? true : !!user.officeId,
           },
           {
             model: Inbox,

@@ -431,8 +431,7 @@ export class EmailCenterService implements OnModuleInit {
       const noAttentionId = noAttention.toJSON().id;
       const stateAvalible =
         await this.channelStateRepository.findAvalibleEmail();
-      if (!stateAvalible)
-        throw new InternalServerErrorException('Estado no disponible');
+      if (!stateAvalible) throw new NotFoundException('Estado no disponible');
       const stateAvalibleJson = stateAvalible.toJSON();
       const ibox = await this.inboxRepository.findOne({
         where: { channelId: ChannelEnum.EMAIL },

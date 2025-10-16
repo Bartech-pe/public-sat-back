@@ -63,7 +63,7 @@ export class ScreenController {
   }
 
   @Get('byOffice/:id')
-  findAllByRol(@Param('id') id: string): Promise<Screen[]> {
+  findAllByOffice(@Param('id') id: string): Promise<Screen[]> {
     return this.service.findAllByOffice(id);
   }
 }

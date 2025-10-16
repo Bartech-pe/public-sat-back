@@ -71,14 +71,16 @@ export class AuthController {
   @ApiBearerAuth()
   @Get('logout')
   async logout(@CurrentUser() user: User) {
-    const res = await this.aloSatService.agentLogout(user.id);
-    const vicidialUser = await this.vicidialUserRepository.findOne({
-      where: { userId: user.id },
-    });
-    await vicidialUser?.update({
-      channelStateId: ChannelPhoneState.OFFLINE,
-      pauseCode: null,
-    });
-    return res;
+    try {
+      const res = await this.aloSatService.agentLogout(user.id);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: user.id },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.OFFLINE,
+        pauseCode: null,
+      });
+      return res;
+    } catch (error) {}
   }
 }
