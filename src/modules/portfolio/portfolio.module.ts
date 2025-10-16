@@ -9,6 +9,7 @@ import { CitizenModule } from '@modules/citizen/citizen.module';
 import { UserModule } from '@modules/user/user.module';
 import { BullModule } from '@nestjs/bullmq';
 import { PortfolioQueueProcessor } from './portfolioQueueProcessor';
+import { PortfolioGateway } from './portfolio.gateway';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { PortfolioQueueProcessor } from './portfolioQueueProcessor';
     }),
   ],
   controllers: [PortfolioController],
-  providers: [PortfolioService, PortfolioRepository,PortfolioQueueProcessor],
+  providers: [PortfolioService, PortfolioRepository,PortfolioQueueProcessor,PortfolioGateway],
   exports: [PortfolioRepository,PortfolioQueueProcessor],
 })
 export class PortfolioModule {}

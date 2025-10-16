@@ -21,6 +21,7 @@ import { UserRepository } from '@modules/user/repositories/user.repository';
 import { PortfolioDetailRepository } from '@modules/portfolio-detail/repositories/portfolio-detail.repository';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { PortfolioGateway } from './portfolio.gateway';
 @Injectable()
 export class PortfolioService {
   constructor(
@@ -32,6 +33,7 @@ export class PortfolioService {
     private readonly repositoryDetail: PortfolioDetailRepository,
     @InjectQueue('portfolio-detail-queue')
     private readonly portfolioQueue: Queue,
+     private readonly gateway: PortfolioGateway,
   ) {}
 
   ///private readonly PortfolioDetailRepository: PortfolioDetailRepository
@@ -315,11 +317,12 @@ export class PortfolioService {
         });
 
         processed += detalles.length;
-        console.log(`✅ Procesados ${processed} de ${total} detalles (${((processed / total) * 100).toFixed(2)}%)`);
+        
+        this.gateway.sendProgress(portfolioId, processed, total);
 
     }
 
-    console.log(`${total} detalles guardados para cartera ${portfolioId}`);
+        this.gateway.sendComplete(portfolioId);
   }
 
   

@@ -11,7 +11,6 @@ import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:4200'], // mejor explícito
     credentials: true,
   },
 })
