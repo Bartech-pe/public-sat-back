@@ -15,7 +15,7 @@ import { ChatRoom } from './chat-room.entity';
 @Table({
   tableName: 'user_chat_rooms',
   timestamps: true,
-  paranoid: true,
+  paranoid: true
 })
 export class UserChatRoom extends Model {
   @ForeignKey(() => User)
@@ -64,21 +64,21 @@ export class UserChatRoom extends Model {
   @Column({ field: 'created_by', allowNull: true })
   declare createdBy: number;
 
-  @BelongsTo(() => User, 'createdBy')
+  @BelongsTo(() => User, 'created_by')
   declare createdByUser?: User;
 
   @ForeignKey(() => User)
   @Column({ field: 'updated_by', allowNull: true })
   declare updatedBy: number;
 
-  @BelongsTo(() => User, 'updatedBy')
+  @BelongsTo(() => User, 'updated_by')
   declare updatedByUser?: User;
 
   @ForeignKey(() => User)
   @Column({ field: 'deleted_by', allowNull: true })
   declare deletedBy: number;
 
-  @BelongsTo(() => User, 'deletedBy')
+  @BelongsTo(() => User, 'deleted_by')
   declare deletedByUser?: User;
 
   @CreatedAt

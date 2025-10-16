@@ -15,7 +15,7 @@ import { MultiChannelChatService } from '@modules/multi-channel-chat/multi-chann
 
 @Injectable()
 export class ChatRoomService {
-  private readonly logger = new Logger(MultiChannelChatService.name);
+  private readonly logger = new Logger(ChatRoomService.name);
   
   constructor(
     private readonly roomRepository: ChatRoomRepository,
@@ -232,7 +232,8 @@ export class ChatRoomService {
 
   async removeUserGroup(id: number): Promise<void> {
     try {
-      return await this.userRoomRepository.delete(id);
+      this.roomRepository.delete(id);
+      return await this.userRoomRepository.deleteUserGroup(id);
     } catch (error) {
       this.logger.error(error.toString())
     }

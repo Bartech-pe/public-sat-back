@@ -7,6 +7,8 @@ import {
   Param,
   Delete,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { CreatePortfolioDto } from './dto/create-portfolio.dto';
 import { UpdatePortfolioDto } from './dto/update-portfolio.dto';
@@ -14,6 +16,8 @@ import { Portfolio } from './entities/portfolio.entity';
 import { PortfolioService } from './portfolio.service';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('portfolios')
 export class PortfolioController {
   constructor(private readonly service: PortfolioService) {}
@@ -33,8 +37,14 @@ export class PortfolioController {
   }
 
   @Post()
-  create(@Body() dto: CreatePortfolioDto): Promise<Portfolio> {
-    return this.service.create(dto);
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreatePortfolioDto })
+  create(
+    @Body() dto: Omit<CreatePortfolioDto, 'file'>,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<Portfolio> {
+    return this.service.create(dto,file);
   }
 
   @Patch(':id')

@@ -64,8 +64,15 @@ export class CreatePortfolioDto {
   @Transform(({ value }) => value === 'true' || value === true)
   status: boolean;
 
-  @IsArray()
-  @ValidateNested({ each: true }) // Validar cada objeto del array
-  @Type(() => CreatePortfolioDetailDto) // Transformar cada objeto a DetallePortfolioDTO
-  detalles: CreatePortfolioDetailDto[];
+  // @IsArray()
+  // @ValidateNested({ each: true }) // Validar cada objeto del array
+  // @Type(() => CreatePortfolioDetailDto) // Transformar cada objeto a DetallePortfolioDTO
+  // detalles: CreatePortfolioDetailDto[];
+
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Archivo Excel con los detalles de la cartera',
+  })
+  file: Express.Multer.File;
 }
