@@ -90,7 +90,6 @@ export class PortfolioDetailService {
           as: 'citizenContacts',
           required: false,
           separate: true,
-          where: { status: true },
           on: {
             '$citizenContacts.tip_doc$': {
               [Op.eq]: col('PortfolioDetail.tip_doc'),

@@ -33,14 +33,10 @@ export class CitizenAssistanceService {
       const whereOpts =
         user.roleId == roleIdAdministrador
           ? {
-              where: {
-                status: true,
-              },
+              where: {},
             }
           : {
-              where: {
-                status: true,
-              },
+              where: {},
             };
       return this.repository.findAndCountAll({
         ...whereOpts,
@@ -142,7 +138,6 @@ export class CitizenAssistanceService {
         );
         if (!carteraDetalle.dataValues.status) {
           await this.carteraDetalleRepository.update(dto.portfolioDetailId, {
-            status: true,
             updatedAt: new Date(),
           });
         }

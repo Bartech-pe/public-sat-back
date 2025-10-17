@@ -39,7 +39,6 @@ export class UserService {
         user.roleId == roleIdAdministrador
           ? {
               where: {
-                status: true,
                 ...(q?.byTransfer
                   ? {
                       id: {
@@ -51,7 +50,6 @@ export class UserService {
             }
           : {
               where: {
-                status: true,
                 roleId: {
                   ...(q?.byTransfer
                     ? { [Op.in]: [2, 3] }
@@ -71,7 +69,7 @@ export class UserService {
             id: officeId,
           }
         : user.roleId == roleIdAdministrador
-          ? { status: true }
+          ? {}
           : {
               id: user.officeId,
             };
@@ -134,7 +132,7 @@ export class UserService {
   async findOne(id: number): Promise<User> {
     try {
       const exist = await this.repository.findOne({
-        where: { id, status: true },
+        where: { id },
         include: [
           {
             model: Skill,
@@ -145,7 +143,7 @@ export class UserService {
           },
           {
             model: Office,
-            where: { status: true },
+            where: {},
             required: false,
           },
           {

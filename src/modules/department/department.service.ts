@@ -25,13 +25,10 @@ export class DepartmentService {
       const whereOpts =
         user.roleId == roleIdAdministrador
           ? {
-              where: {
-                status: true,
-              },
+              where: {},
             }
           : {
               where: {
-                status: true,
                 id: user.office?.departmentId,
               },
             };

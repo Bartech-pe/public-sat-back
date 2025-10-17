@@ -26,13 +26,10 @@ export class RoleService {
       const whereOpts =
         user.roleId == roleIdAdministrador
           ? {
-              where: {
-                status: true,
-              },
+              where: {},
             }
           : {
               where: {
-                status: true,
                 id: 3,
               },
             };

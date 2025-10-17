@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { EmailSent } from './dto/center-email.dto';
 import { MailType } from './enum/mail-type.enum';
 import { EmailWorkerService } from './services/email-worker.service';
+import { MailStates } from '@common/enums/assistance-state.enum';
 
 @Processor('mail-events')
 @Injectable()
@@ -67,13 +68,32 @@ export class EmailWorker extends WorkerHost {
       // Respuesta dentro del hilo
       const thread = await this.emailWorkerService.caseAnswerInThread(event);
       if (thread.success) {
-        await this.createMailFlow(
-          event,
-          MailType.CITIZEN,
-          thread,
-          undefined,
-          5,
-        );
+        if (thread.assistanceState.id === MailStates.CLOSED) {
+          // Flujo de nueva atención
+          const { skillId, emailUserJson } =
+            await this.emailWorkerService.getAdvisorsAvaliable();
+
+          if (emailUserJson.length === 0) {
+            await this.emailWorkerService.createAttention(event, undefined);
+          } else {
+            const index = this.roundRobinIndex[skillId] || 0;
+            const emailUser = emailUserJson[index];
+            this.roundRobinIndex[skillId] = (index + 1) % emailUserJson.length;
+            await this.emailWorkerService.createAttention(
+              event,
+              emailUser?.userId,
+            );
+          }
+        } else {
+          await this.createMailFlow(
+            event,
+            MailType.CITIZEN,
+            thread,
+            undefined,
+            5,
+          );
+        }
+
         return;
       }
 

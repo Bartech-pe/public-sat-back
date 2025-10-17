@@ -275,7 +275,7 @@ export class CitizenService {
     docIde: string,
   ): Promise<CitizenContact[]> {
     return this.citizenContactRepository.findAll({
-      where: { tipDoc, docIde, status: true },
+      where: { tipDoc, docIde },
     });
   }
 

@@ -73,7 +73,6 @@ export class PortfolioService {
                 as: 'citizenContacts',
                 required: false,
                 separate: true,
-                where: { status: true },
                 on: {
                   // 👇 referenciamos columnas con Sequelize.col
                   '$detalles.tip_doc$': {

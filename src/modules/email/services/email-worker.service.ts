@@ -27,6 +27,7 @@ import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
 import { roleIdAsesor } from '@common/constants/role.constant';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { EmailGateway } from '../email.gateway';
+import { EmailAttention } from '../entities/email-attention.entity';
 
 @Injectable()
 export class EmailWorkerService {
@@ -156,6 +157,12 @@ export class EmailWorkerService {
     }
     const messageId = await this.emailThreadRepository.findOne({
       where: { messageHeaderGmailId: event.inReplyTo },
+      include: [
+        {
+          model: EmailAttention,
+          include: [AssistanceState],
+        },
+      ],
     });
     if (messageId) {
       const sendState = await this.emailStateRepository.getReply();
@@ -166,6 +173,7 @@ export class EmailWorkerService {
         type: MailType.CITIZEN,
         attentionId: messageId.toJSON().mailAttentionId,
         state: sendState.toJSON().id,
+        assistanceState: messageId.toJSON().emailAttention.assistanceState,
       };
     }
     return { success: false };
