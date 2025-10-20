@@ -8,7 +8,7 @@ export class AudioStoreDetails extends Model {
   @Column({
     type: DataType.STRING(255),
     allowNull: false,
-     primaryKey: true,
+    primaryKey: true,
   })
   audio_filename: string;
 

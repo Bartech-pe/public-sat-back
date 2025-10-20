@@ -2,6 +2,7 @@ import { IsInt, IsOptional, IsString, IsEnum, MaxLength, ValidateNested, IsNotEm
 import { CreateVicidialLeadDto } from './lead-list.dto';
 import { Type } from 'class-transformer';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateVicidialListDto {
   @IsInt()
@@ -29,9 +30,18 @@ export class CreateVicidialListDto {
   @IsEnum(['Y', 'N'])
   active?: 'Y' | 'N' = 'Y';
 
-  @IsArray()
-  @IsNotEmpty({ message: v.isNotEmpty('dtoList') })
-  @ValidateNested({ each: true }) 
-  @Type(() => CreateVicidialLeadDto) 
-  dtoList: CreateVicidialLeadDto[];
+   @ApiProperty({
+      type: 'string',
+      format: 'binary',
+      description: 'Archivo Excel con los detalles de la cartera',
+    })
+    file: Express.Multer.File;
+
+  // @IsArray()
+  // @IsNotEmpty({ message: v.isNotEmpty('dtoList') })
+  // @ValidateNested({ each: true }) 
+  // @Type(() => CreateVicidialLeadDto) 
+  // dtoList: CreateVicidialLeadDto[];
+
+
 }

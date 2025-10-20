@@ -69,6 +69,15 @@ module.exports = {
           created_at: new Date(),
           updated_at: new Date(),
         },
+        {
+          id: 8,
+          name: 'vicidial',
+          description: 'Central de llamadas',
+          logo: 'line-md:phone-call-twotone-loop',
+          status: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
       ],
       {},
     );

@@ -6,4 +6,5 @@ export enum ChannelEnum {
   INSTAGRAM = 5,
   MESSENGER = 6,
   CHATSAT = 7,
+  VICIDIAL = 8,
 }

@@ -69,11 +69,19 @@ export class PortfolioDetailService {
     return detalles;
   }
 
+  countManagedByUserIdAndPortfolioId(userId: number, portfolioId: number) {
+    return this.repository.count({
+      where: { userId, portfolioId, status: true },
+    });
+  }
+
   findByUserId(
     userId: number,
     portfolioId: number,
-  ): Promise<PortfolioDetail[]> {
-    return this.repository.findAll({
+    limit?: number,
+    offset?: number,
+  ): Promise<PaginatedResponse<PortfolioDetail>> {
+    return this.repository.findAndCountAll({
       where: { userId, portfolioId },
       include: [
         {
@@ -101,6 +109,8 @@ export class PortfolioDetailService {
           order: [['created_at', 'ASC']],
         },
       ],
+      limit,
+      offset,
     });
   }
 

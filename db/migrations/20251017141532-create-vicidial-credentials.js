@@ -3,42 +3,49 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('citizen_contacts', {
-      id: {
+    await queryInterface.createTable('vicidial_credentials', {
+      // 🔗 Relación con Inbox
+      inbox_id: {
         type: Sequelize.BIGINT,
-        autoIncrement: true,
+        allowNull: false,
         primaryKey: true,
-        comment: 'Identificador del contacto del ciudadano',
+        comment: 'ID del inbox asociado a estas credenciales',
+        references: {
+          model: 'inboxes', // nombre real de la tabla
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
-      tip_doc: {
+
+      vicidial_host: {
         type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Tipo de documento de identificación del ciudadano',
+        allowNull: false,
+        comment: 'Host o URL del servidor Vicidial',
       },
-      doc_ide: {
+
+      public_ip: {
         type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Documento de identificación del ciudadano',
+        allowNull: false,
+        comment: 'IP pública del servidor Vicidial',
       },
-      contact_type: {
-        type: Sequelize.ENUM('PHONE', 'EMAIL', 'WHATSAPP'),
-        allowNull: true,
-        comment: 'Tipo de contacto',
-      },
-      value: {
+
+      private_ip: {
         type: Sequelize.STRING,
-        allowNull: true,
-        comment: 'Valor de contacto',
+        allowNull: false,
+        comment: 'IP privada del servidor Vicidial',
       },
-      is_additional: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: true,
-        comment: 'Es información adicional',
+
+      user: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'Usuario de autenticación de la API de Vicidial',
       },
-      status: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: true,
-        comment: 'Campo para habilitar o inhabilitar un registro',
+
+      password: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'Contraseña de la API de Vicidial',
       },
 
       // Auditoría
@@ -80,21 +87,11 @@ module.exports = {
      * Constraints (FKs)
      * ------------------------- */
 
-    // Índice único
-    await queryInterface.addIndex(
-      'citizen_contacts',
-      ['tip_doc', 'doc_ide', 'contact_type', 'value'],
-      {
-        unique: true,
-        name: 'uq_citizen_contacts_unique_contact',
-      },
-    );
-
     // created_by → users.id
-    await queryInterface.addConstraint('citizen_contacts', {
+    await queryInterface.addConstraint('vicidial_credentials', {
       fields: ['created_by'],
       type: 'foreign key',
-      name: 'fk_citizen_contacts_created_by',
+      name: 'fk_vicidial_credentials_created_by',
       references: {
         table: 'users',
         field: 'id',
@@ -104,10 +101,10 @@ module.exports = {
     });
 
     // updated_by → users.id
-    await queryInterface.addConstraint('citizen_contacts', {
+    await queryInterface.addConstraint('vicidial_credentials', {
       fields: ['updated_by'],
       type: 'foreign key',
-      name: 'fk_citizen_contacts_updated_by',
+      name: 'fk_vicidial_credentials_updated_by',
       references: {
         table: 'users',
         field: 'id',
@@ -117,10 +114,10 @@ module.exports = {
     });
 
     // deleted_by → users.id
-    await queryInterface.addConstraint('citizen_contacts', {
+    await queryInterface.addConstraint('vicidial_credentials', {
       fields: ['deleted_by'],
       type: 'foreign key',
-      name: 'fk_citizen_contacts_deleted_by',
+      name: 'fk_vicidial_credentials_deleted_by',
       references: {
         table: 'users',
         field: 'id',
@@ -131,6 +128,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('citizen_contacts');
+    await queryInterface.dropTable('vicidial_credentials');
   },
 };

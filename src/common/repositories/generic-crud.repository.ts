@@ -208,4 +208,12 @@ export class GenericCrudRepository<T extends Model> {
   async bulkRestore(options: RestoreOptions<any>): Promise<void> {
     await this.model.restore(options);
   }
+
+  /**
+   * Coun records  based on conditions.
+   * @param options options Search options (filters, associations, etc.)
+   */
+  async count(options: FindOptions<T>): Promise<number> {
+    return await this.model.count(options);
+  }
 }

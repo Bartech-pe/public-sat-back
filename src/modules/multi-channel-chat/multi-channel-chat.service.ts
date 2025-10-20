@@ -546,7 +546,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             userId: selectedUserId,
           },
         );
-        this.logger.debug('diavlo: ', updatedRoom);
         return updatedRoom;
       }
       return channelRoomExists[0];

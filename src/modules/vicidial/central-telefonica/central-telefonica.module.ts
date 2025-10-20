@@ -22,6 +22,8 @@ import { VicidialApiModule } from '../vicidial-api/vicidial-api.module';
 import { VicidialCampaingRepository } from './repositories/vicidial-campaing.repository';
 import { CallModule } from '@modules/call/call.module';
 import { AmiModule } from '../ami/ami.module';
+import { BullModule } from '@nestjs/bullmq';
+import { AudioQueueProcessor } from './audioQueueProcessor';
 
 @Module({
   imports: [
@@ -41,6 +43,9 @@ import { AmiModule } from '../ami/ami.module';
     VicidialApiModule,
     forwardRef(() => CallModule),
     forwardRef(() => AmiModule),
+    BullModule.registerQueue({
+      name: 'register-details-audio', 
+    }),
   ],
   controllers: [
     CentralTelefonicaController,
@@ -56,7 +61,8 @@ import { AmiModule } from '../ami/ami.module';
     VicidialCallTimesHolidaysService,
     VicidialCallTimesService,
     VicidialCampaingRepository,
+    AudioQueueProcessor
   ],
-  exports: [AloSatService, VicidialCampaingRepository],
+  exports: [AloSatService, VicidialCampaingRepository,AudioQueueProcessor],
 })
 export class CentralTelefonicaModule {}

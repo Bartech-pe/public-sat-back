@@ -41,18 +41,21 @@ export class PortfolioController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreatePortfolioDto })
   create(
-    @Body() dto: Omit<CreatePortfolioDto, 'file'>,
+    @Body() dto: CreatePortfolioDto,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<Portfolio> {
-    return this.service.create(dto,file);
+    return this.service.create(dto, file);
   }
 
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
   update(
     @Param('id') id: number,
     @Body() dto: UpdatePortfolioDto,
+    @UploadedFile() file: Express.Multer.File,
   ): Promise<Portfolio> {
-    return this.service.update(+id, dto);
+    return this.service.update(+id, dto, file);
   }
 
   @Get('toggleStatus/:id')

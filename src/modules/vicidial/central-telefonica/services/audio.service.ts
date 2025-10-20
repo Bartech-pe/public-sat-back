@@ -1,5 +1,5 @@
 // audio.service.ts
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import * as path from 'path';
 import * as Client from 'ssh2-sftp-client';
 import * as ffmpeg from 'fluent-ffmpeg';
@@ -10,14 +10,19 @@ import { AudioStoreDetails } from '../entities/audio-store-details.entity';
 import { VicidialLists } from '../entities/vicidial-lists.entity';
 import { CreateVicidialListDto } from '../dto/create-vicidial-lists.dto';
 import { VicidialLead } from '../entities/vicidial-list.entity';
-
+import * as XLSX from 'xlsx';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { PortfolioGateway } from '@modules/portfolio/portfolio.gateway';
 @Injectable()
 export class AudioService {
 
   private vicidialHost = '195.26.249.9';
-  private vicidialPort = 23022;
-  private vicidialUser = 'custom';
-  private vicidialPass = 'cxbQc5VxrfRTte0Wh3tLbOs1XA';
+  private vicidialPort = 22;
+  private vicidialUser = 'admin';
+  private vicidialPass = 'ZGjJtZw03Bc3VGvcMo1uq77x4T4Vq7D2tIk0VDBJzkLwf97qLaQ';
+
+
   private remotePath = '/var/lib/asterisk/sounds';
 
   constructor(
@@ -28,6 +33,11 @@ export class AudioService {
 
       @InjectModel(VicidialLead, 'central')
       private readonly modelLead: typeof VicidialLead,
+
+      @InjectQueue('register-details-audio')
+      private readonly audioQueue: Queue,
+
+      //private readonly gateway: PortfolioGateway,
   ) {}
 
   findAllList(): Promise<VicidialLists[]> {
@@ -38,7 +48,7 @@ export class AudioService {
       status: 'created' | 'exists';
       data: VicidialLists;
     }>{
-        const { list_id, campaign_id, list_name, list_description, active, dtoList } = body;
+        const { list_id, campaign_id, list_name, list_description, active  } = body;
   
         const existing = await this.modelList.findOne({ where: { list_id } });
   
@@ -57,12 +67,12 @@ export class AudioService {
           active
         });
 
-        const leadsToCreate = dtoList.map(lead => ({
-          ...lead,
-          list_id, 
-        }));
+      //   const leadsToCreate = dtoList.map(lead => ({
+      //     ...lead,
+      //     list_id, 
+      //   }));
 
-       const createdLeads = await this.modelLead.bulkCreate(leadsToCreate);
+      //  const createdLeads = await this.modelLead.bulkCreate(leadsToCreate);
 
         return {
           status: 'created',
@@ -70,8 +80,98 @@ export class AudioService {
         };
   }
 
+  async createlistar(dto: Omit<CreateVicidialListDto, 'file'>, file: Express.Multer.File): Promise<VicidialLists> {
+      try {
+  
+        if (!file) {
+            throw new BadRequestException('Debe subir un archivo Excel.');
+        }
+
+        const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        if (!data.length) {
+          throw new BadRequestException('El archivo Excel está vacío.');
+        }
+       
+         console.log(data)
+      
+         const result = await this.modelList.create({ ...dto });
+
+         const validLeads = data
+          .map((row: any, index: number) => {
+            const telefono = row.TELEFONO?.toString().trim();
+            const obligado = row.OBLIGADO?.toString().trim();
+
+            // Validar número de teléfono y nombre obligatorio
+            if (!telefono || !obligado) return null;
+
+            return {
+              first_name: obligado,
+              last_name: row.PLACA?.toString().trim() || '',
+              phone_number: telefono,
+              status: 'NEW',
+            };
+          })
+
+          console.log(result)
+
+          const list = result.get({ plain: true });
+
+          console.log("=====================================")
+          console.log(list)
+
+         await this.audioQueue.add('register-details-audio', {
+            list_id: list.list_id,  
+            detalles: validLeads,
+          });
+  
+          return result;
+
+      } catch (error) {
+            throw new InternalServerErrorException(
+              error,
+              'Error interno del servidor',
+            );
+      }
+
+  }
+
+  async savePortfolioDetails(list_id: number, detallesComplete: VicidialLead[]) {
+  const BATCH_SIZE = 500;
+  const total = detallesComplete.length;
+  let processed = 0;
+
+  console.log(`🚀 Iniciando carga de ${total} leads en lotes de ${BATCH_SIZE}...`);
+
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      const batch = detallesComplete.slice(i, i + BATCH_SIZE);
+
+      // Preparar los leads con el list_id asignado
+      const leadsToCreate = batch.map(lead => ({
+        ...lead,
+        list_id,
+      }));
+
+      // Insertar en la base de datos
+      await this.modelLead.bulkCreate(leadsToCreate);
+
+      // Actualizar progreso
+      processed += batch.length;
+      const percentage = Math.round((processed / total) * 100);
+
+    }
+
+    //this.gateway.sendComplete(total);
+  }
+
   async processAndUpload(file: Express.Multer.File) {
+    console.log("=====================================================");
+
       const tempDir = path.join(process.cwd(), 'tmp');
+
+      console.log("=====================================================",tempDir);
       try {
         // Crear carpeta tmp si no existe
         await fs.mkdir(tempDir, { recursive: true });
@@ -87,6 +187,8 @@ export class AudioService {
         // Ruta del archivo convertido
         const convertedPath = tempPath.replace(/\.[^/.]+$/, '.wav');
         const fileName = path.basename(convertedPath);
+
+          console.log("=====================================================");
         console.log(fileName);
         // Convertir
         //const archivoaceptado=  await this.convertToAsteriskWav(tempPath, convertedPath);

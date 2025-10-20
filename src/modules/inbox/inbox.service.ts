@@ -19,6 +19,7 @@ import { CreateInboxCredentialDto } from './dto/create-inbox-credential.dto';
 import { InjectModel } from '@nestjs/sequelize';
 import { InvalidateInboxCredentialDto } from './dto/invalidate-inbox-credentials.dto';
 import { InboxCredential } from './entities/inbox-credential.entity';
+import { VicidialCredential } from '@modules/vicidial/entities/vicidial-credentials.entity';
 import { EmailStateEnum } from '@modules/email/enum/email-state.enum';
 import { ChannelStateEnum } from '@common/enums/channel-state.enum';
 
@@ -38,7 +39,7 @@ export class InboxService {
   ): Promise<PaginatedResponse<Inbox>> {
     try {
       return this.repository.findAndCountAll({
-        include: [{ model: Channel }, { model: InboxCredential }],
+        include: [{ model: Channel }, { model: InboxCredential }, { model: VicidialCredential }],
         limit,
         offset,
         order: [['id', 'DESC']],

@@ -66,6 +66,12 @@ module.exports = {
      * Constraints nombrados
      * ------------------------- */
 
+    // Índice único
+    await queryInterface.addIndex('citizens', ['tip_doc', 'doc_ide'], {
+      unique: true,
+      name: 'uq_citizens_doc',
+    });
+
     // FK created_by -> users.id
     await queryInterface.addConstraint('citizens', {
       fields: ['created_by'],

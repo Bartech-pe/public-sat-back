@@ -43,20 +43,33 @@ export class PortfolioDetailController {
     return this.service.findByPortfolioId(id);
   }
 
-  @Get('detalleByUserToken/:portfolioId')
-  findByUser(
+  @Get('detailByUserToken/:portfolioId')
+  async findByUser(
     @CurrentUser() user: User,
     @Param('portfolioId') portfolioId: number,
-  ): Promise<PortfolioDetail[]> {
-    return this.service.findByUserId(user?.id, portfolioId);
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<PortfolioDetail> & { managed: number }> {
+    const limit = query.limit!;
+    const offset = query.offset!;
+    const res = await this.service.findByUserId(
+      user?.id,
+      portfolioId,
+      limit,
+      offset,
+    );
+    const count = await this.service.countManagedByUserIdAndPortfolioId(
+      user.id,
+      portfolioId,
+    );
+    return { ...res, managed: count };
   }
 
-  @Get('detalleByUserId/:id/:portfolioId')
-  findByUserId(
+  @Get('detailByUserId/:id/:portfolioId')
+  async findByUserId(
     @Param('id') id: number,
     @Param('portfolioId') portfolioId: number,
   ): Promise<PortfolioDetail[]> {
-    return this.service.findByUserId(id, portfolioId);
+    return (await this.service.findByUserId(id, portfolioId)).data;
   }
 
   @Get(':id')
@@ -108,10 +121,10 @@ export class PortfolioDetailController {
   }
 
   @Get('portfolio-assignments/details/:userId/:portfolioId')
-  findAssignmentByUserId(
+  async findAssignmentByUserId(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('portfolioId', ParseIntPipe) portfolioId: number,
   ): Promise<PortfolioDetail[]> {
-    return this.service.findByUserId(userId, portfolioId);
+    return (await this.service.findByUserId(userId, portfolioId)).data;
   }
 }

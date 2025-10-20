@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Portfolio } from './entities/portfolio.entity';
 import { PortfolioService } from './portfolio.service';
@@ -14,9 +14,9 @@ import { PortfolioGateway } from './portfolio.gateway';
 @Module({
   imports: [
     SequelizeModule.forFeature([Portfolio]),
-    PortfolioDetailModule,
-    CitizenModule,
-    UserModule,
+    forwardRef(() => PortfolioDetailModule),
+    forwardRef(() => CitizenModule),
+    forwardRef(() => UserModule),
     BullModule.registerQueue({
       name: 'portfolio-detail-queue',
     }),
@@ -28,6 +28,6 @@ import { PortfolioGateway } from './portfolio.gateway';
     PortfolioQueueProcessor,
     PortfolioGateway,
   ],
-  exports: [PortfolioRepository, PortfolioQueueProcessor],
+  exports: [PortfolioRepository, PortfolioQueueProcessor, PortfolioGateway],
 })
 export class PortfolioModule {}
