@@ -7,7 +7,7 @@ import {
 import { CallRepository } from '../repositories/call.repository';
 import { CallFilter } from '../dto/call-filter.dto';
 import { User } from '@modules/user/entities/user.entity';
-import { Op, QueryTypes } from 'sequelize';
+import { col, fn, Op, QueryTypes } from 'sequelize';
 import {
   DataCollection,
   GetPages,
@@ -26,8 +26,15 @@ import { InjectConnection } from '@nestjs/sequelize';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { AdvisorDTO } from '../../vicidial/ami/dto/ami.dto';
 import { CallHistoryRepository } from '../repositories/call-history.repository';
-import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { CallHistory } from '../entities/call-history.entity';
+
+const callstates = {
+  XFER: 'Transferido',
+  DROP: 'Abandonado',
+  SALE: 'Concluido',
+  QUEUE: 'En cola',
+  ABANDON: 'Abandonado',
+};
 
 function getPages(limit: number, total: number): number {
   return Math.ceil(total / (limit || 1));
@@ -46,12 +53,24 @@ export class CallService {
   async getCallHistory(
     limit?: number,
     offset?: number,
-  ): Promise<PaginatedResponse<CallHistory>> {
-    return this.callHistoryRepository.findAndCountAll({
-      include: [{ model: User, as: 'user' }],
+  ): Promise<PaginatedResponse<CallHistory & { callSateName: string }>> {
+    const res = await this.callHistoryRepository.findAndCountAll({
+      include: [{ model: User, as: 'user', required: false }],
       limit,
       offset,
     });
+    return {
+      ...res,
+      data: res.data
+        .map((d) => d.toJSON())
+        .map(
+          (d: CallHistory) =>
+            ({
+              ...d,
+              callSateName: callstates[d.callStatus] ?? 'Abandonado',
+            }) as CallHistory & { callSateName: string },
+        ),
+    };
   }
 
   async getCallsFromVicidial(filter: CallFilter) {
@@ -190,64 +209,82 @@ export class CallService {
   }
 
   async getCallsCountersFromVicidial(filter: CallFilter) {
-    const where: string[] = [];
-    const replacements: any[] = [];
-
-    if (filter.startDate && filter.endDate) {
-      where.push(`rl.start_time BETWEEN ? AND ?`);
-      replacements.push(filter.startDate, filter.endDate);
-    }
-
-    if (filter.search && filter.search.trim() !== '') {
-      where.push(`(vu.full_name LIKE ? OR vu.full_name IS NULL)`);
-      replacements.push(`%${filter.search}%`);
-    }
-
-    if (filter.advisor && filter.advisor !== '') {
-      where.push(`(vu.user LIKE ? OR vu.user IS NULL)`);
-      replacements.push(`%${filter.advisor}%`);
-    }
-
-    const sql = `
-    SELECT
-      COUNT(*) as Total,
-      SUM(CASE 
-        WHEN vcl.status IN ('01', '02', '03', '04', '05', '06', '1', '2', '3', '4', '5', '6', 'SALE', 'A', 'CALLBK', 'INTERESTED', 'CONTACT', 'INFO', 'DISPO') THEN 1
-        ELSE 0
-      END) as Concluida,
-      SUM(CASE 
-        WHEN vcl.status IN ('07', '08', '09', '10', '11', '12', '13', '7', '8', '9', 'DROP', 'HANGUP', 'BUSY', 'NA', 'N', 'MAXCAL', 'ABANDON') THEN 1
-        ELSE 0
-      END) as Abandonado,
-      SUM(CASE 
-        WHEN vcl.status IN ('14', '15', '16', '17', 'QUEUE', 'TIMEOT', 'XFER', 'INCALL', 'CBHOLD') THEN 1
-        ELSE 0
-      END) as Escalado
-    FROM
-      recording_log rl
-    LEFT JOIN vicidial_users vu ON vu.user = rl.user
-    LEFT JOIN vicidial_list vl ON rl.lead_id = vl.lead_id
-    LEFT JOIN (
-      SELECT lead_id, status FROM vicidial_closer_log
-      UNION ALL
-      SELECT lead_id, status FROM vicidial_closer_log_archive
-    ) vcl ON vcl.lead_id = rl.lead_id
-    ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
-  `;
-
-    const results = await this.centralConnection.query<StateCountQuery>(sql, {
-      replacements,
-      type: QueryTypes.SELECT,
+    const resumenRaw: any = await CallHistory.findAll({
+      attributes: ['callStatus', [fn('COUNT', col('id')), 'total']],
+      group: ['callStatus'],
+      raw: true,
     });
 
-    const count = results[0];
-    for (const item of StateCountItems) {
-      const key = item.name as keyof StateCountQuery;
-      if (count[key] !== undefined) {
-        item.total = count[key] ?? 0;
-      }
-    }
-    return StateCountItems;
+    const ESTADOS = ['DROP', 'QUEUE', 'XFER', 'SALE'];
+
+    // Normalizamos el resultado, garantizando que todos los estados estén presentes
+    const resumen = ESTADOS.map((status) => {
+      const item = resumenRaw.find((r) => r.callStatus === status);
+      return {
+        callStatus: status,
+        callSateName: callstates[status],
+        total: item ? Number(item.total) : 0,
+      };
+    });
+    return resumen;
+    //   const where: string[] = [];
+    //   const replacements: any[] = [];
+
+    //   if (filter.startDate && filter.endDate) {
+    //     where.push(`rl.start_time BETWEEN ? AND ?`);
+    //     replacements.push(filter.startDate, filter.endDate);
+    //   }
+
+    //   if (filter.search && filter.search.trim() !== '') {
+    //     where.push(`(vu.full_name LIKE ? OR vu.full_name IS NULL)`);
+    //     replacements.push(`%${filter.search}%`);
+    //   }
+
+    //   if (filter.advisor && filter.advisor !== '') {
+    //     where.push(`(vu.user LIKE ? OR vu.user IS NULL)`);
+    //     replacements.push(`%${filter.advisor}%`);
+    //   }
+
+    //   const sql = `
+    //   SELECT
+    //     COUNT(*) as Total,
+    //     SUM(CASE
+    //       WHEN vcl.status IN ('01', '02', '03', '04', '05', '06', '1', '2', '3', '4', '5', '6', 'SALE', 'A', 'CALLBK', 'INTERESTED', 'CONTACT', 'INFO', 'DISPO') THEN 1
+    //       ELSE 0
+    //     END) as Concluida,
+    //     SUM(CASE
+    //       WHEN vcl.status IN ('07', '08', '09', '10', '11', '12', '13', '7', '8', '9', 'DROP', 'HANGUP', 'BUSY', 'NA', 'N', 'MAXCAL', 'ABANDON') THEN 1
+    //       ELSE 0
+    //     END) as Abandonado,
+    //     SUM(CASE
+    //       WHEN vcl.status IN ('14', '15', '16', '17', 'QUEUE', 'TIMEOT', 'XFER', 'INCALL', 'CBHOLD') THEN 1
+    //       ELSE 0
+    //     END) as Escalado
+    //   FROM
+    //     recording_log rl
+    //   LEFT JOIN vicidial_users vu ON vu.user = rl.user
+    //   LEFT JOIN vicidial_list vl ON rl.lead_id = vl.lead_id
+    //   LEFT JOIN (
+    //     SELECT lead_id, status FROM vicidial_closer_log
+    //     UNION ALL
+    //     SELECT lead_id, status FROM vicidial_closer_log_archive
+    //   ) vcl ON vcl.lead_id = rl.lead_id
+    //   ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
+    // `;
+
+    //   const results = await this.centralConnection.query<StateCountQuery>(sql, {
+    //     replacements,
+    //     type: QueryTypes.SELECT,
+    //   });
+
+    //   const count = results[0];
+    //   for (const item of StateCountItems) {
+    //     const key = item.name as keyof StateCountQuery;
+    //     if (count[key] !== undefined) {
+    //       item.total = count[key] ?? 0;
+    //     }
+    //   }
+    //   return StateCountItems;
   }
 
   async findByCategories() {

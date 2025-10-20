@@ -16,7 +16,7 @@ import { CaseInformationRepository } from './repositories/case-information.repos
 import { Portfolio } from '@modules/portfolio/entities/portfolio.entity';
 import { PortfolioAssignmentRepository } from './repositories/portfolio-assignment.repository';
 import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.dto';
-import { col, Op } from 'sequelize';
+import { col, fn, Op, where } from 'sequelize';
 import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
 import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
 import { CitizenContactDto } from '../citizen/dto/citizen-contact.dto';
@@ -28,7 +28,6 @@ export class PortfolioDetailService {
     private readonly repository: PortfolioDetailRepository,
     private readonly infoCasoRepository: CaseInformationRepository,
     private readonly portfolioAssignmentRepository: PortfolioAssignmentRepository,
-    private readonly citizenContactRepository: CitizenContactRepository,
   ) {}
 
   async findAll(
@@ -80,9 +79,57 @@ export class PortfolioDetailService {
     portfolioId: number,
     limit?: number,
     offset?: number,
+    q?: Record<string, any>,
   ): Promise<PaginatedResponse<PortfolioDetail>> {
+    const search: string = q?.search;
+    const searchTerm = (search || '').toLowerCase();
+    const isInteger = Number.isInteger(searchTerm);
+    const status = q?.status;
+    const taxpayerType = q?.taxpayerType;
+    const segment = q?.segment;
+    const profile = q?.profile;
+    const range = q?.range;
     return this.repository.findAndCountAll({
-      where: { userId, portfolioId },
+      where: {
+        userId,
+        portfolioId,
+        ...(searchTerm && {
+          [Op.or]: [
+            where(fn('LOWER', col('PortfolioDetail.taxpayer_name')), {
+              [Op.like]: `%${searchTerm.toLowerCase()}%`,
+            }),
+            where(fn('LOWER', col('PortfolioDetail.code')), {
+              [Op.like]: `%${searchTerm.toLowerCase()}%`,
+            }),
+            where(fn('LOWER', col('PortfolioDetail.doc_ide')), {
+              [Op.like]: `%${searchTerm.toLowerCase()}%`,
+            }),
+          ],
+        }),
+        ...(status != undefined && {
+          status,
+        }),
+        ...(taxpayerType && {
+          taxpayerType: {
+            [Op.like]: `%${taxpayerType.toLowerCase()}%`,
+          },
+        }),
+        ...(segment && {
+          segment: {
+            [Op.like]: `%${segment.toLowerCase()}%`,
+          },
+        }),
+        ...(profile && {
+          profile: {
+            [Op.like]: `%${profile.toLowerCase()}%`,
+          },
+        }),
+        ...(range && {
+          currentDebt: {
+            [Op.between]: [range.from, range.to],
+          },
+        }),
+      },
       include: [
         {
           model: Portfolio,
@@ -96,6 +143,12 @@ export class PortfolioDetailService {
         {
           model: CitizenContact,
           as: 'citizenContacts',
+          ...(searchTerm &&
+            isInteger && {
+              value: {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              },
+            }),
           required: false,
           separate: true,
           on: {

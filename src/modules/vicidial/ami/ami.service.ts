@@ -16,7 +16,7 @@ import {
   DataCollection,
   GetPages,
 } from '@common/interfaces/paginated-response.interface';
-import { formatPhoneNumber } from '@common/helpers/phone.helper';
+import { formatPhoneNumber, stripPeruCode } from '@common/helpers/phone.helper';
 import { groupBy } from '@common/helpers/group.helper';
 import { AMIGateway } from './ami.gateway';
 import { RequestContextService } from '@common/context/request-context.service';
@@ -28,7 +28,10 @@ import { CallDTO, InterferCallDTO } from '@modules/call/dto/call.dto';
 import { SpyDTO } from '@modules/call/dto/spy.dto';
 import { RecordingDTO } from '@modules/call/dto/recording-dto';
 import { amiConfig } from 'config/env';
-import { ChannelPhoneState } from '@common/enums/status-call.enum';
+import {
+  ChannelPhoneState,
+  VicidialAgentStatus,
+} from '@common/enums/status-call.enum';
 import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 import { UserGateway } from '@modules/user/user.gateway';
 import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
@@ -81,7 +84,23 @@ export class AmiService implements OnModuleInit {
             this.DeviceStatus(event);
             break;
           case 'Newchannel':
-            this.NewChannel(event);
+            // this.NewChannel(event);
+            // if (
+            //   /^SIP\/[^-]+-\w+$/.test(event.channel) &&
+            //   event.channelstate == '4' &&
+            //   event.channelstatedesc == 'Ring'
+            // ) {
+            //   console.log('Newchannel', event);
+            //   await this.callHistoryRepository.create({
+            //     uniqueId: event.uniqueid,
+            //     userCode: event.exten,
+            //     phoneNumber: stripPeruCode(event.calleridnum),
+            //     channel: event.channel,
+            //     entryDate: new Date(),
+            //     callStatus: VicidialAgentStatus.QUEUE,
+            //   });
+            // }
+
             break;
           case 'BridgeInfoChannel':
             //console.log(`BridgeInfoChannel:`, event);
@@ -95,7 +114,16 @@ export class AmiService implements OnModuleInit {
               /^SIP\/[^-]+-\w+$/.test(event.channel) &&
               event.context != 'default'
             ) {
-              console.log('📞 Llamada entrante detectada:', event);
+              console.log('Llamada entrante detectada:', event);
+
+              await this.callHistoryRepository.create({
+                uniqueId: event.uniqueid,
+                userCode: event.exten,
+                phoneNumber: stripPeruCode(event.calleridnum),
+                channel: event.channel,
+                entryDate: new Date(),
+                callStatus: VicidialAgentStatus.QUEUE,
+              });
 
               const viciUsers = await this.vicidialUserRepository.findAll({
                 raw: true,
@@ -103,7 +131,7 @@ export class AmiService implements OnModuleInit {
               });
 
               for (const v of viciUsers) {
-                console.log(`▶️ Reanudando agente: ${v.username}`);
+                console.log(`Reanudando agente: ${v.username}`);
                 await aloSatService.resumeAgent(v.userId);
               }
             }
@@ -178,7 +206,10 @@ export class AmiService implements OnModuleInit {
                         : (new Date().getTime() -
                             new Date(lastCall.toJSON().entryDate).getTime()) /
                           1000,
-                      callStatus: finalStatus,
+                      callStatus:
+                        finalStatus != VicidialAgentStatus.QUEUE
+                          ? finalStatus
+                          : 'DROP',
                     });
                   }
 
@@ -194,24 +225,31 @@ export class AmiService implements OnModuleInit {
             }
             break;
           case 'Hangup':
-            console.log('📞 Hangup:', event);
+            console.log('Hangup:', event);
 
-            const accept = this.actives.find(
-              (ch) =>
-                ch.channel == event.channel || ch.agentChannel == event.channel,
-            );
-            if (accept) {
-              if (accept.agentChannel == event.channel) {
-                this.actives = this.actives.filter(
-                  (ch) => ch.agentChannel != event.channel,
-                );
-              } else {
-                accept.phoneNumber = undefined;
-                accept.channel = undefined;
-                accept.duration = 0;
-                accept.personal = false;
+            // Detectar si la llamada pertenece a una entrante en cola
+            if (/^SIP\/[^-]+-\w+$/.test(event.channel)) {
+              const lastCall = await this.callHistoryRepository.findOne({
+                where: { uniqueId: event.uniqueid },
+                order: [['entryDate', 'DESC']],
+              });
+
+              if (lastCall) {
+                const callData = lastCall.toJSON();
+                // Solo si sigue en cola (nunca pasó a INCALL)
+                if (callData.callStatus === VicidialAgentStatus.QUEUE) {
+                  await lastCall.update({
+                    seconds:
+                      (new Date().getTime() -
+                        new Date(callData.entryDate).getTime()) /
+                      1000,
+                    callStatus: 'DROP',
+                  });
+                  console.log(
+                    `Llamada abandonada detectada: ${callData.phoneNumber}, actualizada a 'DROP'`,
+                  );
+                }
               }
-              this.RunGetCoreChannelAction();
             }
 
             break;
@@ -225,85 +263,7 @@ export class AmiService implements OnModuleInit {
             }
             break;
           case 'CoreShowChannelsComplete':
-            // console.log(`canales actuales:`, this.canales);
-            const group = groupBy(this.canales, (channel) => channel.exten);
-            for (const item in group) {
-              const agent = group[item].find(
-                (ch) => ch.accountcode && ch.accountcode !== '',
-              );
-              const client = group[item].find(
-                (ch) => !ch.accountcode || ch.accountcode === '',
-              );
-              const accept = this.actives.find(
-                (ch) => ch.agent == agent?.accountcode,
-              );
-              if (accept) {
-                accept.phoneNumber = client
-                  ? formatPhoneNumber(client.calleridnum)
-                  : undefined;
-                accept.channel = client ? client.channel : undefined;
-                accept.duration = client
-                  ? durationToSeconds(client.duration)
-                  : (durationToSeconds(agent?.duration ?? '00:00:00') ?? 0);
-                ((accept.personal = client ? true : false),
-                  (accept.actualState = client
-                    ? StateIcon('Up')
-                    : accept.actualState.state == 'En Llamada'
-                      ? StateIcon('NOT_INUSE')
-                      : accept.actualState));
-                accept.extension = client
-                  ? client.exten
-                  : (accept?.extension ?? '');
-              } else {
-                if (!agent) continue;
-                let nombre = 'asesor no encontrado';
-                const asesor = nombre;
-                const amiData: CallAMi = {
-                  advisorName: asesor,
-                  agent: agent?.accountcode ?? '',
-                  agentChannel: agent?.channel ?? '',
-                  duration: client
-                    ? durationToSeconds(client.duration)
-                    : (durationToSeconds(agent?.duration ?? '00:00:00') ?? 0),
-                  actualState: client
-                    ? StateIcon('Up')
-                    : agent?.channelstatedesc == 'Up'
-                      ? StateIcon('NOT_INUSE')
-                      : StateIcon(agent?.channelstatedesc ?? 'Unknown'),
-                  personal: client ? true : false,
-                  phoneNumber: client
-                    ? formatPhoneNumber(client.calleridnum)
-                    : undefined,
-                  channel: client ? client.channel : undefined,
-                  extension: client ? client.exten : (agent?.exten ?? ''),
-                  agentExtension: agent?.exten ?? '',
-                };
-                if (!this.actives.find((ch) => ch.agent == amiData.agent)) {
-                  this.actives.push(amiData);
-                }
-              }
-            }
-            //console.log(`canales activos 2:`,this.actives);
-            const advisors = await this.callService.GetAdvisorsInfo();
-            for (const item of advisors) {
-              const exist = this.actives.find(
-                (ch) => ch.agent === item.phonelogin,
-              );
-              const element: CallAMi = {
-                advisorName: item.displayName,
-                agent: item.phonelogin,
-                agentChannel: exist ? exist.agentChannel : '',
-                duration: exist ? exist.duration : 0,
-                actualState: exist ? exist.actualState : StateIcon('Unknown'),
-                channel: exist ? exist.channel : '',
-                phoneNumber: exist ? exist.phoneNumber : '',
-                personal: exist ? exist.personal : false,
-                extension: exist ? exist.extension : '',
-                agentExtension: exist ? exist.agentExtension : '',
-              };
-              this.channelAdvisors.push(element);
-            }
-            this.gateway.handleNewMessage(this.channelAdvisors);
+            console.log(`canales actuales:`, this.canales);
             this.canales = [];
             this.channelAdvisors = [];
             break;
@@ -321,6 +281,7 @@ export class AmiService implements OnModuleInit {
       throw new Error('No se pudo conectar a Asterisk');
     }
   }
+
   onModuleInit() {}
 
   private PeerStatus() {

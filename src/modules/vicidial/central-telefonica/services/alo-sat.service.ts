@@ -410,10 +410,7 @@ export class AloSatService {
     );
 
     if (!agentData?.session_name) {
-      console.error(
-        'No se encontró sesión activa para el agente:',
-        agentUser,
-      );
+      console.error('No se encontró sesión activa para el agente:', agentUser);
       return;
     }
 
@@ -539,17 +536,36 @@ export class AloSatService {
     const data = lastCall?.toJSON();
 
     if (callInfo && (!lastCall || data.leadId !== callInfo?.leadId)) {
-      await this.callHistoryRepository.create({
-        userId: userId,
-        leadId: callInfo.leadId,
-        callerId: callInfo.callerId,
-        userCode: callInfo.userCode,
-        phoneNumber: callInfo.phoneNumber,
-        channel: callInfo.channel,
-        entryDate: callInfo.entryDate,
-        callStatus: callInfo.callStatus,
-        callBasicInfo: callInfo.callBasicInfo,
-      } as CallHistory);
+      const exist = await this.callHistoryRepository.findOne({
+        where: {
+          uniqueId: callInfo.uniqueId,
+        },
+      });
+      if (exist) {
+        await exist.update({
+          userId: userId,
+          leadId: callInfo.leadId,
+          callerId: callInfo.callerId,
+          userCode: callInfo.userCode,
+          phoneNumber: callInfo.phoneNumber,
+          channel: callInfo.channel,
+          entryDate: callInfo.entryDate,
+          callStatus: callInfo.callStatus,
+          callBasicInfo: callInfo.callBasicInfo,
+        });
+      } else {
+        await this.callHistoryRepository.create({
+          userId: userId,
+          leadId: callInfo.leadId,
+          callerId: callInfo.callerId,
+          userCode: callInfo.userCode,
+          phoneNumber: callInfo.phoneNumber,
+          channel: callInfo.channel,
+          entryDate: callInfo.entryDate,
+          callStatus: callInfo.callStatus,
+          callBasicInfo: callInfo.callBasicInfo,
+        } as CallHistory);
+      }
     }
 
     return callInfo;

@@ -11,8 +11,7 @@ import {
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { User } from '../../user/entities/user.entity';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { User } from '@modules/user/entities/user.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -33,7 +32,11 @@ export class CallHistory extends Model {
   declare id: number;
 
   @ForeignKey(() => User)
-  @Column({ field: 'user_id', allowNull: false })
+  @Column({
+    field: 'user_id',
+    type: DataType.BIGINT,
+    allowNull: true,
+  })
   userId: number;
 
   @BelongsTo(() => User)
@@ -42,14 +45,21 @@ export class CallHistory extends Model {
   @Column({
     field: 'lead_id',
     type: DataType.INTEGER,
-    allowNull: false,
+    allowNull: true,
   })
   leadId: number;
 
   @Column({
-    field: 'caller_id',
+    field: 'unique_id',
     type: DataType.STRING,
     allowNull: false,
+  })
+  uniqueId: string;
+
+  @Column({
+    field: 'caller_id',
+    type: DataType.STRING,
+    allowNull: true,
   })
   callerId: string;
 
@@ -99,7 +109,7 @@ export class CallHistory extends Model {
   @Column({
     field: 'call_basic_info',
     type: DataType.TEXT,
-    allowNull: false,
+    allowNull: true,
   })
   callBasicInfo: string;
 

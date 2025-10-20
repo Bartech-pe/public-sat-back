@@ -12,16 +12,20 @@ module.exports = {
       },
       user_id: {
         type: Sequelize.BIGINT,
-        allowNull: false,
+        allowNull: true,
         comment: 'Id del usuario',
       },
       lead_id: {
         type: Sequelize.INTEGER,
+        allowNull: true,
+      },
+      unique_id: {
+        type: Sequelize.STRING,
         allowNull: false,
       },
       caller_id: {
         type: Sequelize.STRING,
-        allowNull: false,
+        allowNull: true,
       },
       user_code: {
         type: Sequelize.STRING,
@@ -49,7 +53,7 @@ module.exports = {
       },
       call_basic_info: {
         type: Sequelize.TEXT,
-        allowNull: false,
+        allowNull: true,
       },
 
       // Auditoría

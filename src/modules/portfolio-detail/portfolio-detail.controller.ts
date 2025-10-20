@@ -56,6 +56,7 @@ export class PortfolioDetailController {
       portfolioId,
       limit,
       offset,
+      query.q
     );
     const count = await this.service.countManagedByUserIdAndPortfolioId(
       user.id,

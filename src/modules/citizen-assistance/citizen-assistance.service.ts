@@ -21,7 +21,7 @@ import { roleIdAdministrador } from '@common/constants/role.constant';
 export class CitizenAssistanceService {
   constructor(
     private readonly repository: CitizenAssistanceRepository,
-    private readonly carteraDetalleRepository: PortfolioDetailRepository,
+    private readonly portfolioDetailRepository: PortfolioDetailRepository,
   ) {}
 
   async findAll(
@@ -133,12 +133,12 @@ export class CitizenAssistanceService {
     try {
       const attention = this.repository.create(dto);
       if (dto.portfolioDetailId) {
-        const carteraDetalle = await this.carteraDetalleRepository.findById(
-          dto.portfolioDetailId,
-        );
-        if (!carteraDetalle.dataValues.status) {
-          await this.carteraDetalleRepository.update(dto.portfolioDetailId, {
-            updatedAt: new Date(),
+        const portfolioDetail = await this.portfolioDetailRepository.findOne({
+          where: { id: dto.portfolioDetailId },
+        });
+        if (portfolioDetail && !portfolioDetail.toJSON().status) {
+          await portfolioDetail.update({
+            status: true,
           });
         }
       }

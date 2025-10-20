@@ -141,6 +141,16 @@ export class AloSatController {
         channelStateId: ChannelPhoneState.PAUSED,
         pauseCode: dto.pauseCode,
       });
+
+      if (dto.concluded) {
+        const lastCall = await this.callHistoryRepository.getLastCall(user.id);
+
+        if (lastCall) {
+          await lastCall.update({
+            callStatus: 'SALE',
+          });
+        }
+      }
       this.userGateway.notifyPhoneStateUser(user.id);
       return res;
     } catch (error) {
