@@ -17,8 +17,19 @@ export class VicidialUserService {
   ) {}
 
   findAll(): Promise<VicidialUser[]> {
-    console.log("findAll")
     return this.model.findAll();
+  }
+
+   async getByIdCampain(campaignId: string) {
+    const campaign = await this.campaignModel.findOne({
+      where: { campaign_id: campaignId },
+    });
+
+    if (!campaign) {
+      throw new NotFoundException(`La campaña con ID ${campaignId} no fue encontrada`);
+    }
+
+    return campaign;
   }
 
   async createCampaign(body: CreateVicidialCampaignDto): Promise<{
@@ -26,9 +37,6 @@ export class VicidialUserService {
     data: VicidialCampaign;
   }>{
       const { campaign_id, campaign_name } = body;
-
-      console.log("=============================================");
-      console.log(body);
 
       const existing = await this.campaignModel.findOne({ where: { campaign_id } });
 

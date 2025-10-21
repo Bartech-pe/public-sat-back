@@ -14,6 +14,11 @@ export class CentralTelefonicaController {
     return this.service.findAll();
   }
 
+  @Get('campanias/getbyid/:id')
+  getById(@Param('id') campaign_id: string) {
+    return this.service.getByIdCampain(campaign_id);
+  }
+
   @Post('campanias')
   create(@Body() body: CreateVicidialCampaignDto) {
      return this.service.createCampaign(body);
