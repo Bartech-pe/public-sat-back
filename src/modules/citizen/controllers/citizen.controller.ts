@@ -109,11 +109,17 @@ export class CitizenController {
     return this.service.createCitizenContactMultiple(dtoList);
   }
 
-  @Get('citizen-contacts/:tipDoc/:docIde') getCitizenContactsByTipDocAndDocIde(
-    @Param('tipDoc') tipDoc: string,
-    @Param('docIde') docIde: string,
+  @Post('citizen-contacts/:docIde') getCitizenContactsByTipDocAndDocIde(
+    @Body()
+    dto: {
+      tipDoc: string;
+      docIde: string;
+    },
   ): Promise<CitizenContact[]> {
-    return this.service.getCitizenContactsByTipDocAndDocIde(tipDoc, docIde);
+    return this.service.getCitizenContactsByTipDocAndDocIde(
+      dto.tipDoc,
+      dto.docIde,
+    );
   }
 
   /**

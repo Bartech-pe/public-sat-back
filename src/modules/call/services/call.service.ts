@@ -7,7 +7,7 @@ import {
 import { CallRepository } from '../repositories/call.repository';
 import { CallFilter } from '../dto/call-filter.dto';
 import { User } from '@modules/user/entities/user.entity';
-import { col, fn, Op, QueryTypes } from 'sequelize';
+import { col, fn, literal, Op, QueryTypes } from 'sequelize';
 import {
   DataCollection,
   GetPages,
@@ -29,11 +29,10 @@ import { CallHistoryRepository } from '../repositories/call-history.repository';
 import { CallHistory } from '../entities/call-history.entity';
 
 const callstates = {
-  XFER: 'Transferido',
-  DROP: 'Abandonado',
-  SALE: 'Concluido',
-  QUEUE: 'En cola',
-  ABANDON: 'Abandonado',
+  XFER: 'Llamadas transferidas',
+  DROP: 'Llamadas abandonadas',
+  SALE: 'Llamadas concluidas',
+  QUEUE: 'Llamadas en cola',
 };
 
 function getPages(limit: number, total: number): number {
@@ -56,6 +55,7 @@ export class CallService {
   ): Promise<PaginatedResponse<CallHistory & { callSateName: string }>> {
     const res = await this.callHistoryRepository.findAndCountAll({
       include: [{ model: User, as: 'user', required: false }],
+      order: [['entryDate', 'DESC']],
       limit,
       offset,
     });
@@ -209,13 +209,13 @@ export class CallService {
   }
 
   async getCallsCountersFromVicidial(filter: CallFilter) {
-    const resumenRaw: any = await CallHistory.findAll({
+    const resumenRaw: any = await this.callHistoryRepository.findAll({
       attributes: ['callStatus', [fn('COUNT', col('id')), 'total']],
       group: ['callStatus'],
       raw: true,
     });
 
-    const ESTADOS = ['DROP', 'QUEUE', 'XFER', 'SALE'];
+    const ESTADOS = ['QUEUE', 'DROP', 'XFER', 'SALE'];
 
     // Normalizamos el resultado, garantizando que todos los estados estén presentes
     const resumen = ESTADOS.map((status) => {
@@ -285,6 +285,69 @@ export class CallService {
     //     }
     //   }
     //   return StateCountItems;
+  }
+
+  async getCallsCounterByNow() {
+    const startDay = new Date();
+    // startDay.setDate(startDay.getDate() - 1);
+    startDay.setHours(0, 0, 0);
+    const endDay = new Date();
+    endDay.setHours(23, 59, 59);
+
+    const resumenNew: any[] = await this.callHistoryRepository.findAll({
+      where: {
+        entryDate: {
+          [Op.between]: [startDay, endDay],
+        },
+      },
+      attributes: [
+        'callStatus',
+        [
+          literal(`CASE WHEN "userId" IS NULL THEN false ELSE true END`),
+          'userStatus',
+        ],
+        [fn('COUNT', col('id')), 'total'],
+      ],
+      group: [
+        'callStatus',
+        literal(
+          `CASE WHEN "userId" IS NULL THEN false ELSE true END`,
+        ) as unknown as string,
+      ],
+      raw: true,
+    });
+
+    const ESTADOS = ['QUEUE', 'SALE', 'DROP', 'DROPX', 'XFER'];
+
+    // Diccionario de nombres legibles
+    const callstatesOpt = {
+      XFER: 'Llamadas transferidas',
+      DROP: 'Llamadas abandonadas',
+      DROPX: 'Llamadas perdidas',
+      SALE: 'Llamadas concluidas',
+      QUEUE: 'Llamadas en cola',
+    };
+
+    // Normalizamos los resultados
+    const resumen = ESTADOS.map((status) => {
+      const item = resumenNew.find(
+        (r) => r.callStatus === status && r.userStatus === 1,
+      );
+
+      return {
+        callStatus: status,
+        callStateName: callstatesOpt[status],
+        total: item ? Number(item.total) : 0,
+      };
+    });
+
+    return {
+      calls: resumen,
+      total: resumen.reduce((acc, item) => acc + item.total, 0),
+      queueTotal:
+        resumen.find((item) => item.callStatus == 'QUEUE')?.total ?? 0,
+      saleTotal: resumen.find((item) => item.callStatus == 'SALE')?.total ?? 0,
+    };
   }
 
   async findByCategories() {

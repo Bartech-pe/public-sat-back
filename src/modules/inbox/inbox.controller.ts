@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   Put,
+  BadRequestException,
 } from '@nestjs/common';
 import { InboxService } from './inbox.service';
 import { CreateInboxDto } from './dto/create-inbox.dto';
@@ -20,6 +21,9 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { QueryDto } from '@common/dto/query.dto';
 import { InvalidateInboxCredentialDto } from './dto/invalidate-inbox-credentials.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '@modules/user/entities/user.entity';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 
 /**
  * Controller for managing Inbox.
@@ -39,6 +43,11 @@ export class InboxController {
     const limit = query.limit!;
     const offset = query.offset!;
     return this.service.findAll(limit, offset);
+  }
+
+  @Get('general-status')
+  async getUserStatus(@CurrentUser() currentUser: User): Promise<BaseResponseDto<{ userStatus: string }>> {
+    return this.service.getUserStatus(currentUser);
   }
 
   @Get(':id')
@@ -70,7 +79,6 @@ export class InboxController {
     return this.service.findByAssignmentId(+userId);
   }
 
-
   @Post('assignment/supervisor/:userId')
   assignmentSupervisor(
     @Param('userId') userId: number,
@@ -79,8 +87,6 @@ export class InboxController {
     return this.service.assignmentSupervisor(userId, dto);
   }
 
-  
-  
   @Patch(':id')
   update(@Param('id') id: number, @Body() dto: UpdateInboxDto): Promise<Inbox> {
     return this.service.update(+id, dto);
@@ -89,6 +95,11 @@ export class InboxController {
   @Put('toggleStatus/:id')
   toggleStatus(@Param('id') id: number): Promise<Inbox> {
     return this.service.toggleStatus(id);
+  }
+  
+  @Put('inbox-users/change-all-status')
+  changeAllUserStatus(@Body() payload: {isAvailable: boolean}, @CurrentUser() currentUser: User): Promise<BaseResponseDto> {
+    return this.service.changeAllUserStatus(currentUser, payload.isAvailable);
   }
 
   @Delete(':id')

@@ -28,6 +28,10 @@ import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
+import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { MultiChannelChatService } from '../multi-channel-chat.service';
+import { ChannelRoomService } from './channel-room.service';
 
 @Injectable()
 export class ChannelCitizenService {
@@ -37,8 +41,12 @@ export class ChannelCitizenService {
     private citizenRepository: ChannelCitizenRepository,
     private channelAttentionRepository: ChannelAttentionRepository,
     private channelRoomRepository: ChannelRoomRepository,
+    private channelRoomService: ChannelRoomService,
+    private inboxUserRepository : InboxUserRepository,
     @Inject(forwardRef(() => MultiChannelChatGateway))
     private multiChannelChatGateway: MultiChannelChatGateway,
+    @Inject(forwardRef(() => MultiChannelChatService))
+    private multiChannelChatService: MultiChannelChatService,
   ) {}
 
   async updateBasicInfoFromCitizen(
@@ -123,6 +131,7 @@ export class ChannelCitizenService {
           },
         ],
       });
+
       if (!assistanceResult)
         throw new NotFoundException('No se encontró un chat con este número.');
 
@@ -130,22 +139,24 @@ export class ChannelCitizenService {
       const channelRoom = assistanceResult
         .get('channelRoom')
         .toJSON() as ChannelRoom;
-      this.logger.debug(assistanceResult);
-      this.logger.debug(channelRoom);
-      await this.channelRoomRepository.update(channelRoom.id, {
-        botReplies: false,
-        status: 'prioridad',
-      });
 
+      let selectedUserId: number | undefined = await this.multiChannelChatService.searchAdvisorAvailable(
+         channelRoom.inboxId
+      );
+      if(!selectedUserId){
+        throw new NotFoundException("No se encontraron asesores disponibles para este canal")
+      }
+      this.channelRoomService.transferToAdvisor(channelRoom.id, selectedUserId, true)
       this.multiChannelChatGateway.notifyAdvisorRequest(
         channelRoom?.id,
         assistance?.id,
-        channelRoom?.userId,
+        selectedUserId,
       );
     } catch (error) {
       throw error;
     }
   }
+
 
   public async createCitizenFromMessage(
     newMessage: IncomingMessage,
@@ -234,7 +245,7 @@ export class ChannelCitizenService {
                 {
                   model: User,
                   as: 'user',
-                  required: true,
+                  required: false,
                 },
               ],
             },
@@ -256,7 +267,7 @@ export class ChannelCitizenService {
         this.logger.debug(attentionParsed);
         const attentionMessages = attentionParsed.messages as ChannelMessage[];
         const attentionChannel = attentionParsed.channelRoom as ChannelRoom;
-        const user = attentionChannel.user as User;
+        const user = attentionChannel?.user as User | null;
         const citizen = attentionChannel.citizen;
         const channelInbox = attentionChannel.inbox as Inbox;
         const attentionConsultType = attentionParsed.consultType as ConsultType;
@@ -271,7 +282,7 @@ export class ChannelCitizenService {
           startDate: attentionParsed.startDate,
           endDate: attentionParsed.endDate,
           advisorIntervention: advisorIntervention,
-          user: advisorIntervention ? user.displayName : '',
+          user: advisorIntervention ? user?.displayName : '',
           category: '',
           type: attentionConsultType?.name,
           email: citizen.email,

@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InboxRepository } from './repositories/inbox.repository';
@@ -12,7 +14,7 @@ import { InboxUser } from './entities/inbox-user.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { InboxUserRepository } from './repositories/inbox-user.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { Op } from 'sequelize';
+import { col, fn, Op, where } from 'sequelize';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { InboxCredentialRepository } from './repositories/inbox-credential.repository';
 import { CreateInboxCredentialDto } from './dto/create-inbox-credential.dto';
@@ -22,14 +24,28 @@ import { InboxCredential } from './entities/inbox-credential.entity';
 import { VicidialCredential } from '@modules/vicidial/entities/vicidial-credentials.entity';
 import { EmailStateEnum } from '@modules/email/enum/email-state.enum';
 import { ChannelStateEnum } from '@common/enums/channel-state.enum';
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
+import { CategoryChannelRepository } from '@modules/channel/repositories/category-channel.repository';
+import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
+import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
+import { chatSatAvailableStateId, wspAvailableStateId } from '@common/constants/channel.constant';
+import { AvailableEnumToCategory, UnavailableEnumToCategory } from '@common/enums/channel.enum';
+import { x } from 'joi';
 
+
+// CategoryChannelEnum
 @Injectable()
 export class InboxService {
+  private readonly logger = new Logger(InboxService.name);
+
   constructor(
     private readonly repository: InboxRepository,
+    private readonly categoryChannelRepository: CategoryChannelRepository,
+    private readonly channelStateRepository: ChannelStateRepository,
     private readonly inboxCredentialRepository: InboxCredentialRepository,
     private readonly inboxUserRepository: InboxUserRepository,
-    // private readonly channelRoomRepository:ChannelRoomRepository,
     @InjectModel(InboxUser) private readonly inboxUser: typeof InboxUser,
   ) {}
 
@@ -336,6 +352,87 @@ export class InboxService {
       );
     }
   }
+
+  async getUserStatus(currentUser: User): Promise<BaseResponseDto<{ userStatus: string }>> {
+    const userId = Number(currentUser.id);
+    const availableChannelStates = [chatSatAvailableStateId, wspAvailableStateId];
+    const inboxOfUser = await this.inboxUserRepository.findAll({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          include: [
+            {
+              model: Channel,
+              required: true,
+            },
+          ],
+        },
+        {
+          model: ChannelState,
+          required: false,
+        },
+      ],
+      where: { userId },
+    });
+    const inboxOfUserParsed: InboxUser[] = inboxOfUser.map(x => x.toJSON())
+    
+
+    return {
+      message: 'Estado general para este usuario.',
+      success: true,
+      data: { userStatus: inboxOfUserParsed.some(x => availableChannelStates.includes(x?.channelState?.id??'')) ? "Disponible":"Fuera de LÍnea" },
+    };
+  }
+
+  
+  async changeAllUserStatus(
+      currentUser: User,
+      isAvailable: boolean,
+    ): Promise<BaseResponseDto> {
+      const response: BaseResponseDto = {
+        success: false,
+        message: '',
+      };
+
+      try {
+        const inboxOfUser = await this.inboxUserRepository.findAll({
+          include: [
+            {
+              model: Inbox,
+              required: true,
+              include: [
+                {
+                  model: Channel,
+                  required: true,
+                },
+              ],
+            },
+          ],
+          where: {
+            userId: currentUser.id,
+          },
+        });
+
+        for (const inboxUser of inboxOfUser) {
+          const inbox = inboxUser.get('inbox') as Inbox;
+          const channel = inbox.get('channel') as Channel;
+          const newState = isAvailable ? AvailableEnumToCategory[channel.id] : UnavailableEnumToCategory[channel.id];
+          await inboxUser.update({ channelStateId: newState });
+        }
+
+        response.message = '✅ Se ha hecho el cambio de estado para todos los canales.';
+        response.success = true;
+      } catch (error) {
+        this.logger.error(error);
+        response.message = '❌ No se ha podido cambiar el estado de todos los canales.';
+        response.error = error.toString();
+      }
+
+      return response;
+  }
+
+
 
   async remove(id: number): Promise<void> {
     try {

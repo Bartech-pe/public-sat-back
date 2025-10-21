@@ -133,13 +133,23 @@ export class EmailCenterController {
     res.send(buffer);
   }
 
-  @Put('changeEmailState/:channelStateId')
-  async changeEmailState(
+  @Put('changeEmailMyState/:channelStateId')
+  async changeEmailMyState(
     @CurrentUser() user: User,
     @Param('channelStateId') channelStateId: number,
   ) {
     return await this.mailCenterService.changeEmailState(
       user.id,
+      channelStateId,
+    );
+  }
+  @Put('changeEmailState/:userId/:channelStateId')
+  async changeEmaiState(
+    @Param('channelStateId') channelStateId: number,
+    @Param('userId') userId: number,
+  ) {
+    return await this.mailCenterService.changeEmailState(
+      userId,
       channelStateId,
     );
   }

@@ -53,8 +53,23 @@ export class AloSatController {
   }
 
   @Get('all-agent-status')
-  async allAgentStatus(@CurrentUser() user: User): Promise<VicidialUser[]> {
-    return await this.vicidialUserRepository.getAllAloSatState();
+  async allAgentStatus(@CurrentUser() user: User): Promise<any[]> {
+    return (await this.vicidialUserRepository.getAllAloSatState()).map(
+      (data) => {
+        const item: VicidialUser = data.toJSON();
+        const callHistory = item.user?.callHistory.filter(
+          (call) => call.callStatus == 'SALE',
+        )!;
+        return {
+          ...item,
+          average: callHistory.length
+            ? callHistory.reduce((a, b) => a + b.seconds, 0) /
+              callHistory.length
+            : 0,
+          calls: callHistory.length ?? 0,
+        };
+      },
+    );
   }
 
   @Post('agent-login')

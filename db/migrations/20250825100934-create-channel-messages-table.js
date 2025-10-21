@@ -22,7 +22,7 @@ module.exports = {
       },
       user_id: {
         type: Sequelize.BIGINT,
-        allowNull: false,
+        allowNull: true,
         comment: 'ID del usuario que envía el mensaje',
       },
       content: {

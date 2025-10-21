@@ -38,6 +38,11 @@ export class PredefinedResponseController {
   allPredefinedResponseChatSat(): Promise<PredefinedResponse[]> {
     return this.service.allPredefinedResponseChatSat();
   }
+ 
+  @Get('allWhatsapp')
+  allPredefinedResponseWhatsapp(): Promise<PredefinedResponse[]> {
+    return this.service.allPredefinedResponseWhatsapp();
+  }
 
   @Get(':id')
   findOne(@Param('id') id: number): Promise<PredefinedResponse> {

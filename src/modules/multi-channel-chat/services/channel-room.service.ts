@@ -28,6 +28,8 @@ import {
   ChannelRoomMessage,
   Channels,
   CitizenDocType,
+  QueryType,
+  QueryTypeToConsultType,
 } from '@common/interfaces/multi-channel-chat/channel-message/channel-chat-message.dto';
 import { MultiChannelChatService } from '../multi-channel-chat.service';
 import { CreateChannelAgentMessageDto } from '../dto/channel-message/create-message-from-agent.dto';
@@ -63,6 +65,10 @@ import {
   roleIdAdministrador,
   roleIdSupervisor,
 } from '@common/constants/role.constant';
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { CreateChannelQueryHistoryDto } from '../dto/channel-query-history/create-channel-query-history.dto';
+import { ChannelQueryHistoryRepository } from '../repositories/channel-room.repository copy';
+import { ConsultTypeRepository } from '@modules/consult-type/repositories/consult-type.repository';
 
 @Injectable()
 export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
@@ -74,9 +80,11 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     @Inject(forwardRef(() => MultiChannelChatGateway))
     private multiChannelChatGateway: MultiChannelChatGateway,
     private channelRoomRepository: ChannelRoomRepository,
-    private assistanceRepository: ChannelAttentionRepository,
+    private channelAttentionRepository: ChannelAttentionRepository,
     private citizenRepository: ChannelCitizenRepository,
     private assistanceService: ChannelAttentionService,
+    private consultTypeRepository: ConsultTypeRepository,
+    private channelQueryHistory: ChannelQueryHistoryRepository,
     private channelMessageRepository: ChannelMessageRepository,
     private channelMessageAttachmentRepository: ChannelMessageAttachmentRepository,
     private inboxUserRepository: InboxUserRepository,
@@ -93,7 +101,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
 
     const inboxes = currentUserInboxes.map((x) => x.dataValues.inboxId);
 
-    const attentions = await this.assistanceRepository.findAll({
+    const attentions = await this.channelAttentionRepository.findAll({
       ...(query.chatStatus === 'completado'
         ? {
             where: {
@@ -113,7 +121,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           model: ChannelRoom,
           required: true,
           where:
-            currentUserRole.name !== 'administrador'
+            !['administrador', 'supervisor'].includes(currentUserRole.name)
               ? {
                   userId: user.id,
                   ...(query.chatStatus ? { status: query.chatStatus } : {}),
@@ -133,13 +141,13 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
             {
               model: User,
               as: 'user',
-              required: true,
+              required: false,
               attributes: ['id', 'name', 'displayName', 'avatarUrl'],
             },
             {
               model: Inbox,
               required: true,
-              ...(currentUserRole.name !== 'administrador'
+              ...( !['administrador', 'supervisor'].includes(currentUserRole.name)
                 ? { where: { id: inboxes } }
                 : {}),
               include: [
@@ -182,11 +190,10 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const messages = attention?.get('messages')[0] as ChannelMessage;
       const lastMessage = !messages ? null : messages.toJSON();
       const citizen = channelRoom?.get('citizen')?.toJSON() as ChannelCitizen;
-      const advisor = channelRoom?.get('user')?.toJSON() as User;
+      const advisor = channelRoom?.get('user')?.toJSON() as User | null;
 
-      // Validaciones: sin mensaje, o asesor distinto (solo si no es admin)
       if (!lastMessage) continue;
-      if (currentUserRole.name !== 'administrador' && chatroom?.userId !== user.id) continue;
+      if (currentUserRole.name !== 'administrador' && chatroom?.userId !== user?.id) continue;
 
       const unreadCount = await this.channelMessageRepository.findAndCountAll({
         where: {
@@ -209,7 +216,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         status: chatroom?.status,
         advisor: {
           id: advisor?.id,
-          name: advisor?.displayName || advisor?.name || 'Unknown',
+          name: advisor?.displayName || advisor?.name
         },
         lastMessage: {
           citizen: {
@@ -271,7 +278,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         {
           model: User,
           as: 'user',
-          required: true,
+          required: false,
           ...(user.roleId !== roleIdAdministrador
             ? user.roleId !== roleIdSupervisor
               ? { where: { officeId: user.officeId } }
@@ -326,7 +333,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
               order: [['timestamp', 'DESC']],
               where: before ? { timestamp: { [Op.lt]: before } } : {},
               include: [
-                { model: User, as: 'user', required: true },
+                { model: User, as: 'user', required: false },
                 { model: ChannelMessageAttachment, required: false },
               ],
               limit,
@@ -336,7 +343,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         {
           model: User,
           as: 'user',
-          required: true,
+          required: false,
         },
         {
           model: Inbox,
@@ -360,7 +367,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
 
     const chatroom = room.toJSON();
     const inbox = room?.get('inbox') as Inbox;
-    const advisor = room?.get('user').toJSON() as User;
+    const advisor = room?.get('user')?.toJSON() as User | null;
 
     const channel = inbox?.get('channel').toJSON() as Channel;
     const credentials = inbox?.get('credentials').toJSON() as InboxCredential;
@@ -373,7 +380,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     const messagesParsed: ChannelRoomMessage[] = messages
       .map((message) => {
         let messageParsed = message.toJSON();
-        const messageAdvisor = message?.get('user').toJSON() as User;
+        const messageAdvisor = message?.get('user')?.toJSON() as User| null;
         const messageAttachments = message?.get(
           'attachments',
         ) as ChannelMessageAttachment[];
@@ -391,11 +398,11 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           content: messageParsed.content,
           attachments: attachments,
           sender: {
-            id: isAgent ? messageAdvisor.id : citizen.id,
-            alias: isAgent ? messageAdvisor.name : citizen.name,
-            avatar: isAgent ? messageAdvisor.avatarUrl : citizen.avatarUrl,
+            id: isAgent ? messageAdvisor?.id : citizen.id,
+            alias: isAgent ? messageAdvisor?.name : citizen.name,
+            avatar: isAgent ? messageAdvisor?.avatarUrl : citizen.avatarUrl,
             fromCitizen: messageParsed.senderType == 'citizen',
-            fullName: isAgent ? messageAdvisor.displayName : citizen.fullName,
+            fullName: isAgent ? messageAdvisor?.displayName : citizen.fullName,
             isAgent: messageParsed.senderType == 'agent',
           },
           status: messageParsed.status,
@@ -435,11 +442,11 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       channel: channel?.name as Channels,
       botStatus: chatroom.botReplies ? 'active' : 'paused',
       agentAssigned: {
-        id: advisor.id,
-        name: advisor.name,
-        avatarUrl: advisor.avatarUrl,
-        alias: advisor.displayName,
-        email: advisor.email,
+        id: advisor?.id,
+        name: advisor?.name,
+        avatarUrl: advisor?.avatarUrl,
+        alias: advisor?.displayName,
+        email: advisor?.email,
         phoneNumber: credentials.phoneNumber,
       },
       messages: messagesParsed,
@@ -451,7 +458,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
   async sendMessage(message: CreateChannelAgentMessageDto, user: User) {
     try {
       let inboxCredentials: MessagingCredentials | null = null;
-      const assistance = await this.assistanceRepository.findOne({
+      const assistance = await this.channelAttentionRepository.findOne({
         where: {
           id: message.assistanceId,
         },
@@ -492,7 +499,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const channelRoom = assistance.get('channelRoom') as ChannelRoom;
       const inbox = channelRoom.get('inbox') as Inbox;
       const citizen = channelRoom.get('citizen').toJSON() as ChannelCitizen;
-      const channelUser = channelRoom.get('user').toJSON() as User;
+      const channelUser = channelRoom.get('user')?.toJSON() as User| null;
       const credentials = inbox?.get('credentials').toJSON() as InboxCredential;
       if (!credentials) {
         throw new UnauthorizedException('No se hallaron las credenciales');
@@ -543,7 +550,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         chat_id: message.externalChannelRoomId,
         channel: message.channel,
         citizenId: channelRoom.dataValues.channelCitizenId as number,
-        userId: channelRoom.dataValues.userId as number,
+        userId: channelRoom?.dataValues?.userId as number,
         assistanceId: message.assistanceId,
         channelRoomId: message.channelRoomId,
         message: message.message ?? '',
@@ -582,8 +589,8 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           endDate: attentionParsed?.endDate
         },
         advisor: {
-          id: channelUser.id,
-          name: channelUser.name,
+          id: channelUser?.id,
+          name: channelUser?.name,
         },
         externalRoomId: message.externalChannelRoomId,
         channel: message.channel,
@@ -821,7 +828,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
             {
               model: User,
               as: 'users',
-              required: true,
+              required: false,
             },
           ],
         },
@@ -849,15 +856,19 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
   async transferToAdvisor(
     channelroomId: number,
     advisorId: number,
-    res: Response,
-  ) {
+    notificationSended: boolean = false
+  ): Promise<BaseResponseDto> {
+    let response: BaseResponseDto = {
+      success: false,
+      message: ""
+    }
     try {
       const room = await this.channelRoomRepository.findById(channelroomId, {
         include: [
           {
             model: User,
             as: 'user',
-            required: true,
+            required: false,
           },
           {
             model: Inbox,
@@ -866,7 +877,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
               {
                 model: User,
                 as: 'users',
-                required: true,
+                required: false,
                 where: { id: advisorId },
                 order: [['createdAt', 'DESC']],
               },
@@ -874,10 +885,9 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           },
         ],
       });
-      const advisor = room?.get('user').toJSON() as User;
       const inbox = room?.get('inbox') as Inbox;
       const newAdvisor = inbox.get('users') as User[];
-      if (!newAdvisor || newAdvisor.length === 0 || !advisor) {
+      if (!newAdvisor || newAdvisor.length === 0) {
         throw new NotFoundException(
           'No se encontró al asesor. Asegúrese de que el asesor esté asociado al canal.',
         );
@@ -886,19 +896,24 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       this.channelRoomRepository.update(channelroomId, {
         userId: newAdvisorParsed.id,
       });
-      this.multiChannelChatGateway.notifyAdvisorChanged({
-        channelRoomId: channelroomId,
-        id: newAdvisorParsed.id,
-        displayName: newAdvisorParsed.displayName ?? 'Unknown',
-        name: newAdvisorParsed.name,
-      });
-      return res.status(200).json({
-        message: `Se ha asignado la conversación al asesor ${newAdvisorParsed.name} correctamente`,
-      });
+      if(!notificationSended)
+      {
+        this.multiChannelChatGateway.notifyAdvisorChanged({
+          channelRoomId: channelroomId,
+          id: newAdvisorParsed.id,
+          displayName: newAdvisorParsed.displayName ?? 'Unknown',
+          name: newAdvisorParsed.name,
+        });
+      }
+
+      response.message = `Se ha asignado la conversación al asesor ${newAdvisorParsed.name} correctamente`
+      response.success = true;
+      return response
     } catch (error) {
-      throw new NotFoundException(
-        'No se encontró al asesor. Asegúrese de que el asesor esté asociado al canal.',
-      );
+      this.logger.error(error.toString());
+      response.error = error;
+      response.message = 'No se encontró al asesor. Asegúrese de que el asesor esté asociado al canal.';
+      return response;
     }
   }
 
@@ -911,6 +926,79 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     return sizeInBytes;
   }
 
+  async checkForAvailableAdvisors()
+  {
+    const inboxUsers = await this.inboxUserRepository.findAll({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          include: [
+            {
+              model: Channel,
+              required: true,
+              where: {
+                name: ChannelType.CHATSAT
+              }
+            },
+          ]
+        },
+        {
+          model: ChannelState,
+          required: true,
+          where: {
+            name: 'Disponible'
+          }
+        }
+      ]    
+    })
+    return {
+      availableAdvisors: inboxUsers.length
+    }
+  }
+
+  async saveBotQuery(payload: CreateChannelQueryHistoryDto, phoneNumber: string)
+  {
+    const attentionResult = await this.channelAttentionRepository.findOne({
+        where: { status: ChannelAttentionStatus.IN_PROGRESS },
+        include: [
+          {
+            model: ChannelRoom,
+            required: true,
+            where: { status: 'pendiente', botReplies: true },
+            include: [
+              {
+                model: ChannelCitizen,
+                required: true,
+                where: { phoneNumber: phoneNumber },
+              },
+            ],
+          },
+        ],
+      });
+
+      if (!attentionResult) throw new NotFoundException('No se encontró un chat con este número.');
+
+      const attention = attentionResult.toJSON() as ChannelAttention;
+      if(!attention.consultTypeId)
+      {
+        const consultType = (await this.consultTypeRepository.findOne({
+          where:{
+            name: this.getConsultTypeByQuery(payload.queryType)
+          }
+        }))?.toJSON()
+
+        this.channelAttentionRepository.update(attention.id, {
+          consultTypeId: consultType.id 
+        })
+      }
+
+      this.channelQueryHistory.create({...payload, attentionId: attention.id})
+  }
+
+  getConsultTypeByQuery(query: QueryType): string {
+    return QueryTypeToConsultType[query] ?? 'Desconocido';
+  }
   onModuleDestroy() {
     // throw new Error("Method not implemented.");
   }

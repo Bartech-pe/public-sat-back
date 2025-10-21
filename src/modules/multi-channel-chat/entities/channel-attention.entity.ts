@@ -16,6 +16,7 @@ import { ChannelMessage } from './channel-message.entity';
 import { ChannelRoom } from './channel-room.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
+import { ChannelQueryHistory } from './channel-query-history.entity';
 
 export enum ChannelAttentionStatus {
   IDENTITY_VERIFICATION = 'identity_verification',
@@ -90,6 +91,9 @@ export class ChannelAttention extends Model<ChannelAttention> {
 
   @HasMany(() => ChannelMessage)
   messages: ChannelMessage[];
+
+  @HasMany(() => ChannelQueryHistory)
+  queryHistory: ChannelQueryHistory[];
 
   @BelongsTo(() => ChannelRoom)
   channelRoom: ChannelRoom;

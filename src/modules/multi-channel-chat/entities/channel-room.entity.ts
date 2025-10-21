@@ -47,9 +47,9 @@ export class ChannelRoom extends Model {
   @Column({
     field: 'user_id',
     type: DataType.INTEGER,
-    allowNull: false,
+    allowNull: true,
   })
-  userId: number;
+  userId?: number | null;
 
   @Column({
     field: 'external_channel_room_id',

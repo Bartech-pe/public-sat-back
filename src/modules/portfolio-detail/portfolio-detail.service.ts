@@ -16,7 +16,7 @@ import { CaseInformationRepository } from './repositories/case-information.repos
 import { Portfolio } from '@modules/portfolio/entities/portfolio.entity';
 import { PortfolioAssignmentRepository } from './repositories/portfolio-assignment.repository';
 import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.dto';
-import { col, fn, Op, where } from 'sequelize';
+import { col, fn, literal, Op, where } from 'sequelize';
 import { PortfolioAssignment } from './entities/portfolio-assignment.entity';
 import { CitizenContact } from '../citizen/entities/citizen-contact.entity';
 import { CitizenContactDto } from '../citizen/dto/citizen-contact.dto';
@@ -83,7 +83,15 @@ export class PortfolioDetailService {
   ): Promise<PaginatedResponse<PortfolioDetail>> {
     const search: string = q?.search;
     const searchTerm = (search || '').toLowerCase();
-    const isInteger = Number.isInteger(searchTerm);
+    // Detecta si es numérico (por ejemplo código, doc_ide o teléfono)
+    const cleanedSearch = searchTerm
+      .replace(/\s+/g, '') // espacios
+      .replace(/\+/g, '')  // prefijo +
+      .replace(/[-()]/g, ''); // guiones y paréntesis
+      
+
+    const isNumeric = !isNaN(Number(cleanedSearch));
+
     const status = q?.status;
     const taxpayerType = q?.taxpayerType;
     const segment = q?.segment;
@@ -93,17 +101,49 @@ export class PortfolioDetailService {
       where: {
         userId,
         portfolioId,
-        ...(searchTerm && {
+        ...(searchTerm &&
+          !isNumeric && {
+            [Op.or]: [
+              where(fn('LOWER', col('PortfolioDetail.taxpayer_name')), {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              }),
+              where(fn('LOWER', col('PortfolioDetail.code')), {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              }),
+              where(fn('LOWER', col('PortfolioDetail.doc_ide')), {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              }),
+            ],
+          }),
+
+        // 🔢 Filtro numérico (code, doc_ide o CitizenContact.value)
+        ...(isNumeric && {
           [Op.or]: [
-            where(fn('LOWER', col('PortfolioDetail.taxpayer_name')), {
-              [Op.like]: `%${searchTerm.toLowerCase()}%`,
-            }),
-            where(fn('LOWER', col('PortfolioDetail.code')), {
-              [Op.like]: `%${searchTerm.toLowerCase()}%`,
-            }),
-            where(fn('LOWER', col('PortfolioDetail.doc_ide')), {
-              [Op.like]: `%${searchTerm.toLowerCase()}%`,
-            }),
+            { code: { [Op.like]: `%${cleanedSearch}%` } },
+            { doc_ide: { [Op.like]: `%${cleanedSearch}%` } },
+            // 🔸 Subquery que busca coincidencias en CitizenContact.value
+            literal(`
+              EXISTS (
+                SELECT 1 FROM \`citizen_contacts\` AS c
+                WHERE c.tip_doc = PortfolioDetail.tip_doc
+                AND c.doc_ide = PortfolioDetail.doc_ide
+                AND LOWER(
+                  REPLACE(
+                    REPLACE(
+                      REPLACE(
+                        REPLACE(
+                          TRIM(c.value),
+                          '-', ''
+                        ),
+                        ' ', ''
+                      ),
+                      '(', ''
+                    ),
+                    ')', ''
+                  )
+                ) LIKE '%${cleanedSearch}%'
+              )
+            `),
           ],
         }),
         ...(status != undefined && {
@@ -143,12 +183,6 @@ export class PortfolioDetailService {
         {
           model: CitizenContact,
           as: 'citizenContacts',
-          ...(searchTerm &&
-            isInteger && {
-              value: {
-                [Op.like]: `%${searchTerm.toLowerCase()}%`,
-              },
-            }),
           required: false,
           separate: true,
           on: {
@@ -379,14 +413,14 @@ export class PortfolioDetailService {
       );
 
       return {
-        message: 'Detalles asignados correctamente',
+        message: 'Casos reasignados correctamente',
         count: result.length,
         data: result,
       };
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException(
-        'Error al guardar los detalles de la cartera.',
+        'Error al guardar los casos de la cartera.',
       );
     }
   }

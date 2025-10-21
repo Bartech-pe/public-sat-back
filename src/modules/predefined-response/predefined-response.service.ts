@@ -149,4 +149,12 @@ export class PredefinedResponseService {
       }
     })
   }
+  
+  allPredefinedResponseWhatsapp(): Promise<PredefinedResponse[]> {
+    return this.repository.findAll({
+      where: {
+        categoryId: CategoryChannelEnum.WHATSAPP
+      }
+    })
+  }
 }

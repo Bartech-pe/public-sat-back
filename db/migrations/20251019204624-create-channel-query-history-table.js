@@ -3,43 +3,56 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('channel_rooms', {
+    await queryInterface.createTable('channel_query_history', {
       id: {
         type: Sequelize.BIGINT,
         autoIncrement: true,
         primaryKey: true,
-        comment: 'Identificador único del canal de conversación',
+        comment: 'Identificador del registro de consulta',
       },
-      inbox_id: {
+      channel_attention_id: {
         type: Sequelize.BIGINT,
         allowNull: false,
-        comment: 'ID del inbox asociado',
+        comment: 'FK hacia la atención en curso (channel_attentions)',
       },
-      user_id: {
-        type: Sequelize.BIGINT,
-        allowNull: true,
-        comment: 'ID del usuario responsable de la sala',
-      },
-      external_channel_room_id: {
-        type: Sequelize.STRING,
+      query_type: {
+        type: Sequelize.ENUM(
+          'tickets_by_plate',
+          'tickets_by_dni',
+          'tickets_by_ruc',
+          'infraction_code',
+          'taxes_by_plate',
+          'taxes_by_dni',
+          'taxes_by_ruc',
+          'taxes_by_taxpayer_code',
+          'capture_order_by_plate',
+          'procedure_by_number'
+        ),
         allowNull: false,
-        comment: 'ID externo del canal (ejemplo: chatId de Telegram)',
+        comment: 'Tipo de consulta realizada',
       },
-      channel_citizen_id: {
-        type: Sequelize.BIGINT,
+      document_type: {
+        type: Sequelize.ENUM(
+          'plate',
+          'dni',
+          'ruc',
+          'infraction_code',
+          'taxpayer_code',
+          'procedure_number'
+        ),
         allowNull: false,
-        comment: 'ID del ciudadano participante en la sala',
+        comment: 'Tipo de documento utilizado en la consulta',
+      },
+      document_value: {
+        type: Sequelize.STRING(100),
+        allowNull: false,
+        comment: 'Valor del documento ingresado',
       },
       status: {
-        type: Sequelize.ENUM('pendiente', 'prioridad', 'completado'),
-        allowNull: false,
-        defaultValue: 'pendiente',
-        comment: 'Estado de la sala de conversación',
-      },
-      bot_replies: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
-        comment: 'Indica si el bot está respondiendo en la sala',
+        defaultValue: true,
+        comment: 'Campo para habilitar o inhabilitar un registro',
       },
 
       // Auditoría
@@ -81,39 +94,13 @@ module.exports = {
      * Constraints (FKs)
      * ------------------------- */
 
-    // inbox_id → inboxes.id
-    await queryInterface.addConstraint('channel_rooms', {
-      fields: ['inbox_id'],
+    // channel_attention_id → channel_attentions.id
+    await queryInterface.addConstraint('channel_query_history', {
+      fields: ['channel_attention_id'],
       type: 'foreign key',
-      name: 'fk_channel_rooms_inbox_id',
+      name: 'fk_channel_query_history_attention_id',
       references: {
-        table: 'inboxes',
-        field: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'RESTRICT',
-    });
-
-    // user_id → users.id
-    await queryInterface.addConstraint('channel_rooms', {
-      fields: ['user_id'],
-      type: 'foreign key',
-      name: 'fk_channel_rooms_user_id',
-      references: {
-        table: 'users',
-        field: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'RESTRICT',
-    });
-
-    // citizen_id → channel_citizens.id
-    await queryInterface.addConstraint('channel_rooms', {
-      fields: ['channel_citizen_id'],
-      type: 'foreign key',
-      name: 'fk_channel_rooms_channel_citizen_id',
-      references: {
-        table: 'channel_citizens',
+        table: 'channel_attentions',
         field: 'id',
       },
       onUpdate: 'CASCADE',
@@ -121,10 +108,10 @@ module.exports = {
     });
 
     // created_by → users.id
-    await queryInterface.addConstraint('channel_rooms', {
+    await queryInterface.addConstraint('channel_query_history', {
       fields: ['created_by'],
       type: 'foreign key',
-      name: 'fk_channel_rooms_created_by',
+      name: 'fk_channel_query_history_created_by',
       references: {
         table: 'users',
         field: 'id',
@@ -134,10 +121,10 @@ module.exports = {
     });
 
     // updated_by → users.id
-    await queryInterface.addConstraint('channel_rooms', {
+    await queryInterface.addConstraint('channel_query_history', {
       fields: ['updated_by'],
       type: 'foreign key',
-      name: 'fk_channel_rooms_updated_by',
+      name: 'fk_channel_query_history_updated_by',
       references: {
         table: 'users',
         field: 'id',
@@ -147,10 +134,10 @@ module.exports = {
     });
 
     // deleted_by → users.id
-    await queryInterface.addConstraint('channel_rooms', {
+    await queryInterface.addConstraint('channel_query_history', {
       fields: ['deleted_by'],
       type: 'foreign key',
-      name: 'fk_channel_rooms_deleted_by',
+      name: 'fk_channel_query_history_deleted_by',
       references: {
         table: 'users',
         field: 'id',
@@ -161,10 +148,13 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Borrar tabla y ENUM
-    await queryInterface.dropTable('channel_rooms');
+    // Eliminamos la tabla y ENUMs asociados
+    await queryInterface.dropTable('channel_query_history');
     await queryInterface.sequelize.query(
-      'DROP TYPE IF EXISTS "enum_channel_rooms_status";'
+      'DROP TYPE IF EXISTS "enum_channel_query_history_query_type";'
+    );
+    await queryInterface.sequelize.query(
+      'DROP TYPE IF EXISTS "enum_channel_query_history_document_type";'
     );
   },
 };

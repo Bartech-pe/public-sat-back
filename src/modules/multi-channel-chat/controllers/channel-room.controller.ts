@@ -21,6 +21,8 @@ import { Response } from 'express';
 import { GetChannelSummaryDto } from '../dto/channel-summary/get-channel-summary.dto';
 import { BaseResponseDto } from '@common/dto/base-response.dto';
 import { changeChannelRoomStatusDto } from '../dto/channel-room/change-channel-room-status.dto';
+import { Public } from '@common/decorators/public.decorator';
+import { CreateChannelQueryHistoryDto } from '../dto/channel-query-history/create-channel-query-history.dto';
 
 @Controller('channel-room')
 export class ChannelRoomController {
@@ -40,6 +42,12 @@ export class ChannelRoomController {
   ): Promise<BaseResponseDto<number[]>> {
     return this.channelRoomService.getChannelRoomsForSubscribe(user);
   }
+  
+  @Public()
+  @Get('check-available-advisors')
+  async checkForAvailableAdvisorsForChatsat(): Promise<{availableAdvisors: number}> {
+    return this.channelRoomService.checkForAvailableAdvisors();
+  }
 
   @Get(':id/advisors')
   getAvailableAdvisors(
@@ -56,20 +64,22 @@ export class ChannelRoomController {
   async getChannelChatDetail(
     @Param('channelRoomId') channelChatId: number,
     @Param('assistanceId') assistanceId: number,
+    @Query() payload: {
+      limit?: string;
+      before?: string;
+    } 
   ): Promise<ChannelChatDetail> {
-    return this.channelRoomService.getChatDetail(channelChatId, assistanceId);
+    return this.channelRoomService.getChatDetail(channelChatId, assistanceId, payload);
   }
 
   @Post(':id/reassign-advisor/:advisorId')
   transferToAdvisor(
     @Param('id') channelroomId: number,
     @Param('advisorId') advisorId: number,
-    @Res() res: Response,
   ) {
     return this.channelRoomService.transferToAdvisor(
       channelroomId,
       advisorId,
-      res,
     );
   }
 
@@ -79,6 +89,27 @@ export class ChannelRoomController {
   ): Promise<{ message: string }> {
     try {
       await this.channelRoomService.toggleBotService(payload);
+      return {
+        message: 'Bot service toggled successfully',
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          message: error.message || 'Error al cambiar el estado del bot',
+        },
+        error.status || HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Public()
+  @Post('citizen/:phoneNumber/bot-query')
+  async saveBotQuery(
+    @Param('phoneNumber') phoneNumber: string,
+    @Body() payload: CreateChannelQueryHistoryDto
+  ): Promise<{ message: string }> {
+    try {
+      await this.channelRoomService.saveBotQuery(payload, phoneNumber);
       return {
         message: 'Bot service toggled successfully',
       };

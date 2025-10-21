@@ -37,6 +37,7 @@ export class ChannelService {
   ): Promise<PaginatedResponse<Channel>> {
     try {
       return this.repository.findAndCountAll({
+        where: { status: true },
         limit,
         offset,
         order: [['id', 'ASC']],

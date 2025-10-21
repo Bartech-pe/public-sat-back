@@ -24,6 +24,7 @@ import { CallModule } from '@modules/call/call.module';
 import { AmiModule } from '../ami/ami.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AudioQueueProcessor } from './audioQueueProcessor';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AudioQueueProcessor } from './audioQueueProcessor';
       ],
       'central',
     ),
+    HttpModule,
     UserModule,
     VicidialApiModule,
     forwardRef(() => CallModule),

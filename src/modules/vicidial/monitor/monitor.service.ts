@@ -21,6 +21,7 @@ import { getDayMonth } from '@common/helpers/time.helper';
 import { ChannelType } from '@common/interfaces/channel-connector/messaging.interface';
 import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity';
 import { EmailCredential } from '@modules/email/entities/email-credentials.entity';
+import { ChannelEnum } from '@common/enums/channel.enum';
 
 @Injectable()
 export class MonitorService {
@@ -398,7 +399,7 @@ export class MonitorService {
     const advisorsWithMetrics = await Promise.all(
       advisors.map(async (advisor) => {
         const advisorJson = advisor.toJSON();
-        
+
         // Obtener todas las atenciones cerradas del asesor del día
         const attentions = await this.attentionRepository.findAll({
           include: [
@@ -430,7 +431,8 @@ export class MonitorService {
         if (attentions.length > 0) {
           // Filtrar solo las atenciones que tengan endDate válido
           const validAttentions = attentions.filter(
-            (att) => att.endDate instanceof Date || typeof att.endDate === "string"
+            (att) =>
+              att.endDate instanceof Date || typeof att.endDate === 'string',
           );
 
           if (validAttentions.length > 0) {
@@ -445,7 +447,9 @@ export class MonitorService {
             }, 0);
 
             totalDurationMinutes = Math.round(totalMinutes);
-            promedioAtencion = Math.round(totalMinutes / validAttentions.length);
+            promedioAtencion = Math.round(
+              totalMinutes / validAttentions.length,
+            );
           }
         }
 
@@ -467,29 +471,29 @@ export class MonitorService {
               [Op.gte]: today,
               [Op.lt]: tomorrow,
             },
-
           },
         });
 
         // Calcular efectividad (atenciones cerradas / total de atenciones del día)
         const totalAttentions = AttentionsFilteredToday.length;
-        const efectividad = totalAttentions > 0 
-          ? Math.round((attentions.length / totalAttentions) * 100) 
-          : 0;
+        const efectividad =
+          totalAttentions > 0
+            ? Math.round((attentions.length / totalAttentions) * 100)
+            : 0;
 
         const phoneNumber = advisorJson.inbox?.credentials?.phoneNumber ?? '';
-        
+
         return {
           userId: advisorJson?.user?.id,
           channel: advisorJson.inbox?.channel?.name || channel,
           name: advisorJson?.user?.displayName,
-          avgDurationMinutes: promedioAtencion, 
+          avgDurationMinutes: promedioAtencion,
           totalDurationMinutes,
-          percentage: efectividad, 
+          percentage: efectividad,
           attentionCount: totalAttentions,
           phoneNumber,
         };
-      })
+      }),
     );
     return advisorsWithMetrics;
   }
@@ -531,126 +535,121 @@ export class MonitorService {
     return advisorsResult;
   }
 
- async getMonitoringEmailUsers() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
+  async getMonitoringEmailUsers() {
+    const startDay = new Date();
+    // startDay.setDate(startDay.getDate() - 1);
+    startDay.setHours(0, 0, 0);
+    const endDay = new Date();
+    endDay.setHours(23, 59, 59);
 
-  // Obtener todos los asesores con rol 3 que tengan inbox de email
-  const advisors = await this.inboxUserRepository.findAll({
-    include: [
-      {
-        model: User,
-        as: 'user',
-        required: true,
-        attributes: ['id', 'displayName'],
-        include: [{ model: Role, where: { id: 3 }, attributes: [] }],
-      },
-      {
-        model: Inbox,
-        as: 'inbox',
-        required: true,
-        attributes: ['id'],
-        include: [
-          {
-              model: Channel,
-              as: 'channel',
-              where: { name: ChannelType.EMAIL },
-              required: true,
-              attributes: ['name'],
-          },
-          {
-            model: EmailCredential,
-            attributes: ['email'],
-          },
-        ],
-      },
-    ],
-    attributes: ['userId', 'inboxId', 'updatedAt'],
-  });
-
-  // Obtener métricas para cada asesor
-  const advisorsWithMetrics = await Promise.all(
-    advisors.map(async (advisor) => {
-      const advisorJson = advisor.toJSON();
-      
-      // Obtener todas las atenciones cerradas del asesor del día
-      const closedAttentions = await this.mailAttentionRepository.findAll({
-        where: {
-          advisorUserId: advisorJson.userId,
-          advisorInboxId: advisorJson.inboxId,
-          closedAt: { [Op.ne]: null } as any,
-          createdAt: {
-            [Op.gte]: today,
-            [Op.lt]: tomorrow,
-          },
+    // Obtener todos los asesores con rol 3 que tengan inbox de email
+    const advisors = await this.inboxUserRepository.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user',
+          required: true,
+          attributes: ['id', 'displayName'],
+          include: [Role],
         },
-        attributes: ['id', 'createdAt', 'closedAt'],
-        raw: true,
-      });
+        {
+          model: Inbox,
+          as: 'inbox',
+          where: { channelId: ChannelEnum.EMAIL },
+          required: true,
+          attributes: ['id', 'channelId'],
+        },
+      ],
+      attributes: ['userId', 'inboxId', 'channelStateId', 'updatedAt'],
+    });
 
-      let avgStateTime = 0;
-      let totalDurationMinutes = 0;
+    // Obtener métricas para cada asesor
+    const advisorsWithMetrics = await Promise.all(
+      advisors.map(async (advisor) => {
+        const advisorJson = advisor.toJSON();
 
-      if (closedAttentions.length > 0) {
-        const validAttentions = closedAttentions.filter(
-          (att) => att.closedAt instanceof Date || typeof att.closedAt === "string"
-        );
+        // Obtener todas las atenciones cerradas del asesor del día
+        const closedAttentions = await this.mailAttentionRepository.findAll({
+          where: {
+            advisorUserId: advisorJson.userId,
+            advisorInboxId: advisorJson.inboxId,
+            closedAt: { [Op.ne]: null } as any,
+            createdAt: {
+              [Op.between]: [startDay, endDay],
+            },
+          },
+          attributes: ['id', 'createdAt', 'closedAt'],
+          raw: true,
+        });
 
-        if (validAttentions.length > 0) {
-          const totalMinutes = validAttentions.reduce((sum, att) => {
-            const created = new Date(att.createdAt);
-            const closed = att.closedAt ? new Date(att.closedAt) : null;
+        let avgStateTime = 0;
+        let totalDurationMinutes = 0;
 
-            if (!closed || isNaN(closed.getTime())) return sum;
+        if (closedAttentions.length > 0) {
+          const validAttentions = closedAttentions.filter(
+            (att) =>
+              att.closedAt instanceof Date || typeof att.closedAt === 'string',
+          );
 
-            const duration = (closed.getTime() - created.getTime()) / (1000 * 60);
-            return sum + duration;
-          }, 0);
+          if (validAttentions.length > 0) {
+            const totalMinutes = validAttentions.reduce((sum, att) => {
+              const created = new Date(att.createdAt);
+              const closed = att.closedAt ? new Date(att.closedAt) : null;
 
-          totalDurationMinutes = Math.round(totalMinutes);
-          avgStateTime = Math.round(totalMinutes / validAttentions.length);
+              if (!closed || isNaN(closed.getTime())) return sum;
+
+              const duration =
+                (closed.getTime() - created.getTime()) / (1000 * 60);
+              return sum + duration;
+            }, 0);
+
+            totalDurationMinutes = Math.round(totalMinutes);
+            avgStateTime = Math.round(totalMinutes / validAttentions.length);
+          }
         }
-      }
 
-      // Contar total de atenciones del día
-      const allAttentionsToday = await this.mailAttentionRepository.findAll({
-        where: {
-          advisorUserId: advisorJson.userId,
-          advisorInboxId: advisorJson.inboxId,
-          createdAt: {
-            [Op.gte]: today,
-            [Op.lt]: tomorrow,
+        // Contar total de atenciones del día
+        const allAttentionsToday = await this.mailAttentionRepository.findAll({
+          where: {
+            advisorUserId: advisorJson.userId,
+            advisorInboxId: advisorJson.inboxId,
+            createdAt: {
+              [Op.between]: [startDay, endDay],
+            },
           },
-        },
-      });
+        });
 
-      const totalAttentions = allAttentionsToday.length;
-      
-      // Calcular efectividad (atenciones cerradas / total de atenciones del día)
-      const effectiveness = totalAttentions > 0 
-        ? Math.round((closedAttentions.length / totalAttentions) * 100) 
-        : 0;
+        const totalAttentions = allAttentionsToday.length;
 
-      const email = advisorJson.inbox?.emailCredentials?.[0]?.email ?? 
-                    advisorJson.inbox?.emailCredentials?.email ?? '';
-      
-      return {
-        userId: advisorJson.user?.id,
-        channel: 'email',
-        name: advisorJson.user?.displayName,
-        avgStateTimeMinutes: avgStateTime, 
-        totalDurationMinutes,
-        percentage: effectiveness, 
-        attentionCount: totalAttentions,
-        email,
-      };
-    })
-  );
-  
-  return advisorsWithMetrics;
-}
+        const closed = closedAttentions.length;
+
+        // Calcular efectividad (atenciones cerradas / total de atenciones del día)
+        const effectiveness =
+          totalAttentions > 0
+            ? Math.round((closed / totalAttentions) * 100)
+            : 0;
+
+        const email =
+          advisorJson.inbox?.emailCredentials?.[0]?.email ??
+          advisorJson.inbox?.emailCredentials?.email ??
+          '';
+
+        return {
+          userId: advisorJson.user?.id,
+          channelStateId: advisorJson.channelStateId,
+          displayName: advisorJson.user?.displayName,
+          avgStateTimeMinutes: avgStateTime,
+          totalDurationMinutes,
+          closedAttentions: closed,
+          percentage: effectiveness,
+          attentionCount: totalAttentions,
+          email,
+        };
+      }),
+    );
+
+    return advisorsWithMetrics;
+  }
 
   async getChatAdvisors() {
     const today = new Date();
@@ -685,7 +684,7 @@ export class MonitorService {
       include: [
         {
           model: ChannelRoom,
-          required:true,
+          required: true,
           attributes: [],
         },
       ],
@@ -708,14 +707,18 @@ export class MonitorService {
       Object.values(assistanceMap) as { count: number; avgDuration: number }[]
     ).reduce((sum, item) => sum + item.count, 0);
     const advisorsResult = advisors.map((item) => {
-      const attentionData = assistanceMap[item.userId] || { count: 0, avgDuration: 0 };
+      const attentionData = assistanceMap[item.userId] || {
+        count: 0,
+        avgDuration: 0,
+      };
       const updatedAtValue = item.updatedAt ?? 0;
       const diffMinutes = Math.floor(
         (Date.now() - new Date(updatedAtValue).getTime()) / (1000 * 60),
       );
-      const percentage = totalAttentions > 0 
-        ? Number(((attentionData.count / totalAttentions) * 100).toFixed(2))
-        : 0;
+      const percentage =
+        totalAttentions > 0
+          ? Number(((attentionData.count / totalAttentions) * 100).toFixed(2))
+          : 0;
       return {
         ...item,
         attentionCount: attentionData.count,
@@ -726,9 +729,6 @@ export class MonitorService {
     });
     return advisorsResult;
   }
-  
-
-
 
   async chatWspAdvisors() {
     const today = new Date();
@@ -804,20 +804,32 @@ export class MonitorService {
         };
         return acc;
       },
-      {} as Record<number, { count: number; avgDuration: number; totalDuration: number }>,
+      {} as Record<
+        number,
+        { count: number; avgDuration: number; totalDuration: number }
+      >,
     );
     const totalAttentions: number = (
-      Object.values(assistanceMap) as { count: number; avgDuration: number; totalDuration: number }[]
+      Object.values(assistanceMap) as {
+        count: number;
+        avgDuration: number;
+        totalDuration: number;
+      }[]
     ).reduce((sum, item) => sum + item.count, 0);
     const advisorsResult = advisors.map((item) => {
-      const attentionData = assistanceMap[item.userId] || { count: 0, avgDuration: 0, totalDuration: 0 };
+      const attentionData = assistanceMap[item.userId] || {
+        count: 0,
+        avgDuration: 0,
+        totalDuration: 0,
+      };
       const updatedAtValue = item.updatedAt ?? 0;
       const diffMinutes = Math.floor(
         (Date.now() - new Date(updatedAtValue).getTime()) / (1000 * 60),
       );
-      const percentage = totalAttentions > 0 
-        ? Number(((attentionData.count / totalAttentions) * 100).toFixed(2))
-        : 0;
+      const percentage =
+        totalAttentions > 0
+          ? Number(((attentionData.count / totalAttentions) * 100).toFixed(2))
+          : 0;
       return {
         ...item,
         attentionCount: attentionData.count,

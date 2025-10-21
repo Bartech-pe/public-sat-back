@@ -1,11 +1,12 @@
 // audio.controller.ts
-import { Body, Controller, Get, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AudioService } from './services/audio.service';
 import { VicidialLists } from './entities/vicidial-lists.entity';
 import { CreateVicidialListDto } from './dto/create-vicidial-lists.dto';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { VicidialLead } from './entities/vicidial-list.entity';
+import { AudioStoreDetails } from './entities/audio-store-details.entity';
 
 @Controller('central')
 export class AudioController {
@@ -20,6 +21,18 @@ export class AudioController {
   @Get('listas')
   findAll(): Promise<VicidialLists[]> {
       return this.audioService.findAllList();
+  }
+
+  @Get('listas/:campaignId')
+  findAllByCampaign(
+    @Param('campaignId') campaignId: string,
+  ): Promise<VicidialLists[]> {
+    return this.audioService.findAllListByCampaign(campaignId);
+  }
+
+  @Get('audios')
+  findAllAudios(): Promise<AudioStoreDetails[]> {
+      return this.audioService.findAllAudiosList();
   }
 
   @Post('new/listas')

@@ -27,9 +27,8 @@ export class CreateChannelRoomDto {
   channelCitizenId: number;
 
   @ApiProperty({ description: 'ID del agente asignado' })
-  @IsNotEmpty({ message: v.isNotEmpty('userId') })
   @IsNumber({}, { message: v.isNumber('userId') })
-  userId?: number;
+  userId?: number| null;
 
   @ApiProperty({
     description: 'Estado del canal',

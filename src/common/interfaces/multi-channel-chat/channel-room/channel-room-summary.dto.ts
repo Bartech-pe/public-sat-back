@@ -25,8 +25,8 @@ export interface ChannelAttentionSummariesDTO{
   attentionDetail?: string |  null;
 }
 export interface AdvisorAssigned {
-  id: number;
-  name: string;
+  id?: number;
+  name?: string;
 }
 
 export interface ChannelRoomViewStatusDto {
@@ -46,7 +46,7 @@ export class ChannelRoomNewMessageDto {
   attention: ChannelAttentionSummariesDTO;
   externalRoomId?: string;
   channel?: string;
-  advisor: AdvisorAssigned;
+  advisor?: AdvisorAssigned | null;
   message: Message;
   status?: ChatStatus;
   unreadCount?: number;

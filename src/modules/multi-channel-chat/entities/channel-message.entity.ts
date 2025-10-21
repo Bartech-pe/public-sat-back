@@ -56,9 +56,9 @@ export class ChannelMessage extends Model {
   @Column({
     field: 'user_id',
     type: DataType.INTEGER,
-    allowNull: false,
+    allowNull: true,
   })
-  userId: number;
+  userId?: number | null;
 
   @Column({
     field: 'content',
@@ -108,7 +108,7 @@ export class ChannelMessage extends Model {
   user: User;
 
   @BelongsTo(() => ChannelAttention)
-  assistances: ChannelAttention;
+  attention: ChannelAttention;
 
   @HasMany(() => ChannelMessageAttachment)
   attachments: ChannelMessageAttachment[];

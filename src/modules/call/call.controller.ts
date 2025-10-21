@@ -211,6 +211,12 @@ export class CallController {
     const response = await this.callService.getCallsCountersFromVicidial(query);
     return response;
   }
+
+  @Get('statesCountByNow')
+  async getCallsCounterByNow() {
+    return this.callService.getCallsCounterByNow();
+  }
+
   //@ApiBearerAuth()
   //@UseGuards(JwtAuthGuard)
   // @Get('statesCount')

@@ -137,7 +137,7 @@ export class ChannelAttentionService {
         assistanceIdToClose = assistanceParsed?.id;
 
         phoneNumberToCleanup = payload.phoneNumber;
-        userIdClosing = channelRoom?.dataValues.userId;
+        userIdClosing = channelRoom?.dataValues?.userId;
       } else if (payload.channelRoomId) {
         const channelRoom = await this.channelRoomRepository.findOne({
           where: { id: payload.channelRoomId },
@@ -234,7 +234,7 @@ export class ChannelAttentionService {
                   order: [['timestamp', 'DESC']],
                   limit: 1,
                   include: [
-                    { model: User, as: 'user', required: true },
+                    { model: User, as: 'user', required: false },
                     { model: ChannelMessageAttachment, required: false },
                   ],
                 },
@@ -247,7 +247,7 @@ export class ChannelAttentionService {
             {
               model: User,
               as: 'user',
-              required: true,
+              required: false,
             },
             {
               model: Inbox,
@@ -269,7 +269,7 @@ export class ChannelAttentionService {
       const inbox = channelRoom.get('inbox') as Inbox;
       const channel = inbox.get('channel').toJSON() as Channel;
       const citizen = channelRoom.get('citizen').toJSON() as ChannelCitizen;
-      const user = channelRoom.get('user').toJSON() as User;
+      const user = channelRoom.get('user')?.toJSON() as User | null;
 
       response.data = assistances.map((assistance) => {
         const assistanceParsed = assistance.toJSON() as ChannelAttention;
@@ -280,7 +280,7 @@ export class ChannelAttentionService {
 
         const formatDate = (date: Date) =>
           dayjs(date).format('DD/MM/YYYY HH:mm');
-        const messageAdvisor = lastMessage?.get('user').toJSON() as User;
+        const messageAdvisor = lastMessage?.get('user')?.toJSON() as User | null;
         const messageAttachments = lastMessage?.get(
           'attachments',
         ) as ChannelMessageAttachment[];
@@ -302,11 +302,11 @@ export class ChannelAttentionService {
             content: lastMessageParsed.content,
             attachments: attachments,
             sender: {
-              id: isAgent ? messageAdvisor.id : citizen.id,
-              alias: isAgent ? messageAdvisor.name : citizen.name,
-              avatar: isAgent ? messageAdvisor.avatarUrl : citizen.avatarUrl,
+              id: isAgent ? messageAdvisor?.id : citizen.id,
+              alias: isAgent ? messageAdvisor?.name : citizen.name,
+              avatar: isAgent ? messageAdvisor?.avatarUrl : citizen.avatarUrl,
               fromCitizen: lastMessageParsed.senderType == 'citizen',
-              fullName: isAgent ? messageAdvisor.displayName : citizen.fullName,
+              fullName: isAgent ? messageAdvisor?.displayName : citizen.fullName,
               isAgent: lastMessageParsed.senderType == 'agent',
             },
             status: lastMessageParsed.status,
@@ -325,7 +325,7 @@ export class ChannelAttentionService {
             ? formatDate(assistanceParsed.endDate)
             : null,
           status: assistanceParsed.status,
-          user: user.name,
+          user: user?.name,
           citizen: citizen.name,
         };
         return model;
@@ -369,7 +369,7 @@ export class ChannelAttentionService {
               separate: true,
               order: [['timestamp', 'DESC']],
               include: [
-                { model: User, as: 'user', required: true },
+                { model: User, as: 'user', required: false },
                 { model: ChannelMessageAttachment, required: false },
               ],
             },
@@ -390,7 +390,7 @@ export class ChannelAttentionService {
       const messagesParsed: ChannelRoomMessage[] = channelMessages
         .map((message) => {
           let messageParsed = message.toJSON();
-          const messageAdvisor = message?.get('user').toJSON() as User;
+          const messageAdvisor = message?.get('user')?.toJSON() as User | null;
           const messageAttachments = message?.get(
             'attachments',
           ) as ChannelMessageAttachment[];
@@ -408,11 +408,11 @@ export class ChannelAttentionService {
             content: messageParsed.content,
             attachments: attachments,
             sender: {
-              id: isAgent ? messageAdvisor.id : citizen.id,
-              alias: isAgent ? messageAdvisor.name : citizen.name,
-              avatar: isAgent ? messageAdvisor.avatarUrl : citizen.avatarUrl,
+              id: isAgent ? messageAdvisor?.id : citizen.id,
+              alias: isAgent ? messageAdvisor?.name : citizen.name,
+              avatar: isAgent ? messageAdvisor?.avatarUrl : citizen.avatarUrl,
               fromCitizen: messageParsed.senderType == 'citizen',
-              fullName: isAgent ? messageAdvisor.displayName : citizen.fullName,
+              fullName: isAgent ? messageAdvisor?.displayName : citizen.fullName,
               isAgent: messageParsed.senderType == 'agent',
             },
             status: messageParsed.status,
@@ -465,7 +465,7 @@ export class ChannelAttentionService {
               separate: true,
               order: [['timestamp', 'ASC']],
               include: [
-                { model: User, as: 'user', required: true },
+                { model: User, as: 'user', required: false },
                 { model: ChannelMessageAttachment, required: false },
               ],
             },

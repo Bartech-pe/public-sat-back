@@ -7,6 +7,7 @@ import {
   forwardRef,
   Inject,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { io, Socket } from 'socket.io-client';
 import { ChannelRoomRepository } from './repositories/channel-room.repository';
@@ -55,6 +56,9 @@ import {
   roleIdSupervisor,
 } from '@common/constants/role.constant';
 import { JwtService } from '@nestjs/jwt';
+import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { NotFoundError } from 'rxjs';
 
 export interface IChannelChatInformation {
   channelRoomId?: number | null;
@@ -169,7 +173,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             senderType: 'citizen',
             status: 'unread',
             timestamp: new Date(),
-            userId: channelRoom.dataValues.userId as number,
+            userId: channelRoom?.dataValues?.userId,
             externalChannelRoomId: data.payload.chat_id as number,
             externalMessageId: data.payload.message.id as string,
           });
@@ -201,6 +205,12 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           }
           let channelRoomParsed = channelRoom.toJSON();
           let channelMessageParsed = channelMessage.toJSON();
+          let channelUser: User | null = null;
+          if(channelRoomParsed?.userId)
+          {
+            channelUser = await this.userRepository.findOne(channelRoomParsed.userId)
+          }
+
 
           let countUnreadMessages =
             await this.channelMessageRepository.findAndCountAll({
@@ -210,11 +220,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
                 senderType: 'citizen',
               },
             });
-          if (!channelRoomParsed.userId) return;
-
-          let channelUser = await this.userRepository.findById(
-            channelRoomParsed.userId,
-          );
 
           let newMessage: ChannelRoomNewMessageDto = {
             channelRoomId: channelRoomParsed.id,
@@ -223,10 +228,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             },
             externalRoomId: channelRoomParsed.externalChannelRoomId,
             channel: data.payload.channel,
-            advisor: {
-              id: channelUser.dataValues.id,
-              name: channelUser.dataValues.name,
-            },
+            advisor: null,
             status: channelRoomParsed.status,
             message: {
               sender: {
@@ -261,7 +263,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           this.multiChannelChatGateway.handleNewMessage(newMessage);
           let inboxCredential: InboxCredential[] =
             await this.inboxCredentialRepository.findAll({
-              where: { inboxId: channelRoom.dataValues.inboxId },
+              where: { inboxId: channelRoomParsed.inboxId },
               order: [['createdAt', 'DESC']],
               limit: 1,
             });
@@ -303,7 +305,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             assistanceId: assistance.id,
             channelRoomId: channelRoom.dataValues.id,
             channelCitizenId: citizen.id,
-            userId: channelRoom.dataValues.userId,
+            userId: channelRoomParsed?.userId,
           };
           if (typeof callback === 'function') {
             this.logger.debug(result);
@@ -390,7 +392,8 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async searchAdvisorAvailable(inboxId?: number): Promise<number> {
+  public async searchAdvisorAvailable(inboxId?: number): Promise<number> 
+  {
     const inboxUsers: InboxUser[] = await this.inboxUserRepository.findAll({
       include: [
         {
@@ -404,11 +407,16 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
               where: {
                 id: { [Op.notIn]: [roleIdAdministrador, roleIdSupervisor] },
               },
-            },
-          ],
+            }
+          ]
         },
+        {
+          model: ChannelState,
+          required: true,
+          where: {name: 'Disponible'} 
+        }
       ],
-      where: { inboxId: inboxId },
+      where: { inboxId: inboxId }
     });
 
     const agents = inboxUsers.map((x) => x.dataValues.userId);
@@ -426,13 +434,13 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       include: [
         {
           model: ChannelRoom,
-          as: 'channelRoom', // 👈 fuerza el alias
+          as: 'channelRoom', 
           attributes: [],
           required: true,
           where: { userId: { [Op.in]: agents } },
         },
       ],
-      group: ['channelRoom.user_id'], // 👈 igual aquí
+      group: ['channelRoom.user_id'],
       raw: true,
       subQuery: false,
     });
@@ -498,14 +506,18 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     if (!inboxCredential) {
       this.logger.error('No se encontraron las credenciales para este canal');
     }
-    let selectedUserId: number | undefined = await this.searchAdvisorAvailable(
-      inboxCredential?.dataValues?.inboxId,
-    );
 
-    if (!selectedUserId) {
-      this.logger.error('No se pudo asignar un agente al channelRoom');
+    let selectedUserId: number | null = null 
+    if(![ChannelType.CHATSAT, ChannelType.WHATSAPP].includes(newMessage.payload.channel))
+    {
+      selectedUserId = await this.searchAdvisorAvailable(
+        inboxCredential?.dataValues?.inboxId,
+      );
+      if (!selectedUserId) {
+        this.logger.error('No se pudo asignar un agente al channelRoom');
+        throw new NotFoundException("No se encontraron asesores disponibles.")
+      }
     }
-
     let channelRoomExists: ChannelRoom[] =
       await this.channelRoomRepository.findAll({
         include: [
@@ -552,7 +564,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     }
 
     const channelRoomDto: CreateChannelRoomDto = {
-      userId: selectedUserId,
       channelCitizenId: channelCitizenId,
       botReplies: true,
       status: 'pendiente',
@@ -613,5 +624,10 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       (cleaned.length * 3) / 4 -
       (cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0);
     return sizeInBytes;
+  }
+
+  async getChannelRoomCurrentStatus(channelRoomId: number): Promise<ChannelRoom>
+  {
+    return (await this.channelRoomRepository.findById(channelRoomId)).toJSON()
   }
 }

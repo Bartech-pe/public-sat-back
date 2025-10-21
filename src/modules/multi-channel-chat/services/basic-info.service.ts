@@ -90,7 +90,7 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     return {
       channel: message.data.payload.channel as Channels,
       botReply: true,
-      userId: message.user.id,
+      userId: message?.user?.id,
       citizenId: message.citizen.id,
       assistanceId: message.assistance.id,
       channelRoomId: message.channelRoom.id,
@@ -146,7 +146,7 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
         timestamp: new Date(),
         userId:
           message.channelRoom.dataValues?.userId ||
-          (message.channelRoom.userId as number),
+          (message?.channelRoom?.userId as number),
         externalChannelRoomId: message.data.payload.chat_id as number,
         externalMessageId: message.data.payload.message.id as string,
       });
@@ -167,7 +167,7 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       },
       externalRoomId: message.data.payload.chat_id as string,
       channel: message.data.payload.channel,
-      advisor: message.user,
+      advisor: message?.user,
       status: message.channelRoom.status,
       message: {
         sender: {

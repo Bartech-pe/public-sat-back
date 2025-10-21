@@ -33,6 +33,9 @@ import { ChannelMessageAttachment } from './entities/channel-message-attachments
 import { ChannelMessageAttachmentRepository } from './repositories/channel-message-attachments.repository';
 import { EmailModule } from '@modules/email/email.module';
 import { SurveyModule } from '@modules/survey/survey.module';
+import { ChannelQueryHistoryRepository } from './repositories/channel-room.repository copy';
+import { ChannelQueryHistory } from './entities/channel-query-history.entity';
+import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
 @Module({
   imports: [
     forwardRef(() => AuthModule),
@@ -42,6 +45,7 @@ import { SurveyModule } from '@modules/survey/survey.module';
       ChannelRoom,
       ChannelCitizen,
       ChannelMessage,
+      ChannelQueryHistory,
       ChannelAttention,
       ChannelMessageAttachment,
     ]),
@@ -49,6 +53,7 @@ import { SurveyModule } from '@modules/survey/survey.module';
     InboxModule,
     ChannelModule,
     EmailModule,
+    ConsultTypeModule,
     ScheduleModule.forRoot(),
     SurveyModule,
   ],
@@ -61,6 +66,7 @@ import { SurveyModule } from '@modules/survey/survey.module';
   providers: [
     MultiChannelChatService,
     ChannelMessageRepository,
+    ChannelQueryHistoryRepository,
     ChannelMessageRepository,
     ChannelAttentionService,
     ChannelRoomRepository,

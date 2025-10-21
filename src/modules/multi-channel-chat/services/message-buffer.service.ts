@@ -34,7 +34,7 @@ export interface BufferedMessage {
   assistance: ChannelAttention;
   citizen: ChannelCitizen;
   externalMessageId: string;
-  user: AdvisorAssigned;
+  user?: AdvisorAssigned | null;
   channelRoom: ChannelRoom;
   credentials: InboxCredential;
 }
@@ -44,7 +44,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MessageBufferService.name);
   private readonly bufferKey = 'incoming_messages_buffer';
   private readonly waitTime = 5000;
-  private readonly timeoutDuration = 600; // 10 minutos en segundos
+  private readonly timeoutDuration = 600; 
   private timeoutId: NodeJS.Timeout;
   private subscriber: Redis;
 
@@ -159,7 +159,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
           channel: bufferedMessage.data.payload.channel as Channels,
           botReply: true,
           citizenId: bufferedMessage.citizen.id,
-          userId: bufferedMessage.user.id,
+          userId: bufferedMessage?.user?.id,
           assistanceId: bufferedMessage.assistance.id,
           channelRoomId: bufferedMessage.channelRoom.id,
           attachments: [],
@@ -406,7 +406,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
         timestamp: new Date(),
         userId:
           message.channelRoom.dataValues?.userId ||
-          (message.channelRoom.userId as number),
+          (message?.channelRoom?.userId as number),
         externalChannelRoomId: message.data.payload.chat_id as number,
         externalMessageId: message.data.payload.message.id as string,
       });
@@ -419,7 +419,8 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
           senderType: 'citizen',
         },
       });
-
+    let channelRoom = await this.multiChannelChatService.getChannelRoomCurrentStatus(message.channelRoom.id)
+    
     let newMessage: ChannelRoomNewMessageDto = {
       channelRoomId: message.channelRoom.id,
       attention:
@@ -428,9 +429,9 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
       }, 
       externalRoomId: message.data.payload.chat_id as string,
       channel: message.data.payload.channel,
-      advisor: message.user,
+      advisor: message?.user,
       unreadCount: countUnreadMessages.total,
-      status: message.channelRoom.status,
+      status: channelRoom.status,
       message: {
         sender: {
           id: message.citizen.id,

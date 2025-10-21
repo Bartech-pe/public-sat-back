@@ -44,13 +44,12 @@ export class CallHistoryRepository extends GenericCrudRepository<CallHistory> {
       where: { userId },
       order: [['id', 'DESC']],
     });
-    if (history && !history.toJSON().seconds) {
+    if (history) {
       await history.update({
         seconds:
-          seconds ??
           (new Date().getTime() -
             new Date(history.toJSON().entryDate).getTime()) /
-            1000,
+          1000,
       });
     }
   }
@@ -64,13 +63,12 @@ export class CallHistoryRepository extends GenericCrudRepository<CallHistory> {
       where: { userId },
       order: [['id', 'DESC']],
     });
-    if (history && !history.toJSON().seconds) {
+    if (history) {
       await history.update({
         seconds:
-          seconds ??
           (new Date().getTime() -
             new Date(history.toJSON().entryDate).getTime()) /
-            1000,
+          1000,
         callStatus,
       });
     }

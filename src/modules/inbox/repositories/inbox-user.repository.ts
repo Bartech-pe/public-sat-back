@@ -33,7 +33,7 @@ export class InboxUserRepository extends GenericCrudRepository<InboxUser> {
       { userId: newUserId },
       {
         where: {
-          inboxId: inboxId,
+          inboxId: inboxId, 
           userId: currentUserId,
         } as Partial<InboxUser>,
       },
@@ -45,4 +45,36 @@ export class InboxUserRepository extends GenericCrudRepository<InboxUser> {
       );
     }
   }
+
+  async updateChannelState(
+  inboxId: number,
+  userId: number,
+  newChannelStateId: number,
+): Promise<void> {
+  // Validar existencia del registro
+  const inboxUser = await this.model.findOne({
+    where: { inboxId, userId } as Partial<InboxUser>,
+  });
+
+  if (!inboxUser) {
+    throw new NotFoundException(
+      'No se encontró la relación entre el usuario y el canal (InboxUser).',
+    );
+  }
+
+  // Actualizar el estado del canal
+  const [updatedCount] = await this.model.update(
+    { channelStateId: newChannelStateId },
+    {
+      where: { inboxId, userId } as Partial<InboxUser>,
+    },
+  );
+
+  if (updatedCount === 0) {
+    throw new BadRequestException(
+      'No se pudo actualizar el estado del canal.',
+    );
+  }
+}
+
 }
