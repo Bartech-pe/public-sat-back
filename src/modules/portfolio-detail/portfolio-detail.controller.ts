@@ -36,11 +36,14 @@ export class PortfolioDetailController {
     return this.service.findAll(limit, offset);
   }
 
-  @Get('detail/:id')
+  @Get('byPortfolioId/:portfolioId')
   findByCartera(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<PortfolioDetail[]> {
-    return this.service.findByPortfolioId(id);
+    @Param('portfolioId', ParseIntPipe) portfolioId: number,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<PortfolioDetail>> {
+    const limit = query.limit!;
+    const offset = query.offset!;
+    return this.service.findByPortfolioId(portfolioId, limit, offset, query.q);
   }
 
   @Get('detailByUserToken/:portfolioId')
@@ -56,7 +59,7 @@ export class PortfolioDetailController {
       portfolioId,
       limit,
       offset,
-      query.q
+      query.q,
     );
     const count = await this.service.countManagedByUserIdAndPortfolioId(
       user.id,
@@ -121,11 +124,17 @@ export class PortfolioDetailController {
     return this.service.createMultiple(dtoList);
   }
 
-  @Get('portfolio-assignments/details/:userId/:portfolioId')
+  @Get('portfolio-assignments/detail-count/:userId/:portfolioId')
   async findAssignmentByUserId(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('portfolioId', ParseIntPipe) portfolioId: number,
-  ): Promise<PortfolioDetail[]> {
-    return (await this.service.findByUserId(userId, portfolioId)).data;
+  ): Promise<{ count: number }> {
+    const count = await this.service.countAssignedByUserIdAndPortfolioId(
+      userId,
+      portfolioId,
+    );
+    return {
+      count,
+    };
   }
 }

@@ -58,32 +58,7 @@ export class PortfolioService {
     try {
       const exist = await this.repository.findOne({
         where: { id },
-        include: [
-          { model: Office },
-          { model: User, as: 'createdByUser' },
-          {
-            model: PortfolioDetail,
-            include: [
-              { model: User, as: 'user' },
-              {
-                model: CitizenContact,
-                as: 'citizenContacts',
-                required: false,
-                separate: true,
-                on: {
-                  // 👇 referenciamos columnas con Sequelize.col
-                  '$detalles.tip_doc$': {
-                    [Op.eq]: col('detalles->citizenContacts.tip_doc'),
-                  },
-                  '$detalles.doc_ide$': {
-                    [Op.eq]: col('detalles->citizenContacts.doc_ide'),
-                  },
-                },
-                order: [['created_at', 'ASC']],
-              },
-            ],
-          },
-        ],
+        include: [{ model: Office }, { model: User, as: 'createdByUser' }],
       });
       if (!exist) {
         throw new NotFoundException('Usuario no encontrado');

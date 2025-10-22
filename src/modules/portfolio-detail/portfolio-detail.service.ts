@@ -48,29 +48,139 @@ export class PortfolioDetailService {
     }
   }
 
-  async findByPortfolioId(portfolioId: number): Promise<PortfolioDetail[]> {
-    const detalles = await this.repository.findAll({
-      where: { portfolioId: portfolioId },
+  async findByPortfolioId(
+    portfolioId: number,
+    limit?: number,
+    offset?: number,
+    q?: Record<string, any>,
+  ): Promise<PaginatedResponse<PortfolioDetail>> {
+    const search: string = q?.search;
+    const searchTerm = (search || '').toLowerCase();
+    // Detecta si es numérico (por ejemplo código, doc_ide o teléfono)
+    const cleanedSearch = searchTerm
+      .replace(/\s+/g, '') // espacios
+      .replace(/\+/g, '') // prefijo +
+      .replace(/[-()]/g, ''); // guiones y paréntesis
+
+    const isNumeric = !isNaN(Number(cleanedSearch));
+
+    const status = q?.status;
+    const taxpayerType = q?.taxpayerType;
+    const segment = q?.segment;
+    const profile = q?.profile;
+    const range = q?.range;
+    return this.repository.findAndCountAll({
+      where: {
+        portfolioId,
+        ...(searchTerm &&
+          !isNumeric && {
+            [Op.or]: [
+              where(fn('LOWER', col('PortfolioDetail.taxpayer_name')), {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              }),
+              where(fn('LOWER', col('PortfolioDetail.code')), {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              }),
+              where(fn('LOWER', col('PortfolioDetail.doc_ide')), {
+                [Op.like]: `%${searchTerm.toLowerCase()}%`,
+              }),
+            ],
+          }),
+
+        // 🔢 Filtro numérico (code, doc_ide o CitizenContact.value)
+        ...(isNumeric && {
+          [Op.or]: [
+            { code: { [Op.like]: `%${cleanedSearch}%` } },
+            { doc_ide: { [Op.like]: `%${cleanedSearch}%` } },
+            // 🔸 Subquery que busca coincidencias en CitizenContact.value
+            literal(`
+              EXISTS (
+                SELECT 1 FROM \`citizen_contacts\` AS c
+                WHERE c.tip_doc = PortfolioDetail.tip_doc
+                AND c.doc_ide = PortfolioDetail.doc_ide
+                AND LOWER(
+                  REPLACE(
+                    REPLACE(
+                      REPLACE(
+                        REPLACE(
+                          TRIM(c.value),
+                          '-', ''
+                        ),
+                        ' ', ''
+                      ),
+                      '(', ''
+                    ),
+                    ')', ''
+                  )
+                ) LIKE '%${cleanedSearch}%'
+              )
+            `),
+          ],
+        }),
+        ...(status != undefined && {
+          status,
+        }),
+        ...(taxpayerType && {
+          taxpayerType: {
+            [Op.like]: `%${taxpayerType.toLowerCase()}%`,
+          },
+        }),
+        ...(segment && {
+          segment: {
+            [Op.like]: `%${segment.toLowerCase()}%`,
+          },
+        }),
+        ...(profile && {
+          profile: {
+            [Op.like]: `%${profile.toLowerCase()}%`,
+          },
+        }),
+        ...(range && {
+          currentDebt: {
+            [Op.between]: [range.from, range.to],
+          },
+        }),
+      },
       include: [
+        {
+          model: Portfolio,
+          required: true,
+        },
         {
           model: User,
           as: 'user',
         },
+        { model: CaseInformation },
+        {
+          model: CitizenContact,
+          as: 'citizenContacts',
+          required: false,
+          separate: true,
+          on: {
+            '$citizenContacts.tip_doc$': {
+              [Op.eq]: col('PortfolioDetail.tip_doc'),
+            },
+            '$citizenContacts.doc_ide$': {
+              [Op.eq]: col('PortfolioDetail.doc_ide'),
+            },
+          },
+          order: [['created_at', 'ASC']],
+        },
       ],
+      limit,
+      offset,
     });
-
-    if (!detalles.length) {
-      throw new NotFoundException(
-        `No se encontraron detalles para la cartera ${portfolioId}`,
-      );
-    }
-
-    return detalles;
   }
 
   countManagedByUserIdAndPortfolioId(userId: number, portfolioId: number) {
     return this.repository.count({
       where: { userId, portfolioId, status: true },
+    });
+  }
+
+  countAssignedByUserIdAndPortfolioId(userId: number, portfolioId: number) {
+    return this.repository.count({
+      where: { userId, portfolioId },
     });
   }
 
@@ -86,9 +196,8 @@ export class PortfolioDetailService {
     // Detecta si es numérico (por ejemplo código, doc_ide o teléfono)
     const cleanedSearch = searchTerm
       .replace(/\s+/g, '') // espacios
-      .replace(/\+/g, '')  // prefijo +
+      .replace(/\+/g, '') // prefijo +
       .replace(/[-()]/g, ''); // guiones y paréntesis
-      
 
     const isNumeric = !isNaN(Number(cleanedSearch));
 

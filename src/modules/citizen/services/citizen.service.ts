@@ -276,6 +276,7 @@ export class CitizenService {
   ): Promise<CitizenContact[]> {
     return this.citizenContactRepository.findAll({
       where: { tipDoc, docIde },
+      order: [["createdAt", "ASC"]]
     });
   }
 

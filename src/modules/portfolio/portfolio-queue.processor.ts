@@ -122,6 +122,7 @@ export class PortfolioQueueProcessor extends WorkerHost {
       const chunk = uniqueContacts.slice(i, i + this.BATCH_SIZE);
 
       const existingContacts = await this.citizenContactRepository.findAll({
+        raw: true,
         where: {
           [Op.or]: chunk.map((c) => ({
             tipDoc: c.tipDoc,
@@ -150,7 +151,9 @@ export class PortfolioQueueProcessor extends WorkerHost {
     }
 
     if (contactsToCreate.length > 0) {
-      await this.citizenContactRepository.bulkCreate(contactsToCreate);
+      await this.citizenContactRepository.bulkCreate(contactsToCreate, {
+        ignoreDuplicates: true,
+      });
     }
 
     // Crear/actualizar ciudadanos
