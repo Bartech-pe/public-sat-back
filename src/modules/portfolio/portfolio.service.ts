@@ -219,7 +219,7 @@ export class PortfolioService {
         status: true,
       });
 
-      await this.portfolioQueue.add('register-details', {
+      this.portfolioQueue.add('register-details', {
         updated: false,
         portfolioId: result.toJSON().id,
         name: result.toJSON().name,

@@ -13,7 +13,7 @@ import { User } from '@modules/user/entities/user.entity';
 import { AloSatService } from '../services/alo-sat.service';
 import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
 import { PauseAgentDto } from '../dto/pause-agent.dto';
-import { LoginAgentDto } from '../dto/login-agent.dto';
+import { CampaignSearchDto, LoginAgentDto } from '../dto/login-agent.dto';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';
@@ -34,8 +34,20 @@ export class AloSatController {
     private readonly callHistoryRepository: CallHistoryRepository,
   ) {}
 
+  @Get('user-groups')
+  findAllUserGroups(): Promise<{ userGroup: string; groupName: string }[]> {
+    return this.service.findUserGroups();
+  }
+
+  @Post('inbound-groups-by-campaign')
+  findInboundGroupsByCampaign(
+    @Body() dto: CampaignSearchDto,
+  ): Promise<{ groupId: string; groupName: string }[]> {
+    return this.service.findInboundGroupsByCampaign(dto.campaignId);
+  }
+
   @Get('campaigns')
-  findAll(@CurrentUser() user: User): Promise<VicidialCampaign[]> {
+  findAllCampaigns(@CurrentUser() user: User): Promise<VicidialCampaign[]> {
     return this.service.findAllCampaigns(user.id);
   }
 
@@ -78,14 +90,22 @@ export class AloSatController {
     @Body() dto: LoginAgentDto,
   ): Promise<any> {
     console.log('dto', dto);
-    const res = await this.service.agentLogin(user.id, dto.idCampaign);
+    const res = await this.service.agentLogin(
+      user.id,
+      dto.campaignId,
+      dto.inboundGroups,
+    );
     const vicidialUser = await this.vicidialUserRepository.findOne({
       where: { userId: user.id },
     });
     await vicidialUser?.update({
       channelStateId: ChannelPhoneState.PAUSED,
       pauseCode: null,
-    });
+      inboundGroups: dto.inboundGroups,
+    } as VicidialUser);
+
+    await this.service.onChangeIngroups(user.id);
+
     this.userGateway.notifyPhoneStateUser(user.id);
     return res;
   }
@@ -114,7 +134,8 @@ export class AloSatController {
       await vicidialUser?.update({
         channelStateId: ChannelPhoneState.OFFLINE,
         pauseCode: null,
-      });
+        inboundGroups: null,
+      } as VicidialUser);
       this.userGateway.notifyPhoneStateUser(user.id);
       return res;
     } catch (error) {
@@ -133,7 +154,8 @@ export class AloSatController {
       await vicidialUser?.update({
         channelStateId: ChannelPhoneState.OFFLINE,
         pauseCode: null,
-      });
+        inboundGroups: null,
+      } as VicidialUser);
       this.userGateway.notifyPhoneStateUser(userId);
       return res;
     } catch (error) {

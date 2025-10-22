@@ -248,7 +248,14 @@ export class VicidialApiService {
     const data = response.data;
   }
 
-  async changeIngroups(user, pass, phoneLogin, campaign, sessionName) {
+  async changeIngroups(
+    user,
+    pass,
+    phoneLogin,
+    campaign,
+    sessionName,
+    inboundGroups,
+  ) {
     const payload = new URLSearchParams({
       server_ip: vicidialConfig.privateIP,
       session_name: sessionName,
@@ -262,7 +269,7 @@ export class VicidialApiService {
       qm_phone: '',
       qm_extension: phoneLogin,
       dial_method: 'INBOUND_MAN',
-      closer_choice: ' colain -',
+      closer_choice: inboundGroups,
     });
 
     try {
@@ -724,7 +731,7 @@ export class VicidialApiService {
       group_id: 'colain',
     });
 
-    console.log("payload", payload)
+    console.log('payload', payload);
 
     try {
       const res = await axios.post(this.managerSendApi, payload.toString(), {

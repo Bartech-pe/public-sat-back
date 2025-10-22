@@ -9,9 +9,3 @@ export class LoginAgentDto {
   @IsNotEmpty()
   inboundGroups: string;
 }
-
-export class CampaignSearchDto {
-  @IsString()
-  @IsNotEmpty()
-  campaignId: string;
-}

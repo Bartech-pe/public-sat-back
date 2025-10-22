@@ -112,6 +112,14 @@ export class VicidialUser extends Model {
   })
   pauseCode: string | null;
 
+  @Column({
+    field: 'inbound_groups',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'Inbound groups asignados',
+  })
+  inboundGroups: string | null;
+
   @HasMany(() => VicidialUserHistory)
   history?: VicidialUserHistory[];
 

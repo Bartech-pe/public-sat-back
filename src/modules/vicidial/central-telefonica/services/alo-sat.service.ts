@@ -25,6 +25,7 @@ interface UserAgent {
   userPass: string;
   phoneLogin: string;
   phonePass: string;
+  inboundGroups: string;
 }
 
 @Injectable()
@@ -82,6 +83,7 @@ export class AloSatService {
       userPass: agent.userPass,
       phoneLogin: agent.phoneLogin,
       phonePass: agent.phonePass,
+      inboundGroups: agent.inboundGroups,
     };
   }
 
@@ -89,6 +91,22 @@ export class AloSatService {
     const now = new Date();
     const formattedDate = now.toISOString().slice(2, 19).replace(/[-T:]/g, '');
     return `S${formattedDate}${confExten}`;
+  }
+
+  async findUserGroups(): Promise<{ userGroup: string; groupName: string }[]> {
+    const response: any[] = await this.db.query(
+      `
+      SELECT user_group, group_name FROM vicidial_user_groups;;
+    `,
+      {
+        replacements: [],
+        type: QueryTypes.SELECT,
+      },
+    );
+    return response.map((item) => ({
+      userGroup: item.user_group,
+      groupName: item.group_name,
+    }));
   }
 
   async findAllCampaigns(userId: number): Promise<VicidialCampaign[]> {
@@ -134,7 +152,53 @@ export class AloSatService {
     }
   }
 
-  async agentLogin(userId: number, campaign: string): Promise<any> {
+  async findInboundGroupsByCampaign(
+    campaign: string,
+  ): Promise<{ groupId: string; groupName: string }[]> {
+    const response: any[] = await this.db.query(
+      `
+      SELECT 
+          c.campaign_id,
+          c.campaign_name,
+          TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(c.closer_campaigns, ' ', n.n), ' ', -1)) AS group_id,
+          g.group_name,
+          g.active
+      FROM vicidial_campaigns c
+      JOIN (
+          SELECT a.N + b.N * 10 + 1 AS n
+          FROM 
+              (SELECT 0 AS N UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 
+              UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) a,
+              (SELECT 0 AS N UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 
+              UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) b
+      ) n
+      ON n.n <= 1 + (LENGTH(c.closer_campaigns) - LENGTH(REPLACE(c.closer_campaigns, ' ', '')))
+      LEFT JOIN vicidial_inbound_groups g 
+        ON g.group_id = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(c.closer_campaigns, ' ', n.n), ' ', -1))
+      WHERE c.closer_campaigns NOT IN ('', '-', ' ')
+        AND TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(c.closer_campaigns, ' ', n.n), ' ', -1)) NOT IN ('', '-', '--ALL--')
+        AND g.active = 'Y'
+        AND c.campaign_id = ?
+      ORDER BY c.campaign_id, g.group_id;
+
+
+    `,
+      {
+        replacements: [campaign],
+        type: QueryTypes.SELECT,
+      },
+    );
+    return response.map((item) => ({
+      groupId: item.group_id,
+      groupName: item.group_name,
+    }));
+  }
+
+  async agentLogin(
+    userId: number,
+    campaign: string,
+    inboundGroups: string,
+  ): Promise<any> {
     // 1. Obtener credenciales del agente
     const { agentUser, userPass, phoneLogin, phonePass } =
       await this.getAgent(userId);
@@ -174,8 +238,6 @@ export class AloSatService {
         `No se encontró sesión activa para el agente ${agentUser}.`,
       );
     }
-
-    await this.onChangeIngroups(userId);
 
     return { success: true, agentUser, campaign };
   }
@@ -226,7 +288,7 @@ export class AloSatService {
 
   async onChangeIngroups(userId) {
     // 1. Obtener credenciales del agente
-    const { agentUser, userPass, phoneLogin, phonePass } =
+    const { agentUser, userPass, phoneLogin, phonePass, inboundGroups } =
       await this.getAgent(userId);
 
     const [agentData]: any = await this.db.query(
@@ -259,6 +321,7 @@ export class AloSatService {
       phoneLogin,
       agentData?.campaign_id,
       agentData?.session_name,
+      inboundGroups,
     );
   }
 
@@ -383,7 +446,7 @@ export class AloSatService {
 
   async resumeAgent(userId: number): Promise<any> {
     // 1️⃣ Obtenemos las credenciales del agente
-    const { agentUser, userPass, phoneLogin, phonePass } =
+    const { agentUser, userPass, phoneLogin, phonePass, inboundGroups } =
       await this.getAgent(userId);
 
     // 2️⃣ Consultamos sesión activa
@@ -421,6 +484,7 @@ export class AloSatService {
       phoneLogin,
       agentData.campaign_id,
       agentData.session_name,
+      inboundGroups,
     );
 
     console.log(`Grupo 'colain -' asignado. Ahora READY...`);
