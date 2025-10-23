@@ -19,6 +19,11 @@ export class CentralTelefonicaController {
     return this.service.getByIdCampain(campaign_id);
   }
 
+  @Get('campanign')
+  getCampaignAll(): Promise<VicidialCampaign[]>  {
+    return this.service.getCampaignAll();
+  }
+
   @Post('campanias')
   create(@Body() body: CreateVicidialCampaignDto) {
      return this.service.createCampaign(body);
@@ -38,5 +43,13 @@ export class CentralTelefonicaController {
   getProgreso(@Param('id') campaign_id: string) {
     return this.service.getProgreso(campaign_id);
   }
+
+  @Get('campanias/list/:id')
+  getListProgress(@Param('id') listId: number) {
+    return this.service.getListProgress(listId);
+  }
+
+ 
+
 
 }

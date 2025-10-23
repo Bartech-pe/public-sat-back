@@ -487,7 +487,7 @@ export class AloSatService {
       inboundGroups,
     );
 
-    console.log(`Grupo 'colain -' asignado. Ahora READY...`);
+    console.log(`Grupo ${inboundGroups} asignado. Ahora READY...`);
     const response = await this.vicidialApiService.setAgentReady(
       agentUser,
       userPass,

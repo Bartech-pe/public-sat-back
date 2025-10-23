@@ -21,18 +21,18 @@ module.exports = {
         allowNull: true,
         comment: 'Descripción de la campaña',
       },
-      campaign_type_id: {
+      campaign_list_id: {
         type: Sequelize.BIGINT,
         allowNull: false,
-        comment: 'Tipo de campaña (relación con CampaignType)',
+        comment: 'id de la lista',
       },
       department_id: {
         type: Sequelize.BIGINT,
         allowNull: true,
         comment: 'ID del área asignada a la campaña',
       },
-      campaign_state_id: {
-        type: Sequelize.BIGINT,
+      active: {
+        type: Sequelize.STRING,
         allowNull: false,
         comment: 'Estado actual de la campaña (relación con CampaignState)',
       },
@@ -46,26 +46,7 @@ module.exports = {
         allowNull: true,
         comment: 'Fecha de finalización de la campaña',
       },
-      start_time: {
-        type: Sequelize.DATE,
-        allowNull: true,
-        comment: 'Hora de inicio de la campaña',
-      },
-      end_time: {
-        type: Sequelize.DATE,
-        allowNull: true,
-        comment: 'Hora de fin de la campaña',
-      },
-      start_day: {
-        type: Sequelize.SMALLINT,
-        allowNull: true,
-        comment: 'Día de la semana de inicio de la campaña',
-      },
-      end_day: {
-        type: Sequelize.SMALLINT,
-        allowNull: true,
-        comment: 'Día de la semana de fin de la campaña',
-      },
+  
       apply_holiday: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
@@ -82,14 +63,17 @@ module.exports = {
         allowNull: true,
         comment: 'Identificador de la campaña en un sistema externo (VD)',
       },
+      vd_campaign_name: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        comment: 'nombre  de la campaña   vicidial',
+      },
       status: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
         defaultValue: true,
         comment: 'Indica si la campaña está habilitada o inhabilitada',
       },
-
-      // Auditoría con FK hacia users
       created_by: {
         type: Sequelize.BIGINT,
         allowNull: true,
@@ -124,22 +108,7 @@ module.exports = {
       },
     });
 
-    /** -------------------------
-     * Constraints nombrados
-     * ------------------------- */
-
-    // FK campaign_type_id -> campaign_types.id
-    await queryInterface.addConstraint('campaigns', {
-      fields: ['campaign_type_id'],
-      type: 'foreign key',
-      name: 'fk_campaigns_campaign_type_id_campaign_types',
-      references: {
-        table: 'campaign_types',
-        field: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'RESTRICT',
-    });
+   
 
     // FK department_id -> departments.id
     await queryInterface.addConstraint('campaigns', {
@@ -154,19 +123,7 @@ module.exports = {
       onDelete: 'RESTRICT',
     });
 
-    // FK campaign_state_id -> campaign_states.id
-    await queryInterface.addConstraint('campaigns', {
-      fields: ['campaign_state_id'],
-      type: 'foreign key',
-      name: 'fk_campaigns_campaign_state_id_campaign_states',
-      references: {
-        table: 'campaign_states',
-        field: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'RESTRICT',
-    });
-
+  
     // FK created_by -> users.id
     await queryInterface.addConstraint('campaigns', {
       fields: ['created_by'],

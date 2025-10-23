@@ -29,7 +29,7 @@ module.exports = {
           name: 'sms',
           description: 'Aplicación de mensajería',
           logo: 'flat-color-icons:sms',
-          status: true,
+          status: false,
           created_at: new Date(),
           updated_at: new Date(),
         },

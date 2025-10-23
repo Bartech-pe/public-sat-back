@@ -21,15 +21,11 @@ export class CreateCampaignDto {
 
   @ApiProperty({ description: 'Tipo de campaña (ID de CampaignType)' })
   @IsNumber({}, { message: v.isNumber('campaignTypeId') })
-  campaignTypeId: number;
+  vdlistId: number;
 
   @ApiProperty({ description: 'Área asignada a la campaña (ID de Department)' })
   @IsNumber({}, { message: v.isNumber('departmentId') })
   departmentId: number;
-
-  @ApiProperty({ description: 'Estado de la campaña (ID de CampaignState)' })
-  @IsNumber({}, { message: v.isNumber('campaignStateId') })
-  campaignStateId: number;
 
   @ApiProperty({ description: 'Fecha de inicio de la campaña' })
   @Type(() => Date)
@@ -51,27 +47,27 @@ export class CreateCampaignDto {
   })
   endDate?: Date;
 
-  @ApiPropertyOptional({ description: 'Hora de inicio de la campaña' })
-  @IsOptional()
-  @IsDate({ message: v.isDate('startTime') })
-  startTime?: Date;
+  // @ApiPropertyOptional({ description: 'Hora de inicio de la campaña' })
+  // @IsOptional()
+  // @IsDate({ message: v.isDate('startTime') })
+  // startTime?: Date;
 
-  @ApiPropertyOptional({ description: 'Hora de fin de la campaña' })
-  @IsOptional()
-  @IsDate({ message: v.isDate('endTime') })
-  endTime?: Date;
+  // @ApiPropertyOptional({ description: 'Hora de fin de la campaña' })
+  // @IsOptional()
+  // @IsDate({ message: v.isDate('endTime') })
+  // endTime?: Date;
 
-  @ApiPropertyOptional({
-    description: 'Día de la semana de inicio de la campaña',
-  })
-  @IsOptional()
-  @IsNumber({}, { message: v.isNumber('startDay') })
-  startDay?: number;
+  // @ApiPropertyOptional({
+  //   description: 'Día de la semana de inicio de la campaña',
+  // })
+  // @IsOptional()
+  // @IsNumber({}, { message: v.isNumber('startDay') })
+  // startDay?: number;
 
-  @ApiPropertyOptional({ description: 'Día de la semana de fin de la campaña' })
-  @IsOptional()
-  @IsNumber({}, { message: v.isNumber('endDay') })
-  endDay?: number;
+  // @ApiPropertyOptional({ description: 'Día de la semana de fin de la campaña' })
+  // @IsOptional()
+  // @IsNumber({}, { message: v.isNumber('endDay') })
+  // endDay?: number;
 
   @IsOptional()
   @IsBoolean({ message: v.isBoolean('applyHoliday') })
@@ -90,11 +86,15 @@ export class CreateCampaignDto {
 
   @ApiProperty({
     description: 'Identificador de campaña en sistema externo (VD)',
-    type: Number, // 👈 opcional, pero ayuda a Swagger
+    type: String, 
   })
-  @IsInt({ message: v.isInt('vdCampaignId') }) // 👈 cambia IsString por IsInt
+  @IsString({ message: v.isString('vdCampaignId') }) 
   @IsOptional()
-  vdCampaignId?: number;
+  vdCampaignId?: string;
+  
+  @ApiProperty({ description: 'nombre de la campaña' })
+  @IsString({ message: v.isString('vdCampaignName') })
+  vdCampaignName: string;
 
   @IsOptional()
   @IsBoolean({ message: v.isBoolean('status') })

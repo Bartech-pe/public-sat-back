@@ -22,6 +22,7 @@ import { ChannelType } from '@common/interfaces/channel-connector/messaging.inte
 import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity';
 import { EmailCredential } from '@modules/email/entities/email-credentials.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
+import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
 
 @Injectable()
 export class MonitorService {
@@ -34,6 +35,7 @@ export class MonitorService {
     private readonly channelMessageRepository: ChannelMessageRepository,
     private readonly vicidialService: MonitorVicidialService,
     private readonly userVicidialRepository: VicidialUserRepository,
+    private readonly callHistoryRepository: CallHistoryRepository,
     @InjectConnection('central') private readonly db: Sequelize,
   ) {}
 
@@ -237,8 +239,16 @@ export class MonitorService {
     });
     if (vicidialuser) {
       const username = vicidialuser.toJSON().username;
-      const total = await this.vicidialService.vicidialCount(username);
-      alosat = total.total;
+      const total = await this.callHistoryRepository.count({
+        where: {
+          userId,
+          createdAt: {
+            [Op.gte]: today,
+            [Op.lt]: tomorrow,
+          },
+        },
+      });
+      alosat = total;
     }
     const count = recievedCount + chat + chatbot + alosat;
     return { recievedCount, chat, chatbot, alosat, count };

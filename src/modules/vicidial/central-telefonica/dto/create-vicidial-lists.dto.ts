@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsEnum, MaxLength, ValidateNested, IsNotEmpty, IsArray, Length } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsEnum, MaxLength, ValidateNested, IsNotEmpty, IsArray, Length, Min } from 'class-validator';
 import { CreateVicidialLeadDto } from './lead-list.dto';
 import { Type } from 'class-transformer';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
@@ -18,9 +18,14 @@ export class CreateVicidialListDto {
   @MaxLength(255)
   list_description?: string;
 
-  // @IsString()
-  // @MaxLength(20)
-  // campaign_id: number;
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  campaign_name?: string;
+
+  @IsInt()
+  @Min(1)
+  departmentId: number;
 
   @IsString()
   @Length(1, 50)
@@ -30,12 +35,12 @@ export class CreateVicidialListDto {
   @IsEnum(['Y', 'N'])
   active?: 'Y' | 'N' = 'Y';
 
-   @ApiProperty({
+  @ApiProperty({
       type: 'string',
       format: 'binary',
       description: 'Archivo Excel con los detalles de la cartera',
-    })
-    file: Express.Multer.File;
+  })
+  file: Express.Multer.File;
 
   // @IsArray()
   // @IsNotEmpty({ message: v.isNotEmpty('dtoList') })

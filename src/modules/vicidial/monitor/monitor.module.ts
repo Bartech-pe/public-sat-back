@@ -6,9 +6,16 @@ import { InboxModule } from '@modules/inbox/inbox.module';
 import { MonitorVicidialService } from './monitor-vicidial.service';
 import { EmailModule } from '@modules/email/email.module';
 import { UserModule } from '@modules/user/user.module';
+import { CallModule } from '@modules/call/call.module';
 
 @Module({
-  imports: [MultiChannelChatModule, InboxModule, EmailModule, UserModule],
+  imports: [
+    MultiChannelChatModule,
+    InboxModule,
+    EmailModule,
+    UserModule,
+    CallModule,
+  ],
   controllers: [MonitorController],
   providers: [MonitorService, MonitorVicidialService],
   exports: [],

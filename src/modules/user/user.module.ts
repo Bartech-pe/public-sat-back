@@ -10,6 +10,7 @@ import { VicidialApiModule } from '@modules/vicidial/vicidial-api/vicidial-api.m
 import { UserGateway } from './user.gateway';
 import { AuthModule } from '@modules/auth/auth.module';
 import { VicidialUserHistory } from './entities/vicidial-user-history.model';
+import { VicidialUserHistoryRepository } from './repositories/vicidial-user-history.repository';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { VicidialUserHistory } from './entities/vicidial-user-history.model';
     forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
-  providers: [UserService, UserRepository, VicidialUserRepository, UserGateway],
-  exports: [UserRepository, VicidialUserRepository, UserGateway],
+  providers: [UserService, UserRepository, VicidialUserRepository, UserGateway, VicidialUserHistoryRepository],
+  exports: [UserRepository, VicidialUserRepository, UserGateway, VicidialUserHistoryRepository],
 })
 export class UserModule {}

@@ -28,6 +28,7 @@ import { Department } from '@modules/department/entities/department.entity';
   underscored: true,
 })
 export class Campaign extends Model {
+
   @Column({
     type: DataType.BIGINT,
     autoIncrement: true,
@@ -52,17 +53,13 @@ export class Campaign extends Model {
   })
   description: string;
 
-  @ForeignKey(() => CampaignType)
   @Column({
-    field: 'campaign_type_id',
+    field: 'campaign_list_id',
     type: DataType.INTEGER,
     allowNull: false,
-    comment: 'Tipo de campaña (relación con CampaignType)',
+    comment: 'id lista campaña',
   })
-  campaignTypeId: number;
-
-  @BelongsTo(() => CampaignType)
-  campaignType: CampaignType;
+  vdlistId: number;
 
   @ForeignKey(() => Department)
   @Column({
@@ -76,17 +73,13 @@ export class Campaign extends Model {
   @BelongsTo(() => Department)
   department: Department;
 
-  @ForeignKey(() => CampaignState)
   @Column({
-    field: 'campaign_state_id',
-    type: DataType.INTEGER,
-    allowNull: false,
-    comment: 'Estado actual de la campaña (relación con CampaignState)',
+    field: 'active',
+    type: DataType.ENUM('Y', 'N'),
+    defaultValue: 'Y',
   })
-  campaignStateId: number;
+  active?: string;
 
-  @BelongsTo(() => CampaignState)
-  campaignState: CampaignState;
 
   @Column({
     field: 'start_date',
@@ -103,38 +96,6 @@ export class Campaign extends Model {
     comment: 'Fecha de finalización de la campaña',
   })
   endDate: Date;
-
-  @Column({
-    field: 'start_time',
-    type: DataType.DATE,
-    allowNull: true,
-    comment: 'Hora de inicio de la campaña',
-  })
-  startTime: Date;
-
-  @Column({
-    field: 'end_time',
-    type: DataType.DATE,
-    allowNull: true,
-    comment: 'Hora de fin de la campaña',
-  })
-  endTime: Date;
-
-  @Column({
-    field: 'start_day',
-    type: DataType.SMALLINT,
-    allowNull: true,
-    comment: 'Día de la semana de inicio de la campaña',
-  })
-  startDay: number;
-
-  @Column({
-    field: 'end_day',
-    type: DataType.SMALLINT,
-    allowNull: true,
-    comment: 'Día de la semana de fin de la campaña',
-  })
-  endDay: number;
 
   @Column({
     field: 'apply_holiday',
@@ -154,11 +115,19 @@ export class Campaign extends Model {
 
   @Column({
     field: 'vd_campaign_id',
-    type: DataType.INTEGER, // 👈 cambia STRING por INTEGER
+    type: DataType.STRING, 
     allowNull: true,
     comment: 'Identificador de la campaña en un sistema externo (VD)',
   })
-  vdCampaignId?: number;
+  vdCampaignId?: string; 
+
+  @Column({
+    field: 'vd_campaign_name',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'nombre de la campaña',
+  })
+  vdCampaignName: string;
 
   @Column({
     field: 'status',

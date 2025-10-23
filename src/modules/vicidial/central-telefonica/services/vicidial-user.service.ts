@@ -20,6 +20,10 @@ export class VicidialUserService {
     return this.model.findAll();
   }
 
+  getCampaignAll(): Promise<VicidialCampaign[]> {
+    return this.campaignModel.findAll({ where: { dial_method: 'RATIO' }});
+  }
+
    async getByIdCampain(campaignId: string) {
     const campaign = await this.campaignModel.findOne({
       where: { campaign_id: campaignId },
@@ -134,8 +138,37 @@ export class VicidialUserService {
     }
   }
 
-  //sudo chown -R ese_usuario:ese_usuario /var/lib/asterisk/sounds
-  //sudo chmod -R 775 /var/lib/asterisk/sounds
+  async getListProgress(listId: number) {
+    const sql_datos = `SELECT 
+            vl.list_id,
+            vl.list_name,
+            vc.campaign_id,
+            vc.campaign_name,
+            COUNT(vl2.lead_id) AS total_leads,
+            SUM(CASE WHEN vl2.status = 'NEW' THEN 1 ELSE 0 END) AS not_called,
+            SUM(CASE WHEN vl2.status != 'NEW' THEN 1 ELSE 0 END) AS called,
+            ROUND(SUM(CASE WHEN vl2.status != 'NEW' THEN 1 ELSE 0 END) / COUNT(vl2.lead_id) * 100, 2) AS penetration
+        FROM vicidial_lists vl
+        JOIN vicidial_list vl2 ON vl.list_id = vl2.list_id
+        JOIN vicidial_campaigns vc ON vl.campaign_id = vc.campaign_id
+        WHERE vl.list_id = ?
+        GROUP BY vl.list_id, vl.list_name, vc.campaign_id, vc.campaign_name`;
+
+      try {
+      const [results] = await this.centralConnection.query(sql_datos, {
+        replacements: [listId],
+        type: 'SELECT',
+      });
+
+      return results;
+    } catch (error) {
+      
+      throw new InternalServerErrorException('Error al obtener el progreso');
+    }    
+
+  }
+
+  
 
 
 }

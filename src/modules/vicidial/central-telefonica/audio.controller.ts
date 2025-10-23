@@ -1,5 +1,5 @@
 // audio.controller.ts
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AudioService } from './services/audio.service';
 import { VicidialLists } from './entities/vicidial-lists.entity';
@@ -49,6 +49,11 @@ export class AudioController {
       @UploadedFile() file: Express.Multer.File,
   ): Promise<VicidialLists> {
       return this.audioService.createlistar(dto,file);
+  }
+
+  @Patch('campanias/list/:id')
+  updateList(@Param('id') listId: number, @Body() dto:any){
+      return this.audioService.updateList(listId, dto);
   }
 
 

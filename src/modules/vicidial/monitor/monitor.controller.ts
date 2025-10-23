@@ -32,12 +32,16 @@ export class MonitorController {
 
   @Get('monitorAdvisorsChat')
   async monitorAdvisorsChat() {
-    return await this.monitorService.getMonitoringMultiChannel(ChannelType.CHATSAT);
+    return await this.monitorService.getMonitoringMultiChannel(
+      ChannelType.CHATSAT,
+    );
   }
 
   @Get('monitorAdvisorsChatWsp')
   async monitorAdvisorsChatWsp() {
-    return await this.monitorService.getMonitoringMultiChannel(ChannelType.WHATSAPP);
+    return await this.monitorService.getMonitoringMultiChannel(
+      ChannelType.WHATSAPP,
+    );
   }
 
   @Get('monitorVicidialCount')
@@ -50,17 +54,9 @@ export class MonitorController {
     return await this.monitorVicidialService.vicidialTable();
   }
 
-  @Get('stateDetailsByAdvisor/:agent/:start/:finish')
-  async getStateDetailsByAdvisor(
-    @Param('agent') agent: number,
-    @Param('start') start: Date,
-    @Param('finish') finish: Date,
-  ) {
-    return await this.monitorVicidialService.getStateDetailsByAdvisor(
-      agent,
-      start,
-      finish,
-    );
+  @Get('stateDetailsByAdvisor/:userId')
+  async getStateDetailsByAdvisor(@Param('userId') userId: number) {
+    return await this.monitorVicidialService.getStateDetailsByAdvisor(userId);
   }
 
   @Get('monitorVicidialCountDashBoard')

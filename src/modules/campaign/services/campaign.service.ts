@@ -41,9 +41,7 @@ export class CampaignService {
     try {
       return this.repository.findAndCountAll({
         include: [
-          { model: CampaignType },
           { model: Department },
-          { model: CampaignState },
           { model: User, as: 'createdByUser' },
         ],
         limit,

@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as FormData from 'form-data';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
+import { CampaignRepository } from '@modules/campaign/repositories/campaign.repository';
 
 
 const writeFileAsync = promisify(fs_unico.writeFile);
@@ -51,7 +52,9 @@ export class AudioService {
 
       //private readonly gateway: PortfolioGateway,
       private readonly httpService: HttpService,
-      private readonly configService: ConfigService
+      private readonly configService: ConfigService,
+
+      private readonly repository: CampaignRepository
   ) {}
 
   findAllList(): Promise<VicidialLists[]> {
@@ -109,18 +112,32 @@ export class AudioService {
         if (!data.length) {
           throw new BadRequestException('El archivo Excel está vacío.');
         }
-
+ 
         const existingList = await this.modelList.findOne({
             where: { list_id: dto.list_id },
         });
 
         if (existingList) {
-            throw new ConflictException(
-              `El list_id ${dto.list_id} ya está registrado.`,
-            );
+           return existingList; 
         }
        
         const result = await this.modelList.create({ ...dto });
+
+        const newCampaignData = {
+            name: dto.list_name,
+            description: dto.list_description,
+            departmentId: dto.departmentId,
+            vdlistId: dto.list_id,
+            startDate:  new Date(),
+            endDate: new Date(),
+            applyHoliday:  false,
+            validUntil: new Date(),
+            vdCampaignId: dto.campaign_id,
+            vdCampaignName: dto.campaign_name,
+            status:  true,
+        };
+
+         this.repository.create(newCampaignData);
 
         const validLeads = data.map((row: any, index: number) => {
             const telefono = row.TELEFONO?.toString().trim();
@@ -159,7 +176,7 @@ export class AudioService {
     let processed = 0;
 
     console.log(`🚀 Iniciando carga de ${total} leads en lotes de ${BATCH_SIZE}...`);
-
+ 
       for (let i = 0; i < total; i += BATCH_SIZE) {
         const batch = detallesComplete.slice(i, i + BATCH_SIZE);
 
@@ -308,6 +325,43 @@ export class AudioService {
       throw new Error(`Error en upload: ${error.message}`);
     }
   }
+
+  async updateList(
+  listId: number,
+  dto: any,
+): Promise<{ status: 'updated'; data: any } | { status: 'not_found' }> {
+  try {
+
+    const exist = await this.repository.findOne({ where: { id: listId } });
+
+    if (!exist) {
+      return { status: 'not_found' };
+    }
+
+    await exist.update({ active: dto.active });
+
+ 
+    const existLead = await this.modelList.findOne({
+      where: { list_id: dto.vdlistId },
+    });
+    
+
+    if (existLead) {
+      await existLead.update({ active: dto.active });
+    }
+
+    return {
+      status: 'updated',
+      data: exist,
+    };
+
+  } catch (error) {
+    throw new InternalServerErrorException(
+      'Error interno del servidor: ' + error.message,
+    );
+  }
+}
+
 
 
 }

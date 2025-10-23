@@ -25,6 +25,7 @@ import { AmiModule } from '../ami/ami.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AudioQueueProcessor } from './audioQueueProcessor';
 import { HttpModule } from '@nestjs/axios';
+import { CampaignModule } from '@modules/campaign/campaign.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { HttpModule } from '@nestjs/axios';
       'central',
     ),
     HttpModule,
+    CampaignModule,
     UserModule,
     VicidialApiModule,
     forwardRef(() => CallModule),
