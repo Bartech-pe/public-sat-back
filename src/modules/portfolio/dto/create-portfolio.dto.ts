@@ -9,14 +9,16 @@ import {
 import { Transform, Type } from 'class-transformer';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
 import { IsDate } from 'class-validator';
+import { IsUnique } from '@common/validators/is-unique/is-unique.decorator';
+import { Portfolio } from '../entities/portfolio.entity';
 
 export class CreatePortfolioDto {
   @ApiProperty({
-    example: 'Campaña Julio',
     description: 'Nombre de la cartera',
   })
   @IsNotEmpty({ message: v.isNotEmpty('name') })
   @IsString({ message: v.isString('name') })
+  @IsUnique(Portfolio, 'name', { message: v.isUnique('name') })
   name: string;
 
   @ApiPropertyOptional({

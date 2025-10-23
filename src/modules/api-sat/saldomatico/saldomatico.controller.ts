@@ -26,7 +26,7 @@ export class SaldomaticoController {
   }
 
   @Public()
-  @Get('  /:psiTipConsulta/:pvValor')
+  @Get('impuestoPredial/:psiTipConsulta/:pvValor')
   async GetImpuestoPredial(
     @Param('psiTipConsulta') psiTipConsulta: string,
     @Param('pvValor') pvValor: string,

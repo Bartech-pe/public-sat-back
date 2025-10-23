@@ -312,7 +312,34 @@ export class PortfolioDetailService {
 
   async findOne(id: number): Promise<PortfolioDetail> {
     try {
-      const exist = await this.repository.findById(id);
+      const exist = await this.repository.findById(id, {
+        include: [
+          {
+            model: Portfolio,
+            required: true,
+          },
+          {
+            model: User,
+            as: 'user',
+          },
+          { model: CaseInformation },
+          {
+            model: CitizenContact,
+            as: 'citizenContacts',
+            required: false,
+            separate: true,
+            on: {
+              '$citizenContacts.tip_doc$': {
+                [Op.eq]: col('PortfolioDetail.tip_doc'),
+              },
+              '$citizenContacts.doc_ide$': {
+                [Op.eq]: col('PortfolioDetail.doc_ide'),
+              },
+            },
+            order: [['created_at', 'ASC']],
+          },
+        ],
+      });
       if (!exist) {
         throw new NotFoundException('Usuario no encontrado');
       }
