@@ -55,7 +55,7 @@ export class InboxService {
   ): Promise<PaginatedResponse<Inbox>> {
     try {
       return this.repository.findAndCountAll({
-        include: [{ model: Channel }, { model: InboxCredential }, { model: VicidialCredential }],
+        include: [{ model: Channel }, { model: InboxCredential }, { model: VicidialCredential }, {model: User, as: 'users', through: { attributes: [] }}],
         limit,
         offset,
         order: [['id', 'DESC']],

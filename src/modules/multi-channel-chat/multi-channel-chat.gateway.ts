@@ -37,7 +37,7 @@ export interface ChannelRoomAssistance {
   },
 })
 export class MultiChannelChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+  implements OnGatewayInit,OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   server: Server;
@@ -50,6 +50,10 @@ export class MultiChannelChatGateway
     @Inject(forwardRef(() => MultiChannelChatService))
     private multiChannelService: MultiChannelChatService,
   ) {}
+
+  afterInit(server: Server) {
+    server.setMaxListeners(20); 
+  }
 
   async handleConnection(client: any) {
     try {
@@ -68,10 +72,7 @@ export class MultiChannelChatGateway
   }
 
   handleDisconnect(client: any) {
-    console.log('server NO Listo');
-  }
-  afterInit(server: any) {
-    console.log('serverListo');
+    client.removeAllListeners();
   }
 
   handleNewMessage(newMessage: ChannelRoomNewMessageDto) {

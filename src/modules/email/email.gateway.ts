@@ -43,7 +43,7 @@ export class EmailGateway
   }
 
   handleDisconnect(client: any) {
-    console.log('server NO Listo');
+    client.removeAllListeners();
   }
 
   afterInit(server: any) {

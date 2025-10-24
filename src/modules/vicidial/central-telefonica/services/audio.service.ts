@@ -267,100 +267,97 @@ export class AudioService {
   }
 
   private async ensureDirExists(dirPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      fs_unico.mkdir(dirPath, { recursive: true }, (err) => {
-        if (err) reject(err);
-        else resolve();
+      return new Promise((resolve, reject) => {
+        fs_unico.mkdir(dirPath, { recursive: true }, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
-    });
   }
 
   private async updateAgente(body: any): Promise<any> {
-    const form = new FormData();
-    form.append('ADD', 41111); // Acción para agregar agente remoto
-    form.append('DB', body.DB || '0'); // Ejemplo: DB=0
-    form.append('remote_agent_id', body.remote_agent_id || '1');
-    form.append('user_start', body.user_start || '400');
-    form.append('number_of_lines', body.number_of_lines || '1');
-    form.append('server_ip', body.server_ip || '10.0.12.1');
-    form.append('conf_exten', body.conf_exten || '8366');
-    form.append('extension_group', body.extension_group || 'NONE');
-    form.append('status', body.status || 'INACTIVE');
-    form.append('campaign_id', body.campaign_id || '4554');
-    form.append('on_hook_agent', body.on_hook_agent || 'N');
-    form.append('on_hook_ring_time', body.on_hook_ring_time || '15');
-    form.append('SUBMIT', 'SUBMIT');
+        const form = new FormData();
+        form.append('ADD', 41111); // Acción para agregar agente remoto
+        form.append('DB', body.DB || '0'); // Ejemplo: DB=0
+        form.append('remote_agent_id', body.remote_agent_id || '1');
+        form.append('user_start', body.user_start || '400');
+        form.append('number_of_lines', body.number_of_lines || '1');
+        form.append('server_ip', body.server_ip || '10.0.12.1');
+        form.append('conf_exten', body.conf_exten || '8366');
+        form.append('extension_group', body.extension_group || 'NONE');
+        form.append('status', body.status || 'INACTIVE');
+        form.append('campaign_id', body.campaign_id || '4554');
+        form.append('on_hook_agent', body.on_hook_agent || 'N');
+        form.append('on_hook_ring_time', body.on_hook_ring_time || '15');
+        form.append('SUBMIT', 'SUBMIT');
 
-    if (body.agent_id) {
-      form.append('agent_id', body.agent_id); 
-    }
+        if (body.agent_id) {
+          form.append('agent_id', body.agent_id); 
+        }
 
 
-    const authString = Buffer.from(`${this.username}:${this.password}`).toString('base64');
-    const basicAuthHeader = `Basic ${authString}`;
+        const authString = Buffer.from(`${this.username}:${this.password}`).toString('base64');
+        const basicAuthHeader = `Basic ${authString}`;
 
-    const config = {
-      method: 'post',
-      url: this.uploadUrlAgente,
-      maxBodyLength: Infinity,
-      headers: {
-        'Authorization': basicAuthHeader,
-        ...form.getHeaders(),
-      },
-      data: form,
-    };
+        const config = {
+          method: 'post',
+          url: this.uploadUrlAgente,
+          maxBodyLength: Infinity,
+          headers: {
+            'Authorization': basicAuthHeader,
+            ...form.getHeaders(),
+          },
+          data: form,
+        };
 
-    try {
-      const response = await firstValueFrom(
-        this.httpService.request(config)
-      );
-      
-      return {
-        status: 200,
-        message: 'El agente fue agregado/actualizado correctamente en Vicidial..',
-      };
-      
-    } catch (error) {
-      this.logger.error(`Error en upload a Vicidial: ${error.message}`);
-      throw new Error(`Error en upload: ${error.message}`);
-    }
+        try {
+          const response = await firstValueFrom(
+            this.httpService.request(config)
+          );
+          
+          return {
+            status: 200,
+            message: 'El agente fue agregado/actualizado correctamente en Vicidial..',
+          };
+          
+        } catch (error) {
+          this.logger.error(`Error en upload a Vicidial: ${error.message}`);
+          throw new Error(`Error en upload: ${error.message}`);
+        }
   }
 
-  async updateList(
-  listId: number,
-  dto: any,
-): Promise<{ status: 'updated'; data: any } | { status: 'not_found' }> {
-  try {
+  async updateList(listId: number,dto: any): Promise<{ status: 'updated'; data: any } | { status: 'not_found' }> {
+      try {
 
-    const exist = await this.repository.findOne({ where: { id: listId } });
+            const exist = await this.repository.findOne({ where: { id: listId } });
 
-    if (!exist) {
-      return { status: 'not_found' };
-    }
+            if (!exist) {
+              return { status: 'not_found' };
+            }
 
-    await exist.update({ active: dto.active });
+            await exist.update({ active: dto.active });
 
- 
-    const existLead = await this.modelList.findOne({
-      where: { list_id: dto.vdlistId },
-    });
-    
+        
+            const existLead = await this.modelList.findOne({
+              where: { list_id: dto.vdlistId },
+            });
+            
 
-    if (existLead) {
-      await existLead.update({ active: dto.active });
-    }
+            if (existLead) {
+              await existLead.update({ active: dto.active });
+            }
 
-    return {
-      status: 'updated',
-      data: exist,
-    };
+            return {
+              status: 'updated',
+              data: exist,
+            };
 
-  } catch (error) {
-    throw new InternalServerErrorException(
-      'Error interno del servidor: ' + error.message,
-    );
+      } catch (error) {
+        throw new InternalServerErrorException(
+          'Error interno del servidor: ' + error.message,
+        );
+      }
   }
-}
 
 
 

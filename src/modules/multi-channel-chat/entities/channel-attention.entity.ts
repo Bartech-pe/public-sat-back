@@ -22,6 +22,7 @@ export enum ChannelAttentionStatus {
   IDENTITY_VERIFICATION = 'identity_verification',
   IN_PROGRESS = 'in_progress',
   CLOSED = 'closed',
+  PRIORITY = 'priority',
 }
 
 @DefaultScope(() => ({
@@ -65,6 +66,17 @@ export class ChannelAttention extends Model<ChannelAttention> {
   })
   attentionDetail?: string;
 
+  @ForeignKey(() => User)
+  @Column({
+    field: 'user_id',
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  userId?: number | null;
+  
+  @BelongsTo(() => User, { foreignKey: 'user_id', as: 'user'})
+  user: User;
+  
   @Column({
     field: 'status',
     type: DataType.ENUM(...Object.values(ChannelAttentionStatus)),

@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsNotEmpty, IsOptional, IsString, IsBoolean, IsDate } from 'class-validator';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
 import { Channels } from '@common/interfaces/multi-channel-chat/channel-message/channel-chat-message.dto';
+import { ChannelQueryHistory } from '@modules/multi-channel-chat/entities/channel-query-history.entity';
 
 export class GetAttentionsOfCitizenDto {
   @ApiProperty({ description: 'Fecha y hora de la atención (ISO 8601)' })
@@ -41,4 +42,6 @@ export class GetAttentionsOfCitizenDto {
   @IsOptional()
   @IsString({ message: v.isString('email') })
   email?: string;
+
+  queryHistory?: ChannelQueryHistory[]
 }

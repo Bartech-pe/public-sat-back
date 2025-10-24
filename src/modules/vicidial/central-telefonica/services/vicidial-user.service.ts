@@ -154,13 +154,39 @@ export class VicidialUserService {
         WHERE vl.list_id = ?
         GROUP BY vl.list_id, vl.list_name, vc.campaign_id, vc.campaign_name`;
 
+    const sqlDetalle = `
+        SELECT 
+            vl2.status AS estado,
+            vs.status_name AS nombre_estado,
+            COUNT(*) AS subtotal
+        FROM vicidial_list vl2
+        LEFT JOIN vicidial_statuses vs ON vl2.status = vs.status
+        WHERE vl2.list_id = ?
+        GROUP BY vl2.status, vs.status_name
+      `;
+
       try {
       const [results] = await this.centralConnection.query(sql_datos, {
         replacements: [listId],
         type: 'SELECT',
       });
 
-      return results;
+      const detalle = await this.centralConnection.query(sqlDetalle, {
+        replacements: [listId],
+        type: 'SELECT',
+      });
+
+      const detalleFormateado = detalle.map((row: any) => ({
+        estado: row.estado || 'Total',
+        nombre_estado: row.nombre_estado || '',
+        subtotal: row.subtotal,
+      }));
+
+      return {
+        resumen: results,
+        detalle: detalleFormateado,
+      };
+
     } catch (error) {
       
       throw new InternalServerErrorException('Error al obtener el progreso');

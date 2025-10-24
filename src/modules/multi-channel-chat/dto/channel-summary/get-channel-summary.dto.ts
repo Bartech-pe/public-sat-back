@@ -4,7 +4,8 @@ import {
   MessageStatus,
 } from '@common/interfaces/multi-channel-chat/channel-message/channel-chat-message.dto';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class GetChannelSummaryDto {
   @ApiProperty({ description: 'Estado del último mensaje', example: 'read' })
@@ -45,4 +46,24 @@ export class GetChannelSummaryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+
+  @ApiProperty({ description: 'Delimitador de chats propios', example: false })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ obj }) => {
+    const rawValue = obj?.allChats;
+    
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+      return undefined;
+    }
+    
+    if (typeof rawValue === 'string') {
+      const normalized = rawValue.toLowerCase().trim();
+      return normalized === 'true' || normalized === '1';
+    }
+    
+    return Boolean(rawValue);
+  })
+  allChats?: boolean;
 }

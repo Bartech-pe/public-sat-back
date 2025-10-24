@@ -75,6 +75,22 @@ export class AuthService {
     };
   }
 
+  private async validateImageUrl(url?: string): Promise<string> {
+    const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+    if (!url) return defaultAvatar;
+
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+
+      const isImage =
+        res.ok && (res.headers.get('content-type') ?? '').startsWith('image/');
+
+      return isImage ? url : defaultAvatar;
+    } catch {
+      return defaultAvatar;
+    }
+  }
   async createCitizen(dto: CreateChannelCitizenDto) {
     const citizen = (
       await this.channelCitizenRepository.findOrCreate(
@@ -85,9 +101,7 @@ export class AuthService {
         {
           ...dto,
           fullName: dto.name,
-          avatarUrl:
-            dto?.avatarUrl ??
-            'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+          avatarUrl: await this.validateImageUrl(dto.avatarUrl)
         },
       )
     ).toJSON();

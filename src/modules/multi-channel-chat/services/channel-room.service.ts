@@ -69,6 +69,7 @@ import { ChannelState } from '@modules/channel-state/entities/channel-state.enti
 import { CreateChannelQueryHistoryDto } from '../dto/channel-query-history/create-channel-query-history.dto';
 import { ChannelQueryHistoryRepository } from '../repositories/channel-room.repository copy';
 import { ConsultTypeRepository } from '@modules/consult-type/repositories/consult-type.repository';
+import { UserRepository } from '@modules/user/repositories/user.repository';
 
 @Injectable()
 export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
@@ -81,6 +82,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     private multiChannelChatGateway: MultiChannelChatGateway,
     private channelRoomRepository: ChannelRoomRepository,
     private channelAttentionRepository: ChannelAttentionRepository,
+    private userRepository: UserRepository,
     private citizenRepository: ChannelCitizenRepository,
     private assistanceService: ChannelAttentionService,
     private consultTypeRepository: ConsultTypeRepository,
@@ -98,43 +100,107 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     const currentUserInboxes = await this.inboxUserRepository.findAll({
       where: { userId: user.id },
     });
+    const isAdminOrSupervisor = ['administrador', 'supervisor'].includes(currentUserRole.name);
 
     const inboxes = currentUserInboxes.map((x) => x.dataValues.inboxId);
 
     const attentions = await this.channelAttentionRepository.findAll({
-      ...(query.chatStatus === 'completado'
+      subQuery: false,
+      where: query?.messageStatus !== null && query?.messageStatus !== undefined
+          ? {
+              status: {
+                [Op.in]: [
+                  ChannelAttentionStatus.IDENTITY_VERIFICATION,
+                  ChannelAttentionStatus.IN_PROGRESS,
+                  ChannelAttentionStatus.PRIORITY
+                ]
+              },
+              endDate: { [Op.is]: null },
+              userId: { [Op.not]: null },
+              ...(isAdminOrSupervisor ? {} : { userId: user.id })
+            }
+          : query?.allChats 
         ? {
-            where: {
-              status: { [Op.eq]: ChannelAttentionStatus.CLOSED },
-              endDate: { [Op.not]: null },
+            status: {
+              [Op.in]: [
+                ChannelAttentionStatus.IDENTITY_VERIFICATION,
+                ChannelAttentionStatus.IN_PROGRESS
+              ]
             },
+            endDate: { [Op.is]: null },
+            userId: { [Op.is]: null }
+          }
+        : isAdminOrSupervisor
+        ? {
+            ...(query?.chatStatus === 'completado'
+              ? {
+                  status: ChannelAttentionStatus.CLOSED,
+                  endDate: { [Op.not]: null },
+                  userId: { [Op.not]: null }
+                }
+              : query?.chatStatus === 'prioridad'
+                ? {
+                    status: ChannelAttentionStatus.PRIORITY,
+                    endDate: { [Op.is]: null },
+                    userId: { [Op.not]: null }
+                  }
+                : query?.chatStatus === 'pendiente'
+                  ? {
+                      status: {
+                        [Op.in]: [
+                          ChannelAttentionStatus.IDENTITY_VERIFICATION,
+                          ChannelAttentionStatus.IN_PROGRESS
+                        ]
+                      },
+                      endDate: { [Op.is]: null },
+                      userId: { [Op.not]: null }
+                    }
+                  : {}
+            )
           }
         : {
-            where: {
-              status: { [Op.not]: ChannelAttentionStatus.CLOSED },
-              endDate: { [Op.is]: null },
-            },
-          }),
+          userId: user.id,
+          ...(query?.chatStatus === 'completado'
+            ? {
+                status: ChannelAttentionStatus.CLOSED,
+                endDate: { [Op.not]: null }
+              }
+            : query?.chatStatus === 'prioridad'
+              ? {
+                  status: ChannelAttentionStatus.PRIORITY,
+                  endDate: { [Op.is]: null }
+                }
+              : query?.chatStatus === 'pendiente'
+                ? {
+                    status: {
+                      [Op.in]: [
+                        ChannelAttentionStatus.IDENTITY_VERIFICATION,
+                        ChannelAttentionStatus.IN_PROGRESS
+                      ]
+                    },
+                    endDate: { [Op.is]: null }
+                  }
+                : {}
+          )
+      },
       order: [['startDate', 'DESC']],
+      limit: 9999,
       include: [
+        {
+          model: User,
+          as: 'user',
+          required: false,
+          attributes: ['id', 'name', 'displayName', 'avatarUrl']
+        },
         {
           model: ChannelRoom,
           required: true,
-          where:
-            !['administrador', 'supervisor'].includes(currentUserRole.name)
-              ? {
-                  userId: user.id,
-                  ...(query.chatStatus ? { status: query.chatStatus } : {}),
-                }
-              : query.chatStatus
-              ? { status: query.chatStatus }
-              : {},
           include: [
             {
               model: ChannelCitizen,
               required: true,
-              ...(query.search
-                ? { where: { name: { [Op.like]: `%${query.search}%` } } }
+              ...(query?.search
+                ? { where: { name: { [Op.like]: `%${query?.search}%` } } }
                 : {}),
               attributes: ['id', 'name', 'fullName', 'avatarUrl', 'phoneNumber'],
             },
@@ -147,7 +213,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
             {
               model: Inbox,
               required: true,
-              ...( !['administrador', 'supervisor'].includes(currentUserRole.name)
+              ...( !isAdminOrSupervisor
                 ? { where: { id: inboxes } }
                 : {}),
               include: [
@@ -155,8 +221,8 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
                   model: Channel,
                   required: true,
                   attributes: ['name', 'logo'],
-                  ...(query.channel !== 'all'
-                    ? { where: { name: query.channel } }
+                  ...(query?.channel !== 'all'
+                    ? { where: { name: query?.channel } }
                     : {}),
                 },
               ],
@@ -166,7 +232,6 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         {
           model: ChannelMessage,
           required: false,
-          separate: true,
           include: [
             {
               model: ChannelMessageAttachment,
@@ -190,10 +255,9 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const messages = attention?.get('messages')[0] as ChannelMessage;
       const lastMessage = !messages ? null : messages.toJSON();
       const citizen = channelRoom?.get('citizen')?.toJSON() as ChannelCitizen;
-      const advisor = channelRoom?.get('user')?.toJSON() as User | null;
+      // const advisor = channelRoom?.get('user')?.toJSON() as User | null;
 
       if (!lastMessage) continue;
-      if (currentUserRole.name !== 'administrador' && chatroom?.userId !== user?.id) continue;
 
       const unreadCount = await this.channelMessageRepository.findAndCountAll({
         where: {
@@ -207,6 +271,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         channelRoomId: chatroom?.id,
         attention: {
           id: attentionParsed.id,
+          status: attentionParsed.status,
           attentionDetail: attentionParsed?.attentionDetail,
           consultTypeId: attentionParsed?.consultTypeId,
           endDate: attentionParsed.endDate
@@ -215,8 +280,8 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         channel: channel?.name,
         status: chatroom?.status,
         advisor: {
-          id: advisor?.id,
-          name: advisor?.displayName || advisor?.name
+          id: attentionParsed?.user?.id,
+          name: attentionParsed?.user?.displayName || attentionParsed?.user?.name
         },
         lastMessage: {
           citizen: {
@@ -226,6 +291,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
             avatar: citizen?.avatarUrl || '',
             phone: citizen?.phoneNumber,
           },
+          hasAttachment: lastMessage?.attachments && lastMessage?.attachments.length > 0,
           externalMessageId: lastMessage?.externalMessageId,
           id: lastMessage?.id,
           message: lastMessage?.content,
@@ -246,24 +312,24 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       result.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
     }
 
-    if (query.chatStatus) {
-      return result.filter((ch) => ch.status === query.chatStatus);
-    }
+    // if (query?.chatStatus) {
+    //   return result.filter((ch) => ch.status === query.chatStatus);
+    // }
 
-    if (!query.chatStatus && query.messageStatus) {
+    if (query.messageStatus) {
       return result.filter((ch) => ch.lastMessage.status === query.messageStatus);
     }
-    const filtered = result.filter(
-      (ch) => ch.lastMessage.status === 'unread' || ch.status === 'prioridad',
-    );
+    // const filtered = result.filter(
+    //   (ch) => ch.lastMessage.status === 'unread' || ch.status === 'prioridad',
+    // );
 
-    filtered.sort((a, b) => {
+    result.sort((a, b) => {
       if (a.status === 'prioridad' && b.status !== 'prioridad') return -1;
       if (b.status === 'prioridad' && a.status !== 'prioridad') return 1;
       return b.lastMessage.timestamp - a.lastMessage.timestamp;
-    });
+    }); 
 
-    return filtered;
+    return result;
   }
 
 
@@ -327,6 +393,11 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           required: true,
           include: [
             {
+              model: User,
+              as: 'user',
+              required: false,
+            },
+            {
               model: ChannelMessage,
               required: false,
               separate: true,
@@ -380,7 +451,6 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
     const messagesParsed: ChannelRoomMessage[] = messages
       .map((message) => {
         let messageParsed = message.toJSON();
-        const messageAdvisor = message?.get('user')?.toJSON() as User| null;
         const messageAttachments = message?.get(
           'attachments',
         ) as ChannelMessageAttachment[];
@@ -398,11 +468,11 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           content: messageParsed.content,
           attachments: attachments,
           sender: {
-            id: isAgent ? messageAdvisor?.id : citizen.id,
-            alias: isAgent ? messageAdvisor?.name : citizen.name,
-            avatar: isAgent ? messageAdvisor?.avatarUrl : citizen.avatarUrl,
+            id: isAgent ? attentionParsed?.user?.id : citizen.id,
+            alias: isAgent ? attentionParsed?.user?.name : citizen.name,
+            avatar: isAgent ? attentionParsed?.user?.avatarUrl : citizen.avatarUrl,
             fromCitizen: messageParsed.senderType == 'citizen',
-            fullName: isAgent ? messageAdvisor?.displayName : citizen.fullName,
+            fullName: isAgent ? attentionParsed?.user?.displayName : citizen.fullName,
             isAgent: messageParsed.senderType == 'agent',
           },
           status: messageParsed.status,
@@ -423,6 +493,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       channelRoomId: room.id,
       attention:{
         id: attentionParsed.id,
+        status: attentionParsed.status,
         attentionDetail: attentionParsed.attentionDetail,
         consultTypeId: attentionParsed.consultTypeId,
         endDate: attentionParsed.endDate,
@@ -464,6 +535,11 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         },
         include: [
           {
+                model: User,
+                as: 'user',
+                required: false,
+          },
+          {
             model: ChannelRoom,
             required: true,
             include: [
@@ -474,7 +550,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
               {
                 model: User,
                 as: 'user',
-                required: true,
+                required: false,
               },
               {
                 model: Inbox,
@@ -499,7 +575,6 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const channelRoom = assistance.get('channelRoom') as ChannelRoom;
       const inbox = channelRoom.get('inbox') as Inbox;
       const citizen = channelRoom.get('citizen').toJSON() as ChannelCitizen;
-      const channelUser = channelRoom.get('user')?.toJSON() as User| null;
       const credentials = inbox?.get('credentials').toJSON() as InboxCredential;
       if (!credentials) {
         throw new UnauthorizedException('No se hallaron las credenciales');
@@ -584,13 +659,14 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         botStatus: 'paused',
         attention: {
           id: attentionParsed.id,
+          status: attentionParsed.status,
           attentionDetail: attentionParsed?.attentionDetail,
           consultTypeId: attentionParsed?.consultTypeId,
           endDate: attentionParsed?.endDate
         },
         advisor: {
-          id: channelUser?.id,
-          name: channelUser?.name,
+          id: user?.id,
+          name: user?.name,
         },
         externalRoomId: message.externalChannelRoomId,
         channel: message.channel,
@@ -723,8 +799,13 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
         message: 'El estado fue actualizado correctamente.',
         success: true,
       };
-      if (payload.status == 'completado') {
-        if (!payload.channelRoomId || !payload.assistanceId) {
+      await this.channelRoomRepository.update(payload.channelRoomId, {
+          status: payload.status,
+      });
+
+      switch (payload.status) {
+        case 'completado':
+          if (!payload.channelRoomId || !payload.assistanceId) {
           throw new BadRequestException(
             'Debe proporcionar el ID de room y el ID de asistencia.',
           );
@@ -734,18 +815,27 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           channelRoomId: payload.channelRoomId,
         };
         this.assistanceService.closeChannelAttention(payloadToCloseService);
-        return response;
-      } else {
-        await this.channelRoomRepository.update(payload.channelRoomId, {
-          status: payload.status,
-        });
-        this.multiChannelChatGateway.notifyChannelRoomStatusChanged(payload);
+          break;
+        case 'prioridad':
+          await this.channelAttentionRepository.update(payload.assistanceId, {
+            status: ChannelAttentionStatus.PRIORITY,
+          });
+          this.multiChannelChatGateway.notifyChannelRoomStatusChanged(payload);
+          break;
+        case 'pendiente':
+          await this.channelAttentionRepository.update(payload.assistanceId, {
+            status: ChannelAttentionStatus.IN_PROGRESS,
+          });
+          this.multiChannelChatGateway.notifyChannelRoomStatusChanged(payload);
+          break;
+        default:
+          break;
       }
       return response;
     } catch (error) {
       this.logger.error(error.toString());
       return {
-        message: 'No se pudo hacer el camibo de estado',
+        message: 'No se pudo hacer el cambio de estado',
         success: false,
         error: error.toString(),
       };
@@ -856,7 +946,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
   async transferToAdvisor(
     channelroomId: number,
     advisorId: number,
-    notificationSended: boolean = false
+    priorityNotification: boolean = false
   ): Promise<BaseResponseDto> {
     let response: BaseResponseDto = {
       success: false,
@@ -866,9 +956,15 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const room = await this.channelRoomRepository.findById(channelroomId, {
         include: [
           {
-            model: User,
-            as: 'user',
+            model : ChannelAttention,
             required: false,
+            where: {
+              status: {
+                [Op.not]: ChannelAttentionStatus.CLOSED
+              }
+            },
+            order: [['startDate', 'DESC']],
+            limit: 1,
           },
           {
             model: Inbox,
@@ -885,27 +981,38 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           },
         ],
       });
+      const attention = room.get('assistances')[0] as ChannelAttention;
+      const attentionParsed = attention.toJSON() as ChannelAttention;
       const inbox = room?.get('inbox') as Inbox;
-      const newAdvisor = inbox.get('users') as User[];
-      if (!newAdvisor || newAdvisor.length === 0) {
+      const newAdvisor = await this.userRepository.findById(advisorId);
+      if (!newAdvisor) {
         throw new NotFoundException(
           'No se encontró al asesor. Asegúrese de que el asesor esté asociado al canal.',
         );
       }
-      const newAdvisorParsed = newAdvisor[0].toJSON() as User;
+      const newAdvisorParsed = newAdvisor.toJSON() as User;
+      attention.update({
+        userId: newAdvisorParsed.id
+      })
       this.channelRoomRepository.update(channelroomId, {
         userId: newAdvisorParsed.id,
       });
-      if(!notificationSended)
+      if(priorityNotification)
       {
+        this.multiChannelChatGateway.notifyAdvisorRequest(
+          channelroomId,
+          attentionParsed.id,
+          newAdvisorParsed.id,
+        );
+      }else{
         this.multiChannelChatGateway.notifyAdvisorChanged({
           channelRoomId: channelroomId,
+          attentionId: attentionParsed.id,
           id: newAdvisorParsed.id,
           displayName: newAdvisorParsed.displayName ?? 'Unknown',
           name: newAdvisorParsed.name,
         });
       }
-
       response.message = `Se ha asignado la conversación al asesor ${newAdvisorParsed.name} correctamente`
       response.success = true;
       return response

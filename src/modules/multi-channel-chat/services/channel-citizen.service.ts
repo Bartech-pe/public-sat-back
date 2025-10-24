@@ -32,6 +32,7 @@ import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repo
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { MultiChannelChatService } from '../multi-channel-chat.service';
 import { ChannelRoomService } from './channel-room.service';
+import { ChannelQueryHistory } from '../entities/channel-query-history.entity';
 
 @Injectable()
 export class ChannelCitizenService {
@@ -140,6 +141,14 @@ export class ChannelCitizenService {
         .get('channelRoom')
         .toJSON() as ChannelRoom;
 
+      channelRoom.update({
+        status: 'prioridad' 
+      })
+
+      assistance.update({
+        status: ChannelAttentionStatus.PRIORITY
+      })
+
       let selectedUserId: number | undefined = await this.multiChannelChatService.searchAdvisorAvailable(
          channelRoom.inboxId
       );
@@ -147,11 +156,7 @@ export class ChannelCitizenService {
         throw new NotFoundException("No se encontraron asesores disponibles para este canal")
       }
       this.channelRoomService.transferToAdvisor(channelRoom.id, selectedUserId, true)
-      this.multiChannelChatGateway.notifyAdvisorRequest(
-        channelRoom?.id,
-        assistance?.id,
-        selectedUserId,
-      );
+      
     } catch (error) {
       throw error;
     }
@@ -222,6 +227,10 @@ export class ChannelCitizenService {
         await this.channelAttentionRepository.findAll({
           include: [
             {
+              model: ChannelQueryHistory,
+              required: false
+            },
+            {
               model: ChannelRoom,
               required: true,
               include: [
@@ -259,13 +268,12 @@ export class ChannelCitizenService {
             }
           ],
         });
-      this.logger.debug(channelAttentions);
       response.success = true;
       response.message = 'Listado de atenciones del ciudadano';
       response.data = channelAttentions.map((attention) => {
         const attentionParsed = attention.toJSON();
-        this.logger.debug(attentionParsed);
         const attentionMessages = attentionParsed.messages as ChannelMessage[];
+        const queryHistory = attentionParsed.queryHistory as ChannelQueryHistory[];
         const attentionChannel = attentionParsed.channelRoom as ChannelRoom;
         const user = attentionChannel?.user as User | null;
         const citizen = attentionChannel.citizen;
@@ -286,6 +294,7 @@ export class ChannelCitizenService {
           category: '',
           type: attentionConsultType?.name,
           email: citizen.email,
+          queryHistory
         };
       });
       return response;
@@ -325,8 +334,8 @@ export class ChannelCitizenService {
       return response;
     } catch (error) {
       response.error = error.toString();
-      return response;
       this.logger.error(error.toString())
+      return response;
     }
   }
 }

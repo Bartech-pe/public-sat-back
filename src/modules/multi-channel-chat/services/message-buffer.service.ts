@@ -64,9 +64,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    this.logger.log(
-      'MessageBufferService iniciado con buffer dinámico y timeout',
-    );
 
     await this.redisClient.config('SET', 'notify-keyspace-events', 'Ex');
 
@@ -95,13 +92,10 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
       clearTimeout(this.timeoutId);
     }
     await this.subscriber.quit();
-    this.logger.log('Buffer de mensajes detenido');
   }
 
   async addMessageToBuffer(message: BufferedMessage) {
     try {
-      console.log('entro a la cola');
-
       const senderId = (message?.citizen?.phoneNumber ?? '').toString();
       const botMustAnswer =
         [ChannelType.WHATSAPP, ChannelType.CHATSAT].includes(
@@ -139,8 +133,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
   private async onMessageBufferTimeout(senderId: string) {
     try {
       console.log('onMessageBufferTimeout init');
-      this.logger.log(`Timeout alcanzado para usuario: ${senderId}`);
-
       const bufferedMessageStr = await this.redisClient.get(
         `buffered_message:${senderId}`,
       );
@@ -193,8 +185,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      // RESTAURADO: Usar método específico con gateway
-
       await this.cleanupMessageBufferProcess(senderId);
       this.logger.log(
         `Conversación cerrada por timeout para usuario: ${senderId}`,
@@ -212,11 +202,10 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
     try {
       const keysToDelete = [
         `message_buffer_timeout:${senderId}`,
-        `buffered_message:${senderId}`, // RESTAURADO: También limpiar buffered_message
+        `buffered_message:${senderId}`, 
       ];
       await this.redisClient.del(...keysToDelete);
       await this.removeUserMessagesFromBuffer(senderId);
-      // this.logger.debug(`Cleanup Message Buffer realizado para ${senderId}`);
     } catch (error) {
       this.logger.error(
         `Error en cleanup Message Buffer para ${senderId}:`,
@@ -255,9 +244,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
       await multi.exec();
 
       const removedCount = messages.length - filteredMessages.length;
-      // this.logger.debug(
-      //   `Buffer cleanup: ${removedCount} mensajes removidos para usuario ${senderId}`,
-      // );
     } catch (error) {
       this.logger.error(
         `Error en cleanup de buffer compartido para ${senderId}:`,
@@ -276,9 +262,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
         this.processBufferedMessages();
       }
     }, this.waitTime);
-    // this.logger.debug(
-    //   `Temporizador reiniciado, procesará en ${this.waitTime}ms`,
-    // );
   }
 
   private async processBufferedMessages() {
@@ -419,13 +402,15 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
           senderType: 'citizen',
         },
       });
-    let channelRoom = await this.multiChannelChatService.getChannelRoomCurrentStatus(message.channelRoom.id)
-    
+      let channelRoom = await this.multiChannelChatService.getChannelRoomCurrentStatus(message.channelRoom.id)
+      let attention = await this.assistanceService.getAttentionCurrentStatus(message.assistance.id)
+      
     let newMessage: ChannelRoomNewMessageDto = {
       channelRoomId: message.channelRoom.id,
       attention:
       {
         id: message.assistance.id,
+        status: attention.status
       }, 
       externalRoomId: message.data.payload.chat_id as string,
       channel: message.data.payload.channel,
@@ -471,6 +456,5 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
 
   public async clearUserTimeout(senderId: string) {
     await this.redisClient.del(`message_buffer_timeout:${senderId}`);
-    // this.logger.debug(`Timeout limpiado para usuario: ${senderId}`);
   }
 }

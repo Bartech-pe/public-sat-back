@@ -4,6 +4,7 @@ import {
   OnGatewayConnection,
   SubscribeMessage,
   MessageBody,
+  OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { PortfolioQueueProcessor } from './portfolio-queue.processor';
@@ -14,7 +15,7 @@ import { forwardRef, Inject } from '@nestjs/common';
     origin: '*',
   },
 })
-export class PortfolioGateway implements OnGatewayConnection {
+export class PortfolioGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -22,6 +23,9 @@ export class PortfolioGateway implements OnGatewayConnection {
     @Inject(forwardRef(() => PortfolioQueueProcessor))
     private readonly processor: PortfolioQueueProcessor,
   ) {}
+  handleDisconnect(client: any) {
+    client.removeAllListeners();
+  }
 
   handleConnection(client: any) {
     console.log(`📡 Cliente conectado: ${client.id}`);

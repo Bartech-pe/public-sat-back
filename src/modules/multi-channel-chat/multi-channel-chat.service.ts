@@ -145,7 +145,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           if (data.type !== MessageType.INCOMING) return null;
 
           if (data.payload.channel == ChannelType.CHATSAT) {
-            this.logger.debug(data);
             const isValidToken = await this.checkCitizenToken(data?.token);
             if (!isValidToken) {
               result.error = 'No autorizado.';
@@ -225,6 +224,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             channelRoomId: channelRoomParsed.id,
             attention: {
               id: assistance.id,
+              status: assistance.status
             },
             externalRoomId: channelRoomParsed.externalChannelRoomId,
             channel: data.payload.channel,
@@ -509,20 +509,17 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    let selectedUserId: number | null = null;
-    if (
-      ![ChannelType.CHATSAT, ChannelType.WHATSAPP].includes(
-        newMessage.payload.channel,
-      )
-    ) {
-      selectedUserId = await this.searchAdvisorAvailable(
-        inboxCredential?.dataValues?.inboxId,
-      );
-      if (!selectedUserId) {
-        this.logger.error('No se pudo asignar un agente al channelRoom');
-        throw new NotFoundException('No se encontraron asesores disponibles.');
-      }
-    }
+    let selectedUserId: number | null = null 
+    // if(![ChannelType.CHATSAT, ChannelType.WHATSAPP].includes(newMessage.payload.channel))
+    // {
+    //   selectedUserId = await this.searchAdvisorAvailable(
+    //     inboxCredential?.dataValues?.inboxId,
+    //   );
+    //   if (!selectedUserId) {
+    //     this.logger.error('No se pudo asignar un agente al channelRoom');
+    //     throw new NotFoundException("No se encontraron asesores disponibles.")
+    //   }
+    // }
     let channelRoomExists: ChannelRoom[] =
       await this.channelRoomRepository.findAll({
         include: [

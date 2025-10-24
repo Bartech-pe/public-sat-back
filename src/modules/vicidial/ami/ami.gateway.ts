@@ -19,7 +19,7 @@ export class AMIGateway
   @WebSocketServer()
   server: Server;
   handleDisconnect(client: any) {
-    console.log('connection');
+    client.removeAllListeners();
   }
   handleConnection(client: any, ...args: any[]) {
     console.log('serverListo');

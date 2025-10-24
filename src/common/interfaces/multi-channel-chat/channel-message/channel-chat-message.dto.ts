@@ -61,7 +61,6 @@ export type CitizenDocType = 'DNI' | 'CE' | 'OTROS';
 export class ChannelChatDetail {
   channelRoomId: number;
   channel: Channels;
-  status: ChatStatus;
   attention: ChannelAttentionSummariesDTO;
   externalRoomId: string;
   botStatus: BotStatus;

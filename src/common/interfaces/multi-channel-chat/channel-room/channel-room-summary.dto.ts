@@ -1,3 +1,4 @@
+import { ChannelAttentionStatus } from '@modules/multi-channel-chat/entities/channel-attention.entity';
 import { LastMessage } from '../channel-citizen/channel-citizen.interface';
 import {
   BotStatus,
@@ -20,6 +21,7 @@ export class ChannelRoomSummaryDto {
 
 export interface ChannelAttentionSummariesDTO{
   id: number;
+  status: ChannelAttentionStatus;
   endDate?: Date | null;
   consultTypeId?: number | null;
   attentionDetail?: string |  null;

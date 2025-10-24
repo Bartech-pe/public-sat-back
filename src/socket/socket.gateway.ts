@@ -85,6 +85,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         break;
       }
     }
+    client.removeAllListeners();
   }
 
   handleConnection(client: Socket) {

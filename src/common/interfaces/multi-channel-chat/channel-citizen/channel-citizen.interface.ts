@@ -15,6 +15,7 @@ export class LastMessage {
   channelRoomId?: number;
   externalMessageId?: String;
   message?: string;
+  hasAttachment: boolean;
   citizen: ChannelCitizen;
   status?: 'read' | 'unread';
   fromMe?: boolean;

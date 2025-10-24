@@ -76,7 +76,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     this.bufferTimeouts.forEach((timeout) => clearTimeout(timeout));
     this.bufferTimeouts.clear();
     await this.subscriber.quit();
-    this.logger.log('BasicInfoService destruido');
   }
 
   // =====================
@@ -158,12 +157,14 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
           senderType: 'citizen',
         },
       });
+      const attention = await this.assistanceService.getAttentionCurrentStatus(message.assistance.id)
     let newMessage: ChannelRoomNewMessageDto = {
       channelRoomId: message.channelRoom.id,
       unreadCount: countUnreadMessages.total,
       attention:
       {
           id: message.assistance.id,
+          status: attention.status
       },
       externalRoomId: message.data.payload.chat_id as string,
       channel: message.data.payload.channel,
@@ -241,12 +242,10 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     message: BufferedMessage,
   ): Promise<{ handled: boolean }> {
     const phone = message.citizen.phoneNumber!;
-    this.logger.debug('debug: ', message.data.payload);
     const body = (message.data.payload.message.body ?? '').trim();
     const citizen = message.citizen;
 
     try {
-      this.logger.debug(`[${phone}] Procesando mensaje: "${body}"`);
       await this.redis.set(
         `buffered_message:${phone}`,
         JSON.stringify(message),
@@ -257,9 +256,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       const inQueue = await this.isInBasicInfoQueue(phone!);
       const hasGreeted = await this.redis.get(`has_greeted:${phone}`);
       const step = await this.redis.get(`user_step:${phone}`);
-      this.logger.debug(
-        `[${phone}] Estado: inQueue=${inQueue}, hasGreeted=${hasGreeted}, step=${step}`,
-      );
 
       if (!inQueue) {
         await this.redis.set(
@@ -310,7 +306,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       }
 
       if (step === 'name') {
-        this.logger.debug(`[${phone}] Agregando mensaje al buffer de nombres`);
         await this.redis.rpush(`name_buffer:${phone}`, JSON.stringify(message));
         this.resetBufferTimer(phone!);
         return { handled: true };
@@ -349,18 +344,11 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
   }
 
   private resetBufferTimer(phone: string) {
-    this.logger.debug(
-      `[${phone}] Reseteando timer del buffer (${this.bufferWaitTime}ms)`,
-    );
     if (this.bufferTimeouts.has(phone)) {
       clearTimeout(this.bufferTimeouts.get(phone)!);
-      this.logger.debug(`[${phone}] Timer anterior cancelado`);
     }
     const timeout = setTimeout(async () => {
       try {
-        this.logger.debug(
-          `[${phone}] Timer expirado, procesando buffer de nombres`,
-        );
         await this.processNameBuffer(phone);
         this.bufferTimeouts.delete(phone);
       } catch (error) {
@@ -369,15 +357,10 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       }
     }, this.bufferWaitTime);
     this.bufferTimeouts.set(phone, timeout);
-    this.logger.debug(`[${phone}] Nuevo timer configurado`);
   }
 
   private async processNameBuffer(phone: string) {
-    this.logger.debug(
-      `[${phone}] Iniciando procesamiento del buffer de nombres`,
-    );
     const jsonMsgs = await this.redis.lrange(`name_buffer:${phone}`, 0, -1);
-    this.logger.debug(`[${phone}] Mensajes en buffer: ${jsonMsgs.length}`);
     if (jsonMsgs.length === 0) {
       await this.redis.set(
         `debug:${phone}:buffer_empty`,
@@ -385,7 +368,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
         'EX',
         3600,
       );
-      this.logger.warn(`[${phone}] Buffer de nombres vacío`);
       return;
     }
 
@@ -399,16 +381,11 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     const lastMsg = buffered[buffered.length - 1];
     const citizen = lastMsg.citizen;
 
-    this.logger.debug(`[${phone}] Nombre combinado: "${combinedBody}"`);
 
     const result = await this.processName(citizen, combinedBody);
     if (result.success) {
-      this.logger.debug(
-        `[${phone}] Nombre procesado exitosamente, solicitando tipo de documento`,
-      );
       await this.requestDocumentType(lastMsg, false);
     } else {
-      this.logger.debug(`[${phone}] Error en nombre: ${result.message}`);
       await this.sendMessageNotUnderstoodStatus(lastMsg, result.message);
       await this.setBasicInfoTimeout(phone);
     }
@@ -491,9 +468,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     const docType = (
       currentCitizen?.dataValues?.documentType || ''
     ).toUpperCase();
-    this.logger.debug('-------------------debug----------------');
-
-    this.logger.debug(docType);
     const digitsOnly = value.replace(/\D/g, '');
 
     let regex: RegExp;
@@ -507,8 +481,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       default:
         regex = /^\d{8,}$/; // mínimo 8
     }
-
-    this.logger.debug(regex);
 
     if (regex.test(digitsOnly)) {
       await this.citizenRepository.update(citizen.id, {
@@ -611,9 +583,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     message: BufferedMessage,
     includeGreeting: boolean = false,
   ) {
-    this.logger.debug(
-      `[${message.citizen.phoneNumber}] Solicitando tipo de documento`,
-    );
 
     await this.maybeSendGreetings(message, includeGreeting);
 
@@ -634,9 +603,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     );
 
     await this.setStepAndTimeout(message.citizen.phoneNumber!, 'documentType');
-    this.logger.debug(
-      `[${message.citizen.phoneNumber}] Tipo de documento solicitado, step actualizado`,
-    );
   }
 
   private async requestDocumentNumber(message: BufferedMessage) {
@@ -690,12 +656,10 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
   }
 
   public async cleanupBasicInfoProcess(phone: string) {
-    this.logger.debug(`[${phone}] Iniciando limpieza del proceso`);
 
     if (this.bufferTimeouts.has(phone)) {
       clearTimeout(this.bufferTimeouts.get(phone)!);
       this.bufferTimeouts.delete(phone);
-      this.logger.debug(`[${phone}] Timer de buffer cancelado`);
     }
 
     const keysToDelete = [
@@ -712,7 +676,6 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       const pipeline = this.redis.pipeline();
       keysToDelete.forEach((key) => pipeline.del(key));
       await pipeline.exec();
-      this.logger.debug(`[${phone}] Limpieza completada`);
     } catch (error) {
       this.logger.error(`[${phone}] Error en limpieza:`, error);
       for (const key of keysToDelete) {

@@ -15,6 +15,11 @@ module.exports = {
         allowNull: false,
         comment: 'FK hacia la sala de conversación (channel_rooms)',
       },
+      user_id: {
+        type: Sequelize.BIGINT,
+        allowNull: true,
+        comment: 'ID del usuario responsable de la sala',
+      },
       consult_type_id: {
         type: Sequelize.BIGINT,
         allowNull: true,
@@ -26,7 +31,7 @@ module.exports = {
         comment: 'Detalle de atención',
       },
       status: {
-        type: Sequelize.ENUM('identity_verification', 'in_progress', 'closed'),
+        type: Sequelize.ENUM('identity_verification', 'in_progress', 'closed', 'priority'),
         allowNull: false,
         defaultValue: 'identity_verification',
         comment: 'Estado de la attención',
@@ -82,6 +87,19 @@ module.exports = {
      * ------------------------- */
 
     // channel_room_id → channel_rooms.id
+
+      await queryInterface.addConstraint('channel_attentions', {
+      fields: ['user_id'],
+      type: 'foreign key',
+      name: 'fk_channel_attentions_user_id',
+      references: {
+        table: 'users',
+        field: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT',
+    });
+
     await queryInterface.addConstraint('channel_attentions', {
       fields: ['channel_room_id'],
       type: 'foreign key',

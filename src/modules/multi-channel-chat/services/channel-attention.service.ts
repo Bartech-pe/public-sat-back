@@ -53,7 +53,7 @@ export class ChannelAttentionService {
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
     private readonly channelRoomRepository: ChannelRoomRepository,
     private readonly mailFeaturesService: EmailFeaturesService,
-    private readonly assistanceRepository: ChannelAttentionRepository,
+    private readonly channelAttentionRepository: ChannelAttentionRepository,
     @Inject(forwardRef(() => MessageBufferService))
     private readonly messageBufferService: MessageBufferService,
     @Inject(forwardRef(() => BasicInfoService))
@@ -75,7 +75,7 @@ export class ChannelAttentionService {
     try {
       if(payload.attentionId)
       {
-        const attentionUpdated = await this.assistanceRepository.update(payload.attentionId, {
+        const attentionUpdated = await this.channelAttentionRepository.update(payload.attentionId, {
           attentionDetail: payload.attentionDetail,
           consultTypeId: payload.consultTypeId
         });
@@ -90,8 +90,8 @@ export class ChannelAttentionService {
       return response
     } catch (error) {
       response.error = error.toString();
-      return response;
       this.logger.error(error.toString())      
+      return response;
     }
   }
 
@@ -161,7 +161,7 @@ export class ChannelAttentionService {
         botReplies: true,
       });
 
-      this.assistanceRepository.update(assistanceIdToClose, {
+      this.channelAttentionRepository.update(assistanceIdToClose, {
         status: ChannelAttentionStatus.CLOSED,
         endDate: new Date(),
       });
@@ -179,6 +179,7 @@ export class ChannelAttentionService {
         assistanceId: assistanceIdToClose,
         channelRoomId: channelRoomIdToClose,
         status: 'completado',
+        attentionStatus: ChannelAttentionStatus.CLOSED
       };
       const channelChatInformationPayload: IChannelChatInformation = {
         channelRoomId: channelRoomIdToClose,
@@ -238,6 +239,11 @@ export class ChannelAttentionService {
                     { model: ChannelMessageAttachment, required: false },
                   ],
                 },
+                {
+                  model: User,
+                  as: 'user',
+                  required: false,
+                },
               ],
             },
             {
@@ -273,7 +279,6 @@ export class ChannelAttentionService {
 
       response.data = assistances.map((assistance) => {
         const assistanceParsed = assistance.toJSON() as ChannelAttention;
-        this.logger.debug(assistanceParsed);
         const channelMessages = assistance?.get('messages') as ChannelMessage[];
         const lastMessage = channelMessages[0];
         const lastMessageParsed = channelMessages[0].toJSON();
@@ -325,7 +330,7 @@ export class ChannelAttentionService {
             ? formatDate(assistanceParsed.endDate)
             : null,
           status: assistanceParsed.status,
-          user: user?.name,
+          user: assistanceParsed?.user?.name,
           citizen: citizen.name,
         };
         return model;
@@ -351,7 +356,7 @@ export class ChannelAttentionService {
     };
     try {
       const assistanceSearch: ChannelAttention | null =
-        await this.assistanceRepository.findOne({
+        await this.channelAttentionRepository.findOne({
           include: [
             {
               model: ChannelRoom,
@@ -452,7 +457,7 @@ export class ChannelAttentionService {
     };
     try {
       const assistanceSearch: ChannelAttention | null =
-        await this.assistanceRepository.findOne({
+        await this.channelAttentionRepository.findOne({
           include: [
             {
               model: ChannelRoom,
@@ -480,14 +485,8 @@ export class ChannelAttentionService {
       const channelRoom = assistanceSearch.get('channelRoom') as ChannelRoom;
       const citizen = channelRoom.get('citizen').toJSON() as ChannelCitizen;
 
-      // 2. Generar el HTML con tu generador
       const html = await ChatEmailGenerator.generateEmailHtml(assistanceSearch);
 
-      // 3. Construir el payload
-      /**
-       * TODO: REMPLAZAR CORREO DE PRUEBA POR:
-       *
-       */
       const payload: GenericEmail = {
         subject: 'consulta',
         content: 'contenido',
@@ -495,12 +494,8 @@ export class ChannelAttentionService {
         html: JSON.stringify(html),
       };
 
-      // 4. Enviar petición POST
       await this.mailFeaturesService.buildGenericEmail(payload);
 
-      this.logger.log(
-        `Correo generado y enviado correctamente para asistencia ${assistanceId}`,
-      );
 
       response.message = 'Correo generado y enviado correctamente.';
       response.success = true;
@@ -514,5 +509,10 @@ export class ChannelAttentionService {
       response.success = false;
       return response;
     }
+  }
+  
+  async getAttentionCurrentStatus(attentionId: number): Promise<ChannelAttention>
+  {
+    return (await this.channelAttentionRepository.findById(attentionId)).toJSON()
   }
 }

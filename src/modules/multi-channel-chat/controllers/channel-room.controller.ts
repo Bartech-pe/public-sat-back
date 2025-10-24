@@ -76,7 +76,7 @@ export class ChannelRoomController {
   transferToAdvisor(
     @Param('id') channelroomId: number,
     @Param('advisorId') advisorId: number,
-  ) {
+  ): Promise<BaseResponseDto> {
     return this.channelRoomService.transferToAdvisor(
       channelroomId,
       advisorId,
