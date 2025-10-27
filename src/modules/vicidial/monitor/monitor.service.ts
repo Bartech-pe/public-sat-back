@@ -188,6 +188,7 @@ export class MonitorService {
   ) {
     const totalChat = await this.attentionRepository.count({
       where: {
+        userId: userId,
         createdAt: {
           [Op.gte]: today,
           [Op.lt]: tomorrow,
@@ -196,7 +197,6 @@ export class MonitorService {
       include: [
         {
           model: ChannelRoom,
-          where: { userId: userId },
           attributes: [],
           include: [
             {
@@ -417,13 +417,13 @@ export class MonitorService {
               model: ChannelRoom,
               required: true,
               where: {
-                userId: advisorJson.userId,
-                inboxId: advisorJson.inboxId,
+                inboxId: advisorJson.inboxId
               },
               attributes: [],
             },
           ],
           where: {
+            userId: advisorJson.userId,
             status: ChannelAttentionStatus.CLOSED,
             createdAt: {
               [Op.gte]: today,
@@ -470,13 +470,13 @@ export class MonitorService {
               model: ChannelRoom,
               required: true,
               where: {
-                userId: advisorJson.userId,
                 inboxId: advisorJson.inboxId,
               },
               attributes: [],
             },
           ],
           where: {
+            userId: advisorJson.userId,
             createdAt: {
               [Op.gte]: today,
               [Op.lt]: tomorrow,
@@ -485,7 +485,10 @@ export class MonitorService {
         });
 
         // Calcular efectividad (atenciones cerradas / total de atenciones del día)
-        const totalAttentions = AttentionsFilteredToday.length;
+        // const totalAttentions = AttentionsFilteredToday.length;
+        const totalAttentions = new Set(
+          AttentionsFilteredToday.map(a => a.id)
+        ).size;
         const efectividad =
           totalAttentions > 0
             ? Math.round((attentions.length / totalAttentions) * 100)
@@ -762,7 +765,7 @@ export class MonitorService {
     );
     const assistanceGrouped = await this.attentionRepository.findAll({
       attributes: [
-        [this.sequelize.col('channelRoom.user_id'), 'userId'],
+        [this.sequelize.col('user_id'), 'userId'],
         [
           this.sequelize.fn('COUNT', this.sequelize.col('ChannelAttention.id')),
           'count',
@@ -800,7 +803,7 @@ export class MonitorService {
           attributes: [],
         },
       ],
-      group: ['channelRoom.user_id'],
+      group: ['user_id'],
     });
     const asistanceGroupedJson = assistanceGrouped.map(
       (a) => a.toJSON() as any,
