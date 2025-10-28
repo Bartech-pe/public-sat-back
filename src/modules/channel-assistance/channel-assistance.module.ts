@@ -10,6 +10,6 @@ import { CitizenModule } from '@modules/citizen/citizen.module';
   imports: [SequelizeModule.forFeature([ChannelAssistance]), CitizenModule],
   controllers: [ChannelAssistanceController],
   providers: [ChannelAssistanceService, ChannelAssistanceRepository],
-  exports: [ChannelAssistanceRepository],
+  exports: [ChannelAssistanceService, ChannelAssistanceRepository],
 })
 export class ChannelAssistanceModule {}

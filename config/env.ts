@@ -73,6 +73,9 @@ const envSchema = Joi.object({
   // # METABASE
   METABASE_SITE_URL: Joi.string().required(),
   METABASE_SECRET_KEY: Joi.string().required(),
+
+  // # AUDIOS
+  URL_API_AUDIOS: Joi.string().required(),
 }).unknown();
 
 const { error, value: ev } = envSchema.validate(process.env);
@@ -168,4 +171,8 @@ export const apiSatConfig = {
 export const metabaseConfig = {
   url: ev.METABASE_SITE_URL,
   secret: ev.METABASE_SECRET_KEY,
+};
+
+export const audiobaseConfig = {
+  url: ev.URL_API_AUDIOS,
 };

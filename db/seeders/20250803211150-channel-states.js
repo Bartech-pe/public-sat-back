@@ -157,8 +157,8 @@ module.exports = {
         // Teléfono
         {
           id: 15,
-          name: 'Ocupado',
-          description: 'Asesor ocupado con tareas administrativas',
+          name: 'Resultado de llamada',
+          description: 'Asesor en resultado de llamada',
           status: false,
           color: '#ff9c1bff',
           category_id: 1,

@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   Put,
+  Res,
 } from '@nestjs/common';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
@@ -18,6 +19,7 @@ import { CitizenAssistance } from './entities/citizen-assistance.entity';
 import { CreateCitizenAssistanceDto } from './dto/create-citizen-assistance.dto';
 import { UpdateCitizenAssistanceDto } from './dto/update-citizen-assistance.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { Response } from 'express';
 
 /**
  * Controller for managing CitizenAssistance.
@@ -48,6 +50,15 @@ export class CitizenAssistanceController {
   @Get('findByPortfolioDetail/:id')
   findByPortfolioDetail(@Param('id') id: number): Promise<CitizenAssistance[]> {
     return this.service.findByPortfolioDetail(+id);
+  }
+
+  @Get('managed-download/:portfolioId/:dateSelected')
+  async managedDownload(
+    @Param('portfolioId') portfolioId: number,
+    @Param('dateSelected') dateSelected: Date,
+    @Res() res: Response,
+  ) {
+    await this.service.managedDownload(portfolioId, dateSelected, res);
   }
 
   @Get('findVerificacionByPortfolioDetail/:id')

@@ -76,7 +76,7 @@ export class Campaign extends Model {
   @Column({
     field: 'active',
     type: DataType.ENUM('Y', 'N'),
-    defaultValue: 'Y',
+    defaultValue: 'N',
   })
   active?: string;
 

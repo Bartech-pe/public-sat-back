@@ -164,7 +164,7 @@ export class VicidialUserService {
         WHERE vl2.list_id = ?
         GROUP BY vl2.status, vs.status_name
       `;
-
+ 
       try {
       const [results] = await this.centralConnection.query(sql_datos, {
         replacements: [listId],
@@ -194,7 +194,27 @@ export class VicidialUserService {
 
   }
 
-  
+  async getVicidialRemoteAgents(campaign_id: any) {
+    const sql = `
+      SELECT 
+        remote_agent_id, 
+        server_ip
+      FROM vicidial_remote_agents
+      WHERE campaign_id = ?
+    `;
+
+    try {
+      const [results] = await this.centralConnection.query(sql, {
+        replacements: [campaign_id],
+        type: 'SELECT',
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error al obtener los agentes remotos:', error);
+      throw new InternalServerErrorException('Error al obtener los agentes remotos de Vicidial');
+    }
+}
 
 
 }

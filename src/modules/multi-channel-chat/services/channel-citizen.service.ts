@@ -28,8 +28,6 @@ import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
-import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { MultiChannelChatService } from '../multi-channel-chat.service';
 import { ChannelRoomService } from './channel-room.service';
 import { ChannelQueryHistory } from '../entities/channel-query-history.entity';
@@ -43,9 +41,7 @@ export class ChannelCitizenService {
     private channelAttentionRepository: ChannelAttentionRepository,
     private channelRoomRepository: ChannelRoomRepository,
     private channelRoomService: ChannelRoomService,
-    private inboxUserRepository : InboxUserRepository,
     @Inject(forwardRef(() => MultiChannelChatGateway))
-    private multiChannelChatGateway: MultiChannelChatGateway,
     @Inject(forwardRef(() => MultiChannelChatService))
     private multiChannelChatService: MultiChannelChatService,
   ) {}
@@ -142,26 +138,31 @@ export class ChannelCitizenService {
         .toJSON() as ChannelRoom;
 
       channelRoom.update({
-        status: 'prioridad' 
-      })
+        status: 'prioridad',
+      });
 
       assistance.update({
-        status: ChannelAttentionStatus.PRIORITY
-      })
+        status: ChannelAttentionStatus.PRIORITY,
+      });
 
-      let selectedUserId: number | undefined = await this.multiChannelChatService.searchAdvisorAvailable(
-         channelRoom.inboxId
-      );
-      if(!selectedUserId){
-        throw new NotFoundException("No se encontraron asesores disponibles para este canal")
+      let selectedUserId: number | undefined =
+        await this.multiChannelChatService.searchAdvisorAvailable(
+          channelRoom.inboxId,
+        );
+      if (!selectedUserId) {
+        throw new NotFoundException(
+          'No se encontraron asesores disponibles para este canal',
+        );
       }
-      this.channelRoomService.transferToAdvisor(channelRoom.id, selectedUserId, true)
-      
+      this.channelRoomService.transferToAdvisor(
+        channelRoom.id,
+        selectedUserId,
+        true,
+      );
     } catch (error) {
       throw error;
     }
   }
-
 
   public async createCitizenFromMessage(
     newMessage: IncomingMessage,
@@ -228,7 +229,7 @@ export class ChannelCitizenService {
           include: [
             {
               model: ChannelQueryHistory,
-              required: false
+              required: false,
             },
             {
               model: ChannelRoom,
@@ -264,8 +265,8 @@ export class ChannelCitizenService {
             },
             {
               model: ConsultType,
-              required: false
-            }
+              required: false,
+            },
           ],
         });
       response.success = true;
@@ -273,7 +274,8 @@ export class ChannelCitizenService {
       response.data = channelAttentions.map((attention) => {
         const attentionParsed = attention.toJSON();
         const attentionMessages = attentionParsed.messages as ChannelMessage[];
-        const queryHistory = attentionParsed.queryHistory as ChannelQueryHistory[];
+        const queryHistory =
+          attentionParsed.queryHistory as ChannelQueryHistory[];
         const attentionChannel = attentionParsed.channelRoom as ChannelRoom;
         const user = attentionChannel?.user as User | null;
         const citizen = attentionChannel.citizen;
@@ -294,11 +296,12 @@ export class ChannelCitizenService {
           category: '',
           type: attentionConsultType?.name,
           email: citizen.email,
-          queryHistory
+          queryHistory,
         };
       });
       return response;
     } catch (error) {
+      // console.error('error', error);
       this.logger.error(error.toString());
       response.success = false;
       response.error = error.toString();
@@ -306,35 +309,38 @@ export class ChannelCitizenService {
     }
   }
 
-  async getCitizenInformationByChannelRoomAssigned(channelRoomId: number): Promise<BaseResponseDto<ChannelCitizen>>
-  {
+  async getCitizenInformationByChannelRoomAssigned(
+    channelRoomId: number,
+  ): Promise<BaseResponseDto<ChannelCitizen>> {
     let response: BaseResponseDto<ChannelCitizen> = {
-      message: "",
-      success: false
-    } 
+      message: '',
+      success: false,
+    };
     try {
       const channelRoomInformation = await this.channelRoomRepository.findOne({
         where: {
-          id: channelRoomId
+          id: channelRoomId,
         },
-        include:[
+        include: [
           {
             model: ChannelCitizen,
-            required: true 
-          }
+            required: true,
+          },
         ],
-        throwIfNotFound: false       
-      })
+        throwIfNotFound: false,
+      });
 
-      if(channelRoomInformation){
-        response.data = channelRoomInformation.get('citizen').toJSON() as ChannelCitizen;
-        response.message = "Datos del ciudadano";
+      if (channelRoomInformation) {
+        response.data = channelRoomInformation
+          .get('citizen')
+          .toJSON() as ChannelCitizen;
+        response.message = 'Datos del ciudadano';
         response.success = true;
       }
       return response;
     } catch (error) {
       response.error = error.toString();
-      this.logger.error(error.toString())
+      this.logger.error(error.toString());
       return response;
     }
   }

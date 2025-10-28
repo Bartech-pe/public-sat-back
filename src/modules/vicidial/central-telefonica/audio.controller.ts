@@ -57,4 +57,23 @@ export class AudioController {
   }
 
 
+  @Post('listasMultiple')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateVicidialListDto })
+  createMultiple(
+      @Body() dto: Omit<CreateVicidialListDto, 'file'>,
+      @UploadedFile() file: Express.Multer.File,
+  ): Promise<VicidialLists> {
+      return this.audioService.createlistarMultiple(dto,file);
+  }
+
+   @Get('listasMultiple/:campaignId')
+  findAllBylistasMultiple(
+    @Param('campaignId') campaignId: any,
+  ): Promise<VicidialLists[]> {
+    return this.audioService.findAllBylistasMultiple(campaignId);
+  }
+
+
 }

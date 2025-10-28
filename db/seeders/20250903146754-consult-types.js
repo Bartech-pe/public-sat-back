@@ -6,6 +6,7 @@ module.exports = {
     await queryInterface.bulkInsert('consult_types', [
       {
         id: 1,
+        code: '01',
         name: 'Predial',
         created_by: 1,
         updated_by: 1,
@@ -14,6 +15,7 @@ module.exports = {
       },
       {
         id: 2,
+        code: '02',
         name: 'Vehicular',
         created_by: 1,
         updated_by: 1,
@@ -22,6 +24,7 @@ module.exports = {
       },
       {
         id: 3,
+        code: '03',
         name: 'Alcabala',
         created_by: 1,
         updated_by: 1,
@@ -30,6 +33,7 @@ module.exports = {
       },
       {
         id: 4,
+        code: '04',
         name: 'Facilidades tributarias',
         created_by: 1,
         updated_by: 1,
@@ -38,6 +42,7 @@ module.exports = {
       },
       {
         id: 5,
+        code: '05',
         name: 'Papeletas',
         created_by: 1,
         updated_by: 1,
@@ -46,6 +51,7 @@ module.exports = {
       },
       {
         id: 6,
+        code: '06',
         name: 'Multa administrativa',
         created_by: 1,
         updated_by: 1,
@@ -54,6 +60,7 @@ module.exports = {
       },
       {
         id: 7,
+        code: '07',
         name: 'Compromiso de pago',
         created_by: 1,
         updated_by: 1,
@@ -62,6 +69,7 @@ module.exports = {
       },
       {
         id: 8,
+        code: '08',
         name: 'Procedimiento sancionador',
         created_by: 1,
         updated_by: 1,
@@ -70,6 +78,7 @@ module.exports = {
       },
       {
         id: 9,
+        code: '09',
         name: 'Revisión papeleta',
         created_by: 1,
         updated_by: 1,
@@ -78,6 +87,7 @@ module.exports = {
       },
       {
         id: 10,
+        code: '10',
         name: 'Prescripción papeleta',
         created_by: 1,
         updated_by: 1,
@@ -86,6 +96,7 @@ module.exports = {
       },
       {
         id: 11,
+        code: '11',
         name: 'Consulta trámite',
         created_by: 1,
         updated_by: 1,
@@ -94,6 +105,7 @@ module.exports = {
       },
       {
         id: 12,
+        code: '12',
         name: 'Consulta coactiva',
         created_by: 1,
         updated_by: 1,
@@ -102,6 +114,7 @@ module.exports = {
       },
       {
         id: 13,
+        code: '13',
         name: 'Otra entidad',
         created_by: 1,
         updated_by: 1,
@@ -110,6 +123,7 @@ module.exports = {
       },
       {
         id: 14,
+        code: '14',
         name: 'Retención bancaria',
         created_by: 1,
         updated_by: 1,
@@ -118,6 +132,7 @@ module.exports = {
       },
       {
         id: 15,
+        code: '15',
         name: 'Agencia virtual',
         created_by: 1,
         updated_by: 1,
@@ -126,6 +141,7 @@ module.exports = {
       },
       {
         id: 16,
+        code: '16',
         name: 'Otras consultas',
         created_by: 1,
         updated_by: 1,

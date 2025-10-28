@@ -25,7 +25,7 @@ export class VicidialLists  extends Model {
   @Column({ type: DataType.STRING(20), allowNull: false })
   campaign_id?: string;
 
-  @Column({ type: DataType.ENUM('Y', 'N'), defaultValue:'Y' })
+  @Column({ type: DataType.ENUM('Y', 'N'), defaultValue:'N' })
   active?: string;
 
 }

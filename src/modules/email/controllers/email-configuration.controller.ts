@@ -36,8 +36,8 @@ export class EmailConfigurationController {
   }
 
   @Post('loginCredential')
-  async GenerateUrl(@Body() body: { username: string }) {
-    return await this.emailChannelService.login(body.username);
+  async GenerateUrl(@Body() body: { email: string }) {
+    return await this.emailChannelService.login(body.email);
   }
 
   @Post('generateGmailCredential')

@@ -117,7 +117,7 @@ export class CitizenAssistance extends Model {
   portfolioDetailId: number;
 
   @BelongsTo(() => PortfolioDetail)
-  carteraDetalle: PortfolioDetail;
+  portfolioDetail: PortfolioDetail;
 
   @Column({
     field: 'status',

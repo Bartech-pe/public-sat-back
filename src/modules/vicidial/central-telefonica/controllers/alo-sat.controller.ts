@@ -16,14 +16,24 @@ import { PauseAgentDto } from '../dto/pause-agent.dto';
 import { CampaignSearchDto, LoginAgentDto } from '../dto/login-agent.dto';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
-import { ChannelPhoneState } from '@common/enums/status-call.enum';
+import {
+  ChannelPhoneState,
+  VicidialAgentStatus,
+  VicidialAgentStatusObj,
+} from '@common/enums/status-call.enum';
 import { UserGateway } from '@modules/user/user.gateway';
 import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
 import { VicidialPauseCode } from '@common/enums/pause-code.enum';
-import { TransferCallDto } from '../dto/transfer-call.dto';
+import { TransferCallDto, TransferSurveyDto } from '../dto/transfer-call.dto';
 import { ParkCallDto } from '../dto/park-call.dto';
 import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { DispoChoiceDto } from '../dto/update-dispo.dto';
+import { CreateChannelAssistanceDto } from '@modules/channel-assistance/dto/create-channel-assistance.dto';
+import { ChannelAssistanceService } from '@modules/channel-assistance/channel-assistance.service';
+import { RegisteerDispoDto } from '../dto/register-dispo.dto';
 
+@ApiBearerAuth()
 @Controller('alosat')
 export class AloSatController {
   constructor(
@@ -32,6 +42,7 @@ export class AloSatController {
     @Inject(forwardRef(() => UserGateway))
     private readonly userGateway: UserGateway,
     private readonly callHistoryRepository: CallHistoryRepository,
+    private readonly channelAssistanceService: ChannelAssistanceService,
   ) {}
 
   @Get('user-groups')
@@ -51,16 +62,43 @@ export class AloSatController {
     return this.service.findAllCampaigns(user.id);
   }
 
+  @Post('call-disposition')
+  findAllCallDisposition(
+    @Body() dto: CampaignSearchDto,
+  ): Promise<{ statusId: string; statusName: string; campaignId?: string }[]> {
+    return this.service.findAllCallDisposition(dto.campaignId);
+  }
+
+  @Post('campaign-pause-codes')
+  findAllCampaignPauseCodes(
+    @Body() dto: CampaignSearchDto,
+  ): Promise<{ pauseCode: string; pauseCodeName: string }[]> {
+    return this.service.findAllCampaignPauseCode(dto.campaignId);
+  }
+
+  @Post('campaign-dials')
+  findCampaignDials(
+    @Body() dto: CampaignSearchDto,
+  ): Promise<
+    | { d1?: string; d2?: string; d3?: string; d4?: string; d5?: string }
+    | undefined
+  > {
+    return this.service.findCampaignDials(dto.campaignId);
+  }
+
   @Get('agent-status')
-  async agentStatus(
-    @CurrentUser() user: User,
-  ): Promise<{ state?: ChannelState; pauseCode?: string }> {
+  async agentStatus(@CurrentUser() user: User): Promise<{
+    state?: ChannelState;
+    pauseCode?: string;
+    campaignId?: string;
+  }> {
     const res = (
       await this.vicidialUserRepository.getAloSatState(user)
     )?.toJSON();
     return {
       state: res?.channelState,
       pauseCode: res.pauseCode,
+      campaignId: res.campaignId,
     };
   }
 
@@ -89,22 +127,34 @@ export class AloSatController {
     @CurrentUser() user: User,
     @Body() dto: LoginAgentDto,
   ): Promise<any> {
-    console.log('dto', dto);
-    const res = await this.service.agentLogin(
-      user.id,
-      dto.campaignId,
-      dto.inboundGroups,
-    );
+    const res = await this.service.agentLogin(user.id, dto.campaignId);
     const vicidialUser = await this.vicidialUserRepository.findOne({
       where: { userId: user.id },
     });
     await vicidialUser?.update({
       channelStateId: ChannelPhoneState.PAUSED,
+      campaignId: dto.campaignId,
       pauseCode: null,
       inboundGroups: dto.inboundGroups,
+      sessionName: res.sessionName,
+      confExten: res.confExten,
     } as VicidialUser);
 
     await this.service.onChangeIngroups(user.id);
+
+    const resVdc = await this.service.checkVdc(user.id);
+
+    if (resVdc) {
+      const stateId =
+        VicidialAgentStatusObj[
+          resVdc.status?.toUpperCase() as VicidialAgentStatus
+        ];
+
+      await vicidialUser?.update({
+        pauseCode: resVdc.pauseCode ?? null,
+        channelStateId: stateId,
+      } as VicidialUser);
+    }
 
     this.userGateway.notifyPhoneStateUser(user.id);
     return res;
@@ -133,8 +183,11 @@ export class AloSatController {
       });
       await vicidialUser?.update({
         channelStateId: ChannelPhoneState.OFFLINE,
+        campaignId: null,
         pauseCode: null,
         inboundGroups: null,
+        sessionName: null,
+        confExten: null,
       } as VicidialUser);
       this.userGateway.notifyPhoneStateUser(user.id);
       return res;
@@ -153,8 +206,11 @@ export class AloSatController {
       });
       await vicidialUser?.update({
         channelStateId: ChannelPhoneState.OFFLINE,
+        campaignId: null,
         pauseCode: null,
         inboundGroups: null,
+        sessionName: null,
+        confExten: null,
       } as VicidialUser);
       this.userGateway.notifyPhoneStateUser(userId);
       return res;
@@ -176,18 +232,18 @@ export class AloSatController {
       });
       await vicidialUser?.update({
         channelStateId: ChannelPhoneState.PAUSED,
-        pauseCode: dto.pauseCode,
+        pauseCode: dto.pauseCode ?? null,
       });
 
-      if (dto.concluded) {
-        const lastCall = await this.callHistoryRepository.getLastCall(user.id);
+      // if (dto.concluded) {
+      //   const lastCall = await this.callHistoryRepository.getLastCall(user.id);
 
-        if (lastCall) {
-          await lastCall.update({
-            callStatus: 'SALE',
-          });
-        }
-      }
+      //   if (lastCall) {
+      //     await lastCall.update({
+      //       callStatus: 'SALE',
+      //     });
+      //   }
+      // }
       this.userGateway.notifyPhoneStateUser(user.id);
       return res;
     } catch (error) {
@@ -221,42 +277,34 @@ export class AloSatController {
 
   @Get('call-info')
   async callInfo(@CurrentUser() user: User): Promise<any> {
-    const res = await this.service.getCallInfo(user.id);
-    return res;
-  }
-
-  @Get('last-call-info')
-  async lastCallInfo(@CurrentUser() user: User): Promise<any> {
-    const res = await this.callHistoryRepository.getLastCallOfTheDay(user.id);
-    // await this.callHistoryRepository.setDurationCall(user.id);
-    return res;
+    return this.service.getCallInfo(user.id);
   }
 
   @Get('end-call')
   async endCall(@CurrentUser() user: User): Promise<any> {
     const res = await this.service.endCall(user.id);
-    const vicidialUser = await this.vicidialUserRepository.findOne({
-      where: { userId: user.id },
-    });
-    await vicidialUser?.update({
-      channelStateId: ChannelPhoneState.PAUSED,
-      pauseCode: VicidialPauseCode.WRAP,
-    });
-    this.userGateway.notifyPhoneStateUser(user.id);
+    // const vicidialUser = await this.vicidialUserRepository.findOne({
+    //   where: { userId: user.id },
+    // });
+    // await vicidialUser?.update({
+    //   channelStateId: ChannelPhoneState.PAUSED,
+    //   pauseCode: VicidialPauseCode.WRAP,
+    // });
+    // this.userGateway.notifyPhoneStateUser(user.id);
     return res;
   }
 
   @Get('end-call/:userId')
   async endCallByUserId(@Param('userId') userId: number): Promise<any> {
     const res = await this.service.endCall(userId);
-    const vicidialUser = await this.vicidialUserRepository.findOne({
-      where: { userId: userId },
-    });
-    await vicidialUser?.update({
-      channelStateId: ChannelPhoneState.PAUSED,
-      pauseCode: VicidialPauseCode.WRAP,
-    });
-    this.userGateway.notifyPhoneStateUser(userId);
+    // const vicidialUser = await this.vicidialUserRepository.findOne({
+    //   where: { userId: userId },
+    // });
+    // await vicidialUser?.update({
+    //   channelStateId: ChannelPhoneState.PAUSED,
+    //   pauseCode: VicidialPauseCode.WRAP,
+    // });
+    // this.userGateway.notifyPhoneStateUser(userId);
     return res;
   }
 
@@ -265,7 +313,6 @@ export class AloSatController {
     @CurrentUser() user: User,
     @Body() dto: TransferCallDto,
   ): Promise<any> {
-    console.log('dto', dto);
     return this.service.transferCall(user.id, dto.userId);
   }
 
@@ -274,7 +321,6 @@ export class AloSatController {
     @CurrentUser() user: User,
     @Body() dto: TransferCallDto,
   ): Promise<any> {
-    console.log('dto', dto);
     return this.service.transferCall(dto.userId, user.id);
   }
 
@@ -292,6 +338,84 @@ export class AloSatController {
       pauseCode: dto.putOn ? VicidialPauseCode.PARK : null,
     });
     this.userGateway.notifyPhoneStateUser(user.id);
+    return res;
+  }
+
+  @Post('transfer-survey')
+  transferSurvey(
+    @CurrentUser() user: User,
+    @Body() dto: TransferSurveyDto,
+  ): Promise<any> {
+    return this.service.transferSurvey(user.id, dto.dial);
+  }
+
+  @Post('update-dispo')
+  updateDispo(
+    @CurrentUser() user: User,
+    @Body() dto: DispoChoiceDto,
+  ): Promise<any> {
+    return this.service.updateDispo(user.id, dto.dispoChoice, dto.pauseAgent);
+  }
+
+  @Post('alosat-assistance')
+  async alosatAssistance(
+    @CurrentUser() user: User,
+    @Body() dtoComplete: RegisteerDispoDto,
+  ): Promise<any> {
+    const { pauseAgent, ...dto } = dtoComplete;
+    await this.channelAssistanceService.create(dto);
+    return this.service.updateDispo(user.id, dto.consultTypeCode, pauseAgent);
+  }
+
+  @Get('conf-exten-check')
+  async confExtenCheck(@CurrentUser() user: User): Promise<
+    | {
+        status?: string;
+        pauseCode?: string;
+        channel?: string;
+        agentChannel?: string;
+      }
+    | undefined
+  > {
+    const res = await this.service.checkVdc(user.id);
+
+    if (res) {
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: user.id },
+      });
+
+      const stateId =
+        VicidialAgentStatusObj[
+          res.status?.toUpperCase() as VicidialAgentStatus
+        ];
+
+      if (
+        vicidialUser?.toJSON().channelStateId != stateId ||
+        (res.pauseCode && vicidialUser?.toJSON().pauseCode != res.pauseCode)
+      ) {
+        await vicidialUser?.update({
+          pauseCode: res.pauseCode ?? null,
+          channelStateId: stateId,
+        } as VicidialUser);
+
+        this.userGateway.notifyPhoneStateUser(user.id);
+      }
+    } else {
+      await this.service.agentLogout(user.id);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId: user.id },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.OFFLINE,
+        campaignId: null,
+        pauseCode: null,
+        inboundGroups: null,
+        sessionName: null,
+        confExten: null,
+      } as VicidialUser);
+      this.userGateway.notifyPhoneStateUser(user.id);
+    }
+
     return res;
   }
 }

@@ -12,9 +12,9 @@ import {
   UpdatedAt,
 } from 'sequelize-typescript';
 import { User } from '@modules/user/entities/user.entity';
-import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 import { Citizen } from '@modules/citizen/entities/citizen.entity';
 import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
+import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -36,14 +36,20 @@ export class ChannelAssistance extends Model {
   })
   declare id: number;
 
-  @ForeignKey(() => ConsultType)
   @Column({
-    field: 'consult_type_id',
-    type: DataType.BIGINT,
+    field: 'consult_type_code',
+    type: DataType.STRING,
     allowNull: true,
     comment: 'Id del tipo de consulta',
   })
-  consultTypeId: number;
+  consultTypeCode: string;
+
+  @BelongsTo(() => ConsultType, {
+    foreignKey: 'consult_type_code',
+    targetKey: 'code',
+    as: 'consultType',
+  })
+  consultType: ConsultType;
 
   @ForeignKey(() => Citizen)
   @Column({
@@ -86,9 +92,6 @@ export class ChannelAssistance extends Model {
     comment: 'Campo para habilitar o inhabilitar un registro',
   })
   status?: boolean;
-
-  @BelongsTo(() => ConsultType)
-  consultType: ConsultType;
 
   @BelongsTo(() => Citizen)
   citizen: Citizen;

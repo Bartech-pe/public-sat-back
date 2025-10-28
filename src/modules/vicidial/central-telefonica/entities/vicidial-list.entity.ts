@@ -7,9 +7,10 @@ import { Table, Column, Model, DataType } from 'sequelize-typescript';
 export class VicidialLead  extends Model {
 
   @Column({ 
-     type: DataType.BIGINT, 
-     allowNull: false, 
-     primaryKey: true,
+      field: 'lead_id',
+      type: DataType.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
   })
   lead_id: number;
 

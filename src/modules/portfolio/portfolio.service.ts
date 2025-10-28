@@ -12,7 +12,7 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { User } from '@modules/user/entities/user.entity';
 import { Office } from '@modules/office/entities/office.entity';
 import { PortfolioDetail } from '@modules/portfolio-detail/entities/portfolio-detail.entity';
-import { col, Op } from 'sequelize';
+import { col, Op, WhereOptions } from 'sequelize';
 import { CitizenContact } from '@modules/citizen/entities/citizen-contact.entity';
 import { CitizenRepository } from '@modules/citizen/repositories/citizen.repository';
 import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
@@ -28,7 +28,7 @@ export class PortfolioService {
     private readonly repository: PortfolioRepository,
     private readonly userRepository: UserRepository,
 
-    private readonly repositoryDetail: PortfolioDetailRepository,
+    private readonly portfolioDetailRepository: PortfolioDetailRepository,
     @InjectQueue('portfolio-detail-queue')
     private readonly portfolioQueue: Queue,
   ) {}
@@ -38,9 +38,26 @@ export class PortfolioService {
   async findAll(
     limit: number,
     offset: number,
+    q?: Record<string, any>,
   ): Promise<PaginatedResponse<Portfolio>> {
     try {
+      const dateSelected = q?.dateSelected;
+
+      let whereOptions: WhereOptions<Portfolio> = {};
+
+      if (dateSelected) {
+        whereOptions = {
+          dateEnd: {
+            [Op.gt]: dateSelected,
+          },
+          dateStart: {
+            [Op.lte]: dateSelected,
+          },
+        };
+      }
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         include: [{ model: Office }, { model: User, as: 'createdByUser' }],
         limit,
         offset,
@@ -301,7 +318,7 @@ export class PortfolioService {
   //     }
 
   //     // Insertar o actualizar detalles
-  //     await this.repositoryDetail.bulkCreate(detalles, {
+  //     await this.portfolioDetailRepository.bulkCreate(detalles, {
   //       updateOnDuplicate: ['debt', 'currentDebt'],
   //     });
 
@@ -337,7 +354,7 @@ export class PortfolioService {
     try {
       const exist = await this.repository.findById(id);
 
-      let amount = await this.repositoryDetail.count({
+      let amount = await this.portfolioDetailRepository.count({
         where: { portfolioId: id },
       });
 

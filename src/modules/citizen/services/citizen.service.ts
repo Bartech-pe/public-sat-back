@@ -191,6 +191,7 @@ export class CitizenService {
   }
 
   async getBasicInfoFromCitizen(phoneNumber: string) {
+    console.log('getBasicInfoFromCitizen', phoneNumber);
     try {
       const result = await this.repository.findAll({
         include: [
@@ -276,7 +277,7 @@ export class CitizenService {
   ): Promise<CitizenContact[]> {
     return this.citizenContactRepository.findAll({
       where: { tipDoc, docIde },
-      order: [["createdAt", "ASC"]]
+      order: [['createdAt', 'ASC']],
     });
   }
 

@@ -28,7 +28,7 @@ export class PortfolioController {
   ): Promise<PaginatedResponse<Portfolio>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(limit, offset);
+    return this.service.findAll(limit, offset, query.q);
   }
 
   @Get(':id')

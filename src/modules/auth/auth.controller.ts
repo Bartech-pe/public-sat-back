@@ -19,6 +19,7 @@ import { ScreenService } from '@modules/screen/screen.service';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { AloSatService } from '@modules/vicidial/central-telefonica/services/alo-sat.service';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';
+import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -78,8 +79,12 @@ export class AuthController {
       });
       await vicidialUser?.update({
         channelStateId: ChannelPhoneState.OFFLINE,
+        campaignId: null,
         pauseCode: null,
-      });
+        inboundGroups: null,
+        sessionName: null,
+        confExten: null,
+      } as VicidialUser);
       return res;
     } catch (error) {}
   }

@@ -113,12 +113,36 @@ export class VicidialUser extends Model {
   pauseCode: string | null;
 
   @Column({
+    field: 'campaign_id',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'Id de la campaña',
+  })
+  campaignId: string | null;
+
+  @Column({
     field: 'inbound_groups',
     type: DataType.STRING,
     allowNull: true,
     comment: 'Inbound groups asignados',
   })
   inboundGroups: string | null;
+
+  @Column({
+    field: 'session_name',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'Nombre de la sesión',
+  })
+  sessionName: string | null;
+
+  @Column({
+    field: 'conf_exten',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'conf_exten',
+  })
+  confExten: string | null;
 
   @HasMany(() => VicidialUserHistory)
   history?: VicidialUserHistory[];

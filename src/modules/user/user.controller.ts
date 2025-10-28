@@ -19,6 +19,7 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { VicidialApiService } from '@modules/vicidial/vicidial-api/vicidial-api.service';
 
+@ApiBearerAuth()
 @Controller('users')
 export class UserController {
   constructor(
@@ -26,7 +27,6 @@ export class UserController {
     private readonly vicidialService: VicidialApiService,
   ) {}
 
-  @ApiBearerAuth()
   @Get()
   findAll(
     @CurrentUser() user: User,
@@ -37,19 +37,16 @@ export class UserController {
     return this.service.findAll(user, limit, offset, query.q);
   }
 
-  @ApiBearerAuth()
   @Get('roles/:roleId')
   findAllRolId(@Param('roleId') roleId: number): Promise<User[]> {
     return this.service.findAllRolId(+roleId);
   }
 
-  @ApiBearerAuth()
   @Get(':id')
   findOne(@Param('id') id: number): Promise<User> {
     return this.service.findOne(+id);
   }
 
-  @ApiBearerAuth()
   @Post()
   async create(@Body() dto: CreateUserDto): Promise<User> {
     if (dto.vicidial) {
@@ -61,7 +58,6 @@ export class UserController {
     return this.service.create(dto);
   }
 
-  @ApiBearerAuth()
   @Patch(':id')
   async update(
     @Param('id') id: number,
@@ -76,13 +72,11 @@ export class UserController {
     return this.service.update(+id, dto);
   }
 
-  @ApiBearerAuth()
   @Put('toggleStatus/:id')
   toggleStatus(@Param('id') id: number): Promise<User> {
     return this.service.toggleStatus(id);
   }
 
-  @ApiBearerAuth()
   @Delete(':id')
   remove(@Param('id') id: number) {
     return this.service.remove(+id);

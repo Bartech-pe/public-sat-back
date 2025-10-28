@@ -33,7 +33,7 @@ export class CreateVicidialListDto {
 
   @IsOptional()
   @IsEnum(['Y', 'N'])
-  active?: 'Y' | 'N' = 'Y';
+  active?: 'Y' | 'N';
 
   @ApiProperty({
       type: 'string',

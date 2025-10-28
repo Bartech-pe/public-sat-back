@@ -35,21 +35,27 @@ export class OmnicanalidadController {
   @Get('contacto/listado/:psiTipConsulta/:piValPar1/:pvValPar2')
   async infoContactoCelular(
     @Param('psiTipConsulta') psiTipConsulta: '1' | '2',
-    @Param('piValPar1') piValPar1: '1' | '2' | string,
-    @Param('pvValPar2') pvValPar2: 'empty' | string,
+    @Param('piValPar1') piValPar1: string,
+    @Param('pvValPar2') pvValPar2: string,
   ) {
     try {
       const token = await this.authSatService.getToken();
+
       const res: AxiosResponse<ContactoDto[]> = await this.client.get(
         `/contacto/listado/${psiTipConsulta}/${piValPar1}/${pvValPar2}`,
-        // {
-        //   headers: {
-        //     Authorization: `Bearer ${token}`,
-        //   },
-        //   validateStatus: () => true,
-        // },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          validateStatus: () => true, // para controlar manualmente los errores HTTP
+        },
       );
-      if (res.status == 200) {
+
+      // Si la respuesta es exitosa
+      if (res.status === 200 && Array.isArray(res.data)) {
+        if (res.data.length === 0) {
+          return await this.citizenService.getBasicInfoFromCitizen(piValPar1);
+        }
         return res.data.map(
           (d) =>
             ({
@@ -57,17 +63,30 @@ export class OmnicanalidadController {
               docIde: d.vdocIde,
             }) as Citizen,
         );
-      } else if (res.status == 401) {
-        throw new UnauthorizedException('Token api sat inválido');
-      } else {
-        throw new InternalServerErrorException();
       }
+
+      // Si no encontró resultados en la API externa
+      if (
+        res.status === 204 ||
+        (Array.isArray(res.data) && res.data.length === 0)
+      ) {
+        // Buscar localmente
+        return await this.citizenService.getBasicInfoFromCitizen(piValPar1);
+      }
+
+      // Si el token no es válido
+      if (res.status === 401) {
+        throw new UnauthorizedException('Token API SAT inválido');
+      }
+
+      // Otros errores de la API externa
+      throw new InternalServerErrorException(
+        `Error al consultar API SAT: ${res.status}`,
+      );
     } catch (error) {
-      // console.error(error);
-      return this.citizenService.getBasicInfoFromCitizen(piValPar1);
-      // throw new InternalServerErrorException(
-      //   error.response?.data || error.message,
-      // );
+      // Si hubo error en la llamada externa, buscar localmente
+      console.error('Error al consultar API externa:', error.message || error);
+      return await this.citizenService.getBasicInfoFromCitizen(piValPar1);
     }
   }
 

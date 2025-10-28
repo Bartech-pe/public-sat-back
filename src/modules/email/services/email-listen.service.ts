@@ -15,7 +15,12 @@ export class EmailListenService implements OnModuleInit {
       auth: {
         token: channelConnectorConfig.verifyToken,
       },
-      transports: ['websocket'], // fuerza WebSocket puro
+      reconnection: true,
+      reconnectionAttempts: Infinity,   
+      reconnectionDelay: 1000,  
+      reconnectionDelayMax: 10000, 
+      timeout: 20000,    
+      transports: ['websocket']
     });
 
     this.socket.on('connect', () => {

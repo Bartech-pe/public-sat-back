@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Call } from '../entities/call.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { User } from '@modules/user/entities/user.entity';
 
 export class CallCollection implements PaginatedResponse<CallItem> {
   total?: number | undefined;
@@ -42,11 +43,25 @@ export class CallItemRow {
   user: string;
   lead_id: number;
   filename: string;
-  location: string;
-  start_time: string; // ISO date string
+  recording_location: string;
+  call_date: string; // ISO date string
   length_in_sec: number;
   phone_number: string;
-  list_id: number;
+  status: string;
+  status_name: string;
+}
+
+export class CallItemNew {
+  recordingId: number;
+  user: User;
+  leadId: number;
+  filename: string;
+  recordingLocation: string;
+  callDate: Date; // ISO date string
+  lengthInSec: number;
+  phoneNumber: string;
+  status: string;
+  statusName: string;
 }
 
 export class CreateCallDto {

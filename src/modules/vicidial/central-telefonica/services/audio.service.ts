@@ -15,15 +15,15 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
 import { ConfigService } from '@nestjs/config';
-import { vicidialConfig } from 'config/env';
+import { audiobaseConfig, metabaseConfig, vicidialConfig } from 'config/env';
 import { promisify } from 'util';
 import { v4 as uuidv4 } from 'uuid';
 import * as FormData from 'form-data';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { CampaignRepository } from '@modules/campaign/repositories/campaign.repository';
-
-
+import { VicidialUserService } from './vicidial-user.service';
+import axios, { AxiosError } from 'axios';
 const writeFileAsync = promisify(fs_unico.writeFile);
 const unlinkAsync = promisify(fs_unico.unlink);
 
@@ -53,6 +53,8 @@ export class AudioService {
       //private readonly gateway: PortfolioGateway,
       private readonly httpService: HttpService,
       private readonly configService: ConfigService,
+
+      private readonly vicidialUserService:VicidialUserService,
 
       private readonly repository: CampaignRepository
   ) {}
@@ -137,7 +139,7 @@ export class AudioService {
             status:  true,
         };
 
-         this.repository.create(newCampaignData);
+        const crmList = this.repository.create(newCampaignData);
 
         const validLeads = data.map((row: any, index: number) => {
             const telefono = row.TELEFONO?.toString().trim();
@@ -157,6 +159,7 @@ export class AudioService {
         await this.audioQueue.add('register-details-audio', {
             list_id: list.list_id,  
             detalles: validLeads,
+            type:0,
         });
   
           return result;
@@ -170,27 +173,135 @@ export class AudioService {
 
   }
 
-  async savePortfolioDetails(list_id: number, detallesComplete: VicidialLead[]) {
+  async createlistarMultiple(dto: Omit<CreateVicidialListDto, 'file'>, file: Express.Multer.File): Promise<VicidialLists>{
+    try {
+
+        if (!file) {
+            throw new BadRequestException('Debe subir un archivo Excel.');
+        }
+
+        const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        if (!data.length) {
+          throw new BadRequestException('El archivo Excel está vacío.');
+        }
+ 
+        const existingList = await this.modelList.findOne({
+            where: { list_id: dto.list_id },
+        });
+
+        if (existingList) {
+           return existingList; 
+        }
+       
+        const result = await this.modelList.create({ ...dto });
+
+        const newCampaignData = {
+            name: dto.list_name,
+            description: dto.list_description,
+            departmentId: dto.departmentId,
+            vdlistId: dto.list_id,
+            startDate:  new Date(),
+            endDate: new Date(),
+            applyHoliday:  false,
+            validUntil: new Date(),
+            vdCampaignId: dto.campaign_id,
+            vdCampaignName: dto.campaign_name,
+            status:  false,
+        };
+
+        const crmList = await  this.repository.create(newCampaignData);
+
+       const agents: any = await this.vicidialUserService.getVicidialRemoteAgents(dto.campaign_id);
+
+        const validLeads = data.map((row: any, index: number) => {
+            const telefono = row.phone_number?.toString().trim();
+          
+            if (!telefono) return null;
+
+            return {
+              first_name: '',
+              last_name:  '',
+              phone_number: telefono,
+              status: 'NEW',
+              crm_campaign_id:  crmList.id,
+              script_text:  row.script_text?.toString().trim(),
+              asterisk_server_ip: agents.server_ip,
+            };
+        });
+       
+ 
+
+        const list = result.get({ plain: true });
+        await this.audioQueue.add('register-details-audio', {
+            list_id: list.list_id,  
+            detalles: validLeads,
+            type:1,
+        });
+  
+          return result;
+
+      } catch (error) {
+            throw new InternalServerErrorException(
+              error,
+              'Error interno del servidor',
+            );
+      }
+  }
+
+  
+
+  async savePortfolioDetails(list_id: number, detallesComplete: any[],type:number) {
+
     const BATCH_SIZE = 500;
     const total = detallesComplete.length;
     let processed = 0;
 
-    console.log(`🚀 Iniciando carga de ${total} leads en lotes de ${BATCH_SIZE}...`);
- 
-      for (let i = 0; i < total; i += BATCH_SIZE) {
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+
         const batch = detallesComplete.slice(i, i + BATCH_SIZE);
 
         const leadsToCreate = batch.map(lead => ({
-          ...lead,
-          list_id,
+            first_name: lead.first_name,
+            last_name: lead.last_name,
+            phone_number: lead.phone_number,
+            status: lead.status,
+            list_id,
         }));
 
-        await this.modelLead.bulkCreate(leadsToCreate);
+        const leadsCreated = await this.modelLead.bulkCreate(leadsToCreate, { returning: true });
+        if(type ==1){
+            const tasks = leadsCreated.map((created, index) => ({
+              crm_campaign_id: String(batch[index].crm_campaign_id),
+              vicidial_lead_id: created.get('lead_id'),
+              phone_number: created.get('phone_number'),
+              script_text: batch[index].script_text,
+              asterisk_server_ip: batch[index].asterisk_server_ip,
+            }));
 
+            const newlist  = {
+              tasks:tasks
+            }
+
+              try {
+                const response = await axios.post(`${audiobaseConfig.url}/api/audio-tasks/bulk-create`, { tasks });
+                console.log('API audio-tasks response:', response.data);
+              } catch (error) {
+                console.error('Error al enviar tareas a API audio-tasks:', error.message);
+              }
+
+          console.log("=============================================")
+     
+          console.log(newlist)
+        }
+       
         processed += batch.length;
         const percentage = Math.round((processed / total) * 100);
+    }
 
-      }
+    
 
       //this.gateway.sendComplete(total);
   }
@@ -360,5 +471,33 @@ export class AudioService {
   }
 
 
+  async findAllBylistasMultiple(campaignId: string): Promise<any> {
+      const url = `${audiobaseConfig.url}/api/campaign-status/${campaignId}`;
 
+      try {
+        const response = await axios.get(url, {
+          headers: { 'Accept': 'application/json' },
+          timeout: 10000, 
+        });
+
+    
+        return response.data;
+      } catch (error) {
+
+        const err = error as AxiosError;
+
+        if (err.response) {
+          this.logger.error(
+            `Error ${err.response.status} al consultar campaña ${campaignId}: ${JSON.stringify(err.response.data)}`
+          );
+        } 
+
+
+        return { success: false, message: 'Error consultando estado de campaña', campaignId };
+      }
+  }
 }
+
+
+
+

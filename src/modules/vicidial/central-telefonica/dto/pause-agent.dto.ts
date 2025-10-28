@@ -1,11 +1,10 @@
-import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsNotEmpty, IsOptional, ValidateIf } from 'class-validator';
+import { IsOptional, IsString, ValidateIf } from 'class-validator';
 
 export class PauseAgentDto {
-  @ValidateIf((o) => o.pauseCode !== '')
-  @IsEnum(VicidialPauseCode)
-  pauseCode: VicidialPauseCode | '';
+  @ValidateIf((o) => o.pauseCode)
+  @IsString()
+  pauseCode: string;
 
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)

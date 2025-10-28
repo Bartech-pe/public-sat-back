@@ -26,6 +26,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { AudioQueueProcessor } from './audioQueueProcessor';
 import { HttpModule } from '@nestjs/axios';
 import { CampaignModule } from '@modules/campaign/campaign.module';
+import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-assistance.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { CampaignModule } from '@modules/campaign/campaign.module';
     BullModule.registerQueue({
       name: 'register-details-audio', 
     }),
+    forwardRef(() => ChannelAssistanceModule),
   ],
   controllers: [
     CentralTelefonicaController,

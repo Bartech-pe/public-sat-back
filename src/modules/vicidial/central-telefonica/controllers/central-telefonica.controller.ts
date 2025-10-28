@@ -44,6 +44,11 @@ export class CentralTelefonicaController {
     return this.service.getProgreso(campaign_id);
   }
 
+  @Get('remote_agents/:id')
+  getVicidialRemoteAgents(@Param('id') campaignId:any ) {
+    return this.service.getVicidialRemoteAgents(campaignId);
+  }
+
   @Get('campanias/list/:id')
   getListProgress(@Param('id') listId: number) {
     return this.service.getListProgress(listId);

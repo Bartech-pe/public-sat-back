@@ -9,12 +9,17 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        comment: 'Identificador del canal',
+        comment: 'Identificador de tipo de consulta',
+      },
+      code: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'Código de tipo de consulta',
       },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
-        comment: 'Nombre del canal',
+        comment: 'Nombre de  tipo de consulta',
       },
 
       // Auditoría con FK hacia users

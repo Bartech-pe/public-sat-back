@@ -13,6 +13,7 @@ import { CitizenRepository } from '@modules/citizen/repositories/citizen.reposit
 import { Citizen } from '@modules/citizen/entities/citizen.entity';
 import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
+import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
 
 /**
  * Service layer for managing ChannelAssistances.
@@ -26,6 +27,7 @@ export class ChannelAssistanceService {
   constructor(
     private readonly repository: ChannelAssistanceRepository,
     private readonly citizenRepository: CitizenRepository,
+    private readonly citizenContactRepository: CitizenContactRepository,
   ) {}
 
   /**
@@ -96,10 +98,29 @@ export class ChannelAssistanceService {
         },
         { raw: true },
       );
+
+      if (dto.contact) {
+        const contact = await this.citizenContactRepository.findOrCreate(
+          {
+            tipDoc: dto.contact.tipDoc,
+            docIde: dto.contact.docIde,
+            contactType: dto.contact.contactType,
+            value: dto.contact.value,
+          },
+          {
+            tipDoc: dto.contact.tipDoc,
+            docIde: dto.contact.docIde,
+            contactType: dto.contact.contactType,
+            value: dto.contact.value,
+          },
+          { raw: true },
+        );
+      }
+
       return this.repository.create({
         citizenId: citizen.id,
         categoryId: dto.categoryId,
-        consultTypeId: dto.consultTypeId,
+        consultTypeCode: dto.consultTypeCode,
         detail: dto.detail,
         communicationId: dto.communicationId,
       });
@@ -218,7 +239,7 @@ export class ChannelAssistanceService {
         include: [
           { model: Citizen, where: { docIde } },
           { model: CategoryChannel },
-          { model: ConsultType },
+          { model: ConsultType, as: 'consultType' },
           { model: User, as: 'createdByUser' },
         ],
       });

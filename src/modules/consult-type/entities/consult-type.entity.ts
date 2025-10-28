@@ -34,6 +34,14 @@ export class ConsultType extends Model {
   declare id: number;
 
   @Column({
+    field: 'code',
+    type: DataType.STRING,
+    allowNull: false,
+    comment: 'Código del tipo de consulta',
+  })
+  code: string;
+
+  @Column({
     field: 'name',
     type: DataType.STRING,
     allowNull: false,

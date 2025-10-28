@@ -20,16 +20,16 @@ import {
   SendMessageRasaDto,
 } from '@common/proxy/rasa/dto/Rasa';
 import { CallService } from './services/call.service';
-import { CallFilter } from './dto/call-filter.dto';
-import { CreateCallDto } from './dto/call-collection.dto';
+import {
+  CallItemNew,
+  CreateCallDto,
+} from './dto/call-collection.dto';
 import { SpyDTO } from './dto/spy.dto';
 import { AMIFilter } from '../vicidial/ami/dto/ami.dto';
 import { AmiService } from '@modules/vicidial/ami/ami.service';
-import { SaldomaticoService } from '@modules/api-sat/saldomatico/saldomatico.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { CallHistory } from './entities/call-history.entity';
 
 /**
  * Controller for managing Calls.
@@ -44,16 +44,18 @@ export class CallController {
   constructor(
     private readonly amiService: AmiService,
     private readonly callService: CallService,
-    private readonly saldomaticoService: SaldomaticoService,
     private readonly rasaService: RasaService,
   ) {}
 
   @Get()
   async getCalls(
-    @Query() q: PaginationQueryDto,
-  ): Promise<PaginatedResponse<CallHistory>> {
-    const response = await this.callService.getCallHistory(q.limit, q.offset);
-    return response;
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<CallItemNew>> {
+    return this.callService.getCallsFromVicidial(
+      query.limit,
+      query.offset,
+      query.q,
+    );
   }
 
   @Post('start-call')
@@ -207,8 +209,8 @@ export class CallController {
   }
 
   @Get('statesCount')
-  async getCallsCounters(@Query() query: CallFilter) {
-    const response = await this.callService.getCallsCountersFromVicidial(query);
+  async getCallsCounters(@Query() query: PaginationQueryDto) {
+    const response = await this.callService.getCallsCountersFromVicidial(query.q);
     return response;
   }
 

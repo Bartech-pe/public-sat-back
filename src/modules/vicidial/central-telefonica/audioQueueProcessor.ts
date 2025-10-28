@@ -10,16 +10,12 @@ export class AudioQueueProcessor extends WorkerHost {
 
   async process(job: Job<any>) {
 
-    const { list_id, detalles } = job.data;
+    const { list_id, detalles,list,type } = job.data;
 
-     console.log(job.data);
     try {
-     
-      await this.audioService.savePortfolioDetails(list_id, detalles);
-      console.log(`✅ Detalles registrados para cartera ID ${list_id}`);
-    
+      await this.audioService.savePortfolioDetails(list_id, detalles,type);
     } catch (error) {
-      console.error(`❌ Error procesando cartera ${list_id}:`, error);
+
     }
   }
 

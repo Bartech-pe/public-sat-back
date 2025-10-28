@@ -1,6 +1,8 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { CitizenContactDto } from '@modules/citizen/dto/citizen-contact.dto';
 
 export class CreateChannelAssistanceDto {
   @ApiProperty({
@@ -13,9 +15,9 @@ export class CreateChannelAssistanceDto {
   @ApiProperty({
     description: 'Id del tipo de consulta',
   })
-  @IsNumber({}, { message: v.isNumber('consultTypeId') })
-  @IsNotEmpty({ message: v.isNotEmpty('consultTypeId') })
-  consultTypeId: number;
+  @IsString({ message: v.isString('consultTypeCode') })
+  @IsNotEmpty({ message: v.isNotEmpty('consultTypeCode') })
+  consultTypeCode: string;
 
   @ApiProperty({
     description: 'Tipo de documento de identificación del ciudadano',
@@ -41,4 +43,8 @@ export class CreateChannelAssistanceDto {
   @IsNumber({}, { message: v.isNumber('communicationId') })
   @IsNotEmpty({ message: v.isNotEmpty('communicationId') })
   communicationId: number;
+
+  @IsOptional()
+  @Type(() => CitizenContactDto)
+  contact: CitizenContactDto;
 }

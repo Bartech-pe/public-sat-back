@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { Department } from '@modules/department/entities/department.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { CitizenAssistanceRepository } from './repositories/citizen-assistance.repository';
 import { CitizenAssistance } from './entities/citizen-assistance.entity';
@@ -16,6 +15,9 @@ import { Office } from '@modules/office/entities/office.entity';
 import { PortfolioDetail } from '@modules/portfolio-detail/entities/portfolio-detail.entity';
 import { Portfolio } from '@modules/portfolio/entities/portfolio.entity';
 import { roleIdAdministrador } from '@common/constants/role.constant';
+import { Op } from 'sequelize';
+import { Response } from 'express';
+import * as ExcelJS from 'exceljs';
 
 @Injectable()
 export class CitizenAssistanceService {
@@ -226,5 +228,125 @@ export class CitizenAssistanceService {
         'Error interno del servidor',
       );
     }
+  }
+
+  async managedDownload(
+    portfolioId: number,
+    dateSelected: Date,
+    res: Response,
+  ): Promise<void> {
+    const startDay = new Date(dateSelected);
+    startDay.setHours(0, 0, 0);
+    const endDay = new Date();
+    endDay.setHours(23, 59, 59);
+    const result = await this.repository.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [startDay, endDay],
+        },
+      },
+      include: [
+        {
+          model: PortfolioDetail,
+          where: { portfolioId },
+          include: [Portfolio],
+          required: true,
+        },
+        { model: User, as: 'createdByUser' },
+      ],
+    });
+
+    if (result.length == 0) {
+      throw new NotFoundException(
+        'No se encontró información para el día y cartera seleccionados',
+      );
+    }
+
+    // Crear workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Atenciones');
+
+    // Encabezados de columnas
+    worksheet.columns = [
+      { header: 'FECHA', key: 'createdAt', width: 20 },
+      { header: 'CARTERA', key: 'portfolio', width: 25 },
+      { header: 'SECTORISTA', key: 'user', width: 25 },
+      { header: 'TIPO DE CONTRIBUYENTE', key: 'taxpayerType', width: 25 },
+      { header: 'CONTRIBUYENTE', key: 'taxpayerName', width: 45 },
+      { header: 'TIPO DOC. IDE.', key: 'docType', width: 25 },
+      { header: 'N° DOC. IDE.', key: 'docIde', width: 25 },
+      { header: 'CODIGO DE CONTRIBUYENTE', key: 'code', width: 25 },
+      { header: 'DEUDA INICIAL', key: 'debt', width: 25 },
+      { header: 'TIPO DE ATENCIÓN', key: 'assistanceType', width: 25 },
+      { header: 'MÉTODO DE CONTACTO', key: 'method', width: 25 },
+      { header: 'RESULTADO DE CONTACTO', key: 'result', width: 25 },
+      { header: 'OBSERVACIÓN', key: 'observation', width: 25 },
+    ];
+
+    const worksheetVerify = workbook.addWorksheet('Verificaciones de pago');
+
+    // Encabezados de columnas
+    worksheetVerify.columns = [
+      { header: 'FECHA', key: 'createdAt', width: 20 },
+      { header: 'CARTERA', key: 'portfolio', width: 25 },
+      { header: 'SECTORISTA', key: 'user', width: 25 },
+      { header: 'TIPO DE CONTRIBUYENTE', key: 'taxpayerType', width: 25 },
+      { header: 'CONTRIBUYENTE', key: 'taxpayerName', width: 45 },
+      { header: 'TIPO DOC. IDE.', key: 'docType', width: 25 },
+      { header: 'N° DOC. IDE.', key: 'docIde', width: 25 },
+      { header: 'CODIGO DE CONTRIBUYENTE', key: 'code', width: 25 },
+      { header: 'DEUDA INICIAL', key: 'debt', width: 25 },
+      { header: 'DETALLE', key: 'detail', width: 25 },
+    ];
+
+    // Agregar filas
+    result
+      .map((item) => item.toJSON())
+      .forEach((item: CitizenAssistance) => {
+        if (!item.verifyPayment) {
+          worksheet.addRow({
+            createdAt: item.createdAt,
+            portfolio: item.portfolioDetail.portfolio.name,
+            user: item.createdByUser?.name,
+            taxpayerType: item.portfolioDetail.taxpayerType,
+            taxpayerName: item.portfolioDetail.taxpayerName,
+            docType: item.tipDoc,
+            docIde: item.docIde,
+            code: item.portfolioDetail.code,
+            debt: item.portfolioDetail.debt,
+            assistanceType: item.type,
+            method: `${item.method}: ${item.contact}`,
+            result: item.result,
+            observation: item.observation,
+          });
+        } else {
+          worksheetVerify.addRow({
+            createdAt: item.createdAt,
+            portfolio: item.portfolioDetail.portfolio.name,
+            user: item.createdByUser?.name,
+            taxpayerType: item.portfolioDetail.taxpayerType,
+            taxpayerName: item.portfolioDetail.taxpayerName,
+            docType: item.tipDoc,
+            docIde: item.docIde,
+            code: item.portfolioDetail.code,
+            debt: item.portfolioDetail.debt,
+            detail: item.result,
+          });
+        }
+      });
+
+    // 5️⃣ Configurar headers de descarga
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="atenciones_${startDay.toISOString().split('T')[0]}.xlsx"`,
+    );
+
+    // 6️⃣ Escribir el archivo en el response
+    await workbook.xlsx.write(res);
+    res.end();
   }
 }

@@ -125,43 +125,43 @@ export class AmiService implements OnModuleInit {
                 callStatus: VicidialAgentStatus.QUEUE,
               });
 
-              const viciUsers = await this.vicidialUserRepository.findAll({
-                raw: true,
-                where: { channelStateId: ChannelPhoneState.READY },
-              });
+              // const viciUsers = await this.vicidialUserRepository.findAll({
+              //   raw: true,
+              //   where: { channelStateId: ChannelPhoneState.READY },
+              // });
 
-              for (const v of viciUsers) {
-                console.log(`Reanudando agente: ${v.username}`);
-                await aloSatService.resumeAgent(v.userId);
-              }
+              // for (const v of viciUsers) {
+              //   console.log(`Reanudando agente: ${v.username}`);
+              //   await aloSatService.resumeAgent(v.userId);
+              // }
             }
             break;
           case 'MeetmeJoin':
             if (/^SIP\/[^-]+-\w+$/.test(event.channel)) {
-              console.log(`MeetmeJoin:`, event);
+              // console.log(`MeetmeJoin:`, event);
               console.log(`meetme:`, event.meetme);
-              const username = await aloSatService.getAgentNameByConfExten(
-                event.meetme,
-              );
-              if (username) {
-                console.log(`username:`, username);
-                const vicidialUser = await this.vicidialUserRepository.findOne({
-                  where: {
-                    username: username,
-                    channelStateId: ChannelPhoneState.READY,
-                  },
-                });
+              // const username = await aloSatService.getAgentNameByConfExten(
+              //   event.meetme,
+              // );
+              // if (username) {
+              //   // console.log(`username:`, username);
+              //   // const vicidialUser = await this.vicidialUserRepository.findOne({
+              //   //   where: {
+              //   //     username: username,
+              //   //     channelStateId: ChannelPhoneState.READY,
+              //   //   },
+              //   // });
 
-                if (vicidialUser) {
-                  await vicidialUser?.update({
-                    channelStateId: ChannelPhoneState.INCALL,
-                    pauseCode: null,
-                  });
-                  this.userGateway.notifyPhoneStateUser(
-                    vicidialUser.toJSON().userId,
-                  );
-                }
-              }
+              //   // if (vicidialUser) {
+              //   //   await vicidialUser?.update({
+              //   //     channelStateId: ChannelPhoneState.INCALL,
+              //   //     pauseCode: null,
+              //   //   });
+              //   //   this.userGateway.notifyPhoneStateUser(
+              //   //     vicidialUser.toJSON().userId,
+              //   //   );
+              //   // }
+              // }
             }
             break;
           case 'MeetmeLeave':
@@ -182,13 +182,12 @@ export class AmiService implements OnModuleInit {
                 });
 
                 if (vicidialUser) {
-                  await this.aloSatService.onChangeIngroups(
+                  // await this.aloSatService.onChangeIngroups(
+                  //   vicidialUser?.toJSON()?.userId,
+                  // );
+                  // await new Promise((res) => setTimeout(res, 300));
+                  await this.aloSatService.endCall(
                     vicidialUser?.toJSON()?.userId,
-                  );
-                  await new Promise((res) => setTimeout(res, 300));
-                  await this.aloSatService.pauseAgent(
-                    vicidialUser?.toJSON()?.userId,
-                    VicidialPauseCode.WRAP,
                   );
 
                   const lastCall = await this.callHistoryRepository.getLastCall(
@@ -213,13 +212,13 @@ export class AmiService implements OnModuleInit {
                     });
                   }
 
-                  await vicidialUser?.update({
-                    channelStateId: ChannelPhoneState.PAUSED,
-                    pauseCode: VicidialPauseCode.WRAP,
-                  });
-                  this.userGateway.notifyPhoneStateUser(
-                    vicidialUser.toJSON().userId,
-                  );
+                  // await vicidialUser?.update({
+                  //   channelStateId: ChannelPhoneState.PAUSED,
+                  //   pauseCode: VicidialPauseCode.WRAP,
+                  // });
+                  // this.userGateway.notifyPhoneStateUser(
+                  //   vicidialUser.toJSON().userId,
+                  // );
                 }
               }
             }
@@ -233,7 +232,6 @@ export class AmiService implements OnModuleInit {
                 where: { uniqueId: event.uniqueid },
                 order: [['entryDate', 'DESC']],
               });
-
               if (lastCall) {
                 const callData = lastCall.toJSON();
                 // Solo si sigue en cola (nunca pasó a INCALL)

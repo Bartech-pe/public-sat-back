@@ -10,8 +10,8 @@ module.exports = {
         primaryKey: true,
         comment: 'Identificador único de la asistencia',
       },
-      consult_type_id: {
-        type: Sequelize.BIGINT,
+      consult_type_code: {
+        type: Sequelize.STRING,
         allowNull: false,
         comment: 'Id del tipo de consulta',
       },
@@ -87,19 +87,6 @@ module.exports = {
       name: 'fk_channel_assistances_citizen_id_citizens',
       references: {
         table: 'citizens',
-        field: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'RESTRICT',
-    });
-
-    // FK consult_type_id -> consult_types.id
-    await queryInterface.addConstraint('channel_assistances', {
-      fields: ['consult_type_id'],
-      type: 'foreign key',
-      name: 'fk_channel_assistances_consult_type_id_consult_types',
-      references: {
-        table: 'consult_types',
         field: 'id',
       },
       onUpdate: 'CASCADE',
