@@ -4,11 +4,13 @@ import { AutomaticMessageService } from './automatic-message.service';
 import { AutomaticMessageController } from './automatic-message.controller';
 import { AutomaticMessageRepository } from './repositories/automatic-message.repository';
 import { AutomaticMessage } from './entities/automatic-message.entity';
+import { AutomaticMessageDescription } from './entities/automatic-message-description.entity';
+import { AutomaticMessageDescriptionRepository } from './repositories/automatic-message-description.repository';
 
 @Module({
-  imports: [SequelizeModule.forFeature([AutomaticMessage])],
+  imports: [SequelizeModule.forFeature([AutomaticMessage, AutomaticMessageDescription])],
   controllers: [AutomaticMessageController],
-  providers: [AutomaticMessageService, AutomaticMessageRepository],
+  providers: [AutomaticMessageService, AutomaticMessageRepository, AutomaticMessageDescriptionRepository],
   exports: [AutomaticMessageRepository],
 })
 export class AutomaticMessageModule {}

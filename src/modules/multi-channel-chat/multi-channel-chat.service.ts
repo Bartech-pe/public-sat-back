@@ -392,7 +392,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  public async searchAdvisorAvailable(inboxId?: number): Promise<number> {
+  public async searchAdvisorAvailable(inboxId: number): Promise<number> {
     const inboxUsers: InboxUser[] = await this.inboxUserRepository.findAll({
       include: [
         {
@@ -417,7 +417,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       ],
       where: { inboxId: inboxId },
     });
-
     const agents = inboxUsers.map((x) => x.dataValues.userId);
 
     if (agents.length === 0) {

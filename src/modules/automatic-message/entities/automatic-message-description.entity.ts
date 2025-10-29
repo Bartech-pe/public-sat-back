@@ -1,5 +1,5 @@
-import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
 import { User } from '@modules/user/entities/user.entity';
+import { AutomaticMessage } from './automatic-message.entity';
 import {
   BelongsTo,
   Column,
@@ -8,66 +8,60 @@ import {
   DefaultScope,
   DeletedAt,
   ForeignKey,
-  HasMany,
   Model,
   Scopes,
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { AutomaticMessageDescription } from './automatic-message-description.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] },
-  include: [
-    {
-      model: AutomaticMessageDescription,
-      as: 'descriptions',
-      where: { status: true },
-      required: false,
-      separate: true,
-      order: [['order', 'ASC']],
-    },
-  ],
 }))
 @Scopes(() => ({}))
 @Table({
-  tableName: 'automatic_messages',
+  tableName: 'automatic_message_descriptions',
   timestamps: true,
   paranoid: true,
   underscored: true,
 })
-export class AutomaticMessage extends Model {
+export class AutomaticMessageDescription extends Model {
   @Column({
     field: 'id',
     type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
-    comment: 'Identificador del mensaje automático',
+    comment: 'Identificador de la descripción',
   })
   declare id: number;
 
+  @ForeignKey(() => AutomaticMessage)
   @Column({
-    field: 'name',
-    type: DataType.STRING,
-    allowNull: false,
-    comment: 'Nombre del mensaje automático',
-  })
-  name: string;
-
-  @ForeignKey(() => CategoryChannel)
-  @Column({
-    field: 'category_id',
+    field: 'automatic_message_id',
     type: DataType.BIGINT,
     allowNull: false,
-    comment: 'Parametro para identificar el canal al que pertenece el estado',
+    comment: 'ID del mensaje automático al que pertenece',
   })
-  categoryId: number;
+  automaticMessageId: number;
 
-  @BelongsTo(() => CategoryChannel)
-  category: CategoryChannel;
+  @BelongsTo(() => AutomaticMessage)
+  automaticMessage: AutomaticMessage;
 
-  @HasMany(() => AutomaticMessageDescription )
-  descriptions: AutomaticMessageDescription[];
+  @Column({
+    field: 'description',
+    type: DataType.TEXT,
+    allowNull: false,
+    comment: 'Contenido del mensaje',
+  })
+  description: string;
+
+  @Column({
+    field: 'order',
+    type: DataType.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+    comment: 'Orden de aparición de la descripción',
+  })
+  order: number;
 
   @Column({
     field: 'status',

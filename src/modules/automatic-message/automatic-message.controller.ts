@@ -48,6 +48,14 @@ export class AutomaticMessageController {
     return this.service.findAll(user, limit, offset, query.q);
   }
 
+  @ApiBearerAuth()
+  @Get('descriptions-by-channel/:channel')
+  getallAutomaticWelcomeMessagesFromChannel(@Param('categoryId') categoryId: number)
+  {
+    return this.service.getallAutomaticWelcomeMessagesFromChannel(categoryId)
+  }
+
+
   /**
    * Retrieves a single automatic message by its ID.
    * @param id AutomaticMessage identifier

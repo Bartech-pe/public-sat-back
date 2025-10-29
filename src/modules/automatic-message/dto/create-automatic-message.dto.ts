@@ -17,11 +17,9 @@ export class CreateAutomaticMessageDto {
 
   @ApiPropertyOptional({
     example: 'Descripción del estado',
-    description: 'Descripción de lo que representa este estado',
   })
   @IsOptional()
-  @IsString({ message: v.isString('description') })
-  description?: string;
+  message_descriptions?: string[];
 
   @ApiProperty({ description: 'Categoría del estado' })
   @IsNumber({}, { message: v.isNumber('categoryId') })

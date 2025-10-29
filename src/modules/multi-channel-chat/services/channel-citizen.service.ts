@@ -41,7 +41,6 @@ export class ChannelCitizenService {
     private channelAttentionRepository: ChannelAttentionRepository,
     private channelRoomRepository: ChannelRoomRepository,
     private channelRoomService: ChannelRoomService,
-    @Inject(forwardRef(() => MultiChannelChatGateway))
     @Inject(forwardRef(() => MultiChannelChatService))
     private multiChannelChatService: MultiChannelChatService,
   ) {}
@@ -111,7 +110,7 @@ export class ChannelCitizenService {
 
   async requestAdvisor(phoneNumber: string) {
     try {
-      const assistanceResult = await this.channelAttentionRepository.findOne({
+      const attentionResult = await this.channelAttentionRepository.findOne({
         where: { status: ChannelAttentionStatus.IN_PROGRESS },
         include: [
           {
@@ -129,33 +128,28 @@ export class ChannelCitizenService {
         ],
       });
 
-      if (!assistanceResult)
+      if (!attentionResult)
         throw new NotFoundException('No se encontró un chat con este número.');
 
-      const assistance = assistanceResult.toJSON() as ChannelAttention;
-      const channelRoom = assistanceResult
-        .get('channelRoom')
-        .toJSON() as ChannelRoom;
+      const attention = attentionResult as ChannelAttention;
+      const channelRoom = attentionResult.get('channelRoom') as ChannelRoom;
 
-      channelRoom.update({
-        status: 'prioridad',
-      });
-
-      assistance.update({
-        status: ChannelAttentionStatus.PRIORITY,
-      });
-
-      let selectedUserId: number | undefined =
-        await this.multiChannelChatService.searchAdvisorAvailable(
-          channelRoom.inboxId,
-        );
-      if (!selectedUserId) {
+      let selectedUserId: number = await this.multiChannelChatService.searchAdvisorAvailable(channelRoom.dataValues.inboxId);
+        if (!selectedUserId) {
         throw new NotFoundException(
           'No se encontraron asesores disponibles para este canal',
         );
       }
+      channelRoom.update({
+        status: 'prioridad',
+      });
+
+      attention.update({
+        status: ChannelAttentionStatus.PRIORITY,
+      });
+
       this.channelRoomService.transferToAdvisor(
-        channelRoom.id,
+        channelRoom.dataValues.id,
         selectedUserId,
         true,
       );

@@ -9,6 +9,8 @@ import { AutomaticMessageRepository } from './repositories/automatic-message.rep
 import { AutomaticMessage } from './entities/automatic-message.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { User } from '@modules/user/entities/user.entity';
+import { AutomaticMessageDescriptionRepository } from './repositories/automatic-message-description.repository';
+import { AutomaticMessageDescription } from './entities/automatic-message-description.entity';
 
 /**
  * Service layer for managing Automatic Messages.
@@ -19,7 +21,10 @@ import { User } from '@modules/user/entities/user.entity';
  */
 @Injectable()
 export class AutomaticMessageService {
-  constructor(private readonly repository: AutomaticMessageRepository) {}
+  constructor(
+    private readonly repository: AutomaticMessageRepository,
+    private readonly automaticMessageDescriptionRepository: AutomaticMessageDescriptionRepository
+  ) {}
 
   /**
    * Retrieves a paginated list of automatic messages.
@@ -38,15 +43,19 @@ export class AutomaticMessageService {
   ): Promise<PaginatedResponse<AutomaticMessage>> {
     try {
       return this.repository.findAndCountAll({
+        include: [{ 
+          model: AutomaticMessageDescription, 
+          required: false,
+          order: [['order', 'ASC']]
+        }],
         limit,
         offset,
-        order: [['id', 'DESC']], // Most recent first
+        order: [['id', 'DESC']],
       });
     } catch (error) {
       throw new InternalServerErrorException(error, 'Internal server error');
     }
   }
-
   /**
    * Retrieves a single automatic message by its ID.
    *
@@ -56,7 +65,14 @@ export class AutomaticMessageService {
    */
   async findOne(id: number): Promise<AutomaticMessage> {
     try {
-      const exist = await this.repository.findById(id);
+      const exist = await this.repository.findOne({
+        where: { id },
+        include: [{ 
+          model: AutomaticMessageDescription, 
+          required: false,
+          order: [['order', 'ASC']]
+        }],
+      });
       if (!exist) {
         throw new NotFoundException('Automatic message not found');
       }
@@ -66,15 +82,44 @@ export class AutomaticMessageService {
     }
   }
 
+  async getallAutomaticWelcomeMessagesFromChannel(categoryId: number)
+  {
+    // const exist = await this.repository.findAll({
+    //     where: { categoryId: categoryId },
+    //     include: [{ 
+    //       model: AutomaticMessageDescription, 
+    //       required: false,
+    //       order: [['order', 'ASC']]
+    //     }],
+    //   });
+  }
+
   /**
    * Creates a new automatic message.
    *
    * @param dto Data Transfer Object containing creation data
    * @returns The created AutomaticMessage instance
    */
-  async create(dto: CreateAutomaticMessageDto): Promise<AutomaticMessage> {
+ async create(dto: CreateAutomaticMessageDto): Promise<AutomaticMessage> {
     try {
-      return this.repository.create(dto);
+      // Crear el mensaje automático
+      const automaticMessage = await this.repository.create(dto);
+
+      // Crear las descripciones si existen
+      if (dto.message_descriptions && dto.message_descriptions.length > 0) {
+        for (const [index, description] of dto.message_descriptions.entries()) {
+          await this.automaticMessageDescriptionRepository.create(
+            {
+              automaticMessageId: automaticMessage.id,
+              description: description,
+              order: index + 1,
+              status: dto.status ?? true,
+            }
+          );
+        }
+      }
+
+      return this.findOne(automaticMessage.id);
     } catch (error) {
       throw new InternalServerErrorException(error, 'Internal server error');
     }
@@ -108,21 +153,43 @@ export class AutomaticMessageService {
    * @param dto Data Transfer Object containing updated data
    * @returns Updated AutomaticMessage instance
    */
-  async update(
-    id: number,
-    dto: UpdateAutomaticMessageDto,
-  ): Promise<AutomaticMessage> {
-    try {
-      const exist = await this.repository.findById(id);
+    async update(
+      id: number,
+      dto: UpdateAutomaticMessageDto,
+    ): Promise<AutomaticMessage> {
+      try {
+        const exist = await this.repository.findById(id);
 
-      await exist.update(dto);
+        // Actualizar el mensaje automático
+        await exist.update(
+          {
+            name: dto.name,
+            categoryId: dto.categoryId,
+            status: dto.status,
+          },
+        );
 
-      return exist;
-    } catch (error) {
-      throw new InternalServerErrorException(error, 'Internal server error');
+        // Si vienen descripciones, actualizarlas
+        if (dto.message_descriptions && dto.message_descriptions.length > 0) {
+          await this.automaticMessageDescriptionRepository.bulkDestroy({where: {automaticMessageId: id}})
+          // Crear las nuevas descripciones
+          for (const [index, description] of dto.message_descriptions.entries()) {
+            await this.automaticMessageDescriptionRepository.create(
+              {
+                automaticMessageId: id,
+                description: description,
+                order: index + 1,
+                status: dto.status ?? true,
+              },
+            );
+          }
+        }
+
+        return this.findOne(id);
+      } catch (error) {
+        throw new InternalServerErrorException(error, 'Internal server error');
+      }
     }
-  }
-
   /**
    * Toggles the status (active/inactive) of an automatic message.
    *
@@ -148,8 +215,11 @@ export class AutomaticMessageService {
    *
    * @param id AutomaticMessage ID
    */
-  remove(id: number): Promise<void> {
+  async remove(id: number): Promise<void> {
     try {
+      await this.automaticMessageDescriptionRepository.bulkDestroy({
+        where: { automaticMessageId: id} 
+      });
       return this.repository.delete(id);
     } catch (error) {
       throw new InternalServerErrorException(error, 'Internal server error');
@@ -161,8 +231,11 @@ export class AutomaticMessageService {
    *
    * @param id AutomaticMessage ID
    */
-  restore(id: number): Promise<void> {
+  async restore(id: number): Promise<void> {
     try {
+      await this.automaticMessageDescriptionRepository.bulkRestore({
+        where: { automaticMessageId: id} 
+      });
       return this.repository.restore(id);
     } catch (error) {
       throw new InternalServerErrorException(error, 'Internal server error');

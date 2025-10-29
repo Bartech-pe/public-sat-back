@@ -16,11 +16,6 @@ module.exports = {
         allowNull: false,
         comment: 'Nombre del mensaje automático',
       },
-      description: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        comment: 'Descripción del mensaje automático',
-      },
       category_id: {
         type: Sequelize.BIGINT,
         allowNull: false,
