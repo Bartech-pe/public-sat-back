@@ -67,7 +67,6 @@ async function bootstrap() {
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
           ],
-          'script-src-attr': ["'unsafe-inline'"],
           'style-src': [
             "'self'",
             "'unsafe-inline'",
@@ -86,8 +85,8 @@ async function bootstrap() {
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
             'https://fonts.gstatic.com',
-            'https://www.sat.gob.pe', // ✅ nuevo
-            'https://marketplace.canva.com', // ✅ nuevo
+            'https://www.sat.gob.pe',
+            'https://marketplace.canva.com',
           ],
           'font-src': [
             "'self'",
@@ -107,14 +106,17 @@ async function bootstrap() {
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
           ],
-          'frame-src': [
-            "'self'",
-            'https://172.29.55.44:9000', // ✅ nuevo
-          ],
+          'frame-src': ["'self'", 'https://172.29.55.44:9000'],
           'object-src': ["'none'"],
           'frame-ancestors': ["'none'"],
           'base-uri': ["'self'"],
           'upgrade-insecure-requests': [],
+          'media-src': [
+            "'self'",
+            'blob:',
+            'data:',
+            'https://satvcwebcc01.sat.gob.pe',
+          ],
         },
       },
       crossOriginEmbedderPolicy: false,
