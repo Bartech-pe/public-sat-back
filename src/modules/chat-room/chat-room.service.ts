@@ -75,7 +75,14 @@ export class ChatRoomService {
     return message;
   }
 
-  async getMessages(chatRoomId: number): Promise<ChatRoomMessage[]> {
+  async getMessages(chatRoomId: number,userId: number): Promise<ChatRoomMessage[]> {
+  
+    await ChatRoomMessage.update(
+      { isRead: true },
+      { where: { chatRoomId, senderId: { [Op.ne]: userId }, 
+        isRead: false,} }
+    );
+
     return this.messageRepository.findAll({
       where: { chatRoomId },
       include: [{ model: User, as: 'sender' }],

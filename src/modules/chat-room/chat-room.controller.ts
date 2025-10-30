@@ -47,7 +47,7 @@ export class ChatRoomController {
     @CurrentUser() user: User,
     @Param('chatRoomId') chatRoomId: number,
   ) {
-    const messages = await this.chatService.getMessages(chatRoomId);
+    const messages = await this.chatService.getMessages(chatRoomId,user.id);
 
     return messages.map((item) => {
       const data = item.get();
