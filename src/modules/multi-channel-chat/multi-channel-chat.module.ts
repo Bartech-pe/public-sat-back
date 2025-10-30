@@ -36,6 +36,8 @@ import { SurveyModule } from '@modules/survey/survey.module';
 import { ChannelQueryHistoryRepository } from './repositories/channel-room.repository copy';
 import { ChannelQueryHistory } from './entities/channel-query-history.entity';
 import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
+import { AutomaticMessageService } from '@modules/automatic-message/automatic-message.service';
+import { AutomaticMessageModule } from '@modules/automatic-message/automatic-message.module';
 @Module({
   imports: [
     forwardRef(() => AuthModule),
@@ -53,6 +55,7 @@ import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
     InboxModule,
     ChannelModule,
     EmailModule,
+    AutomaticMessageModule,
     ConsultTypeModule,
     ScheduleModule.forRoot(),
     SurveyModule,

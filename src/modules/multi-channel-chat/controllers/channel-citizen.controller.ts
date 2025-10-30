@@ -150,7 +150,7 @@ export class ChannelCitizenController {
   @Public()
   @UseGuards(JwtCitizenGuard)
   @Post('create-survey')
-  SurveyCreate(@Body() dto: CreateSurveyDto): Promise<Survey> {
-    return this.surveyService.create(dto);
+  async createSurvey(@Body() dto: CreateSurveyDto): Promise<Survey> {
+    return await this.surveyService.create(dto);
   }
 }

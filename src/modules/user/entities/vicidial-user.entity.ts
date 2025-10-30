@@ -18,6 +18,7 @@ import { User } from './user.entity';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { VicidialUserHistory } from './vicidial-user-history.model';
 import { Op } from 'sequelize';
+import { ChannelPhoneState } from '@common/enums/status-call.enum';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] },
@@ -188,7 +189,7 @@ export class VicidialUser extends Model {
     try {
       await VicidialUserHistory.create({
         vicidialUserId: vUser.toJSON().id,
-        oldChannelStateId: null,
+        oldChannelStateId: ChannelPhoneState.OFFLINE,
         newChannelStateId: vUser.toJSON().channelStateId ?? null,
         oldPauseCode: null,
         newPauseCode: vUser.toJSON().pauseCode ?? null,
@@ -239,7 +240,7 @@ export class VicidialUser extends Model {
     // 🔹 Crear nuevo registro de historial
     await VicidialUserHistory.create({
       vicidialUserId: instance.id,
-      oldChannelStateId: previous.channelStateId,
+      oldChannelStateId: previous.channelStateId ?? ChannelPhoneState.OFFLINE,
       newChannelStateId: instance.channelStateId,
       oldPauseCode: previous.pauseCode,
       newPauseCode: instance.pauseCode,

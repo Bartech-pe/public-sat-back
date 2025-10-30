@@ -11,6 +11,7 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { User } from '@modules/user/entities/user.entity';
 import { AutomaticMessageDescriptionRepository } from './repositories/automatic-message-description.repository';
 import { AutomaticMessageDescription } from './entities/automatic-message-description.entity';
+import { Op } from 'sequelize';
 
 /**
  * Service layer for managing Automatic Messages.
@@ -21,6 +22,8 @@ import { AutomaticMessageDescription } from './entities/automatic-message-descri
  */
 @Injectable()
 export class AutomaticMessageService {
+  private welcomeMessagesId: number[] = [18, 14];
+
   constructor(
     private readonly repository: AutomaticMessageRepository,
     private readonly automaticMessageDescriptionRepository: AutomaticMessageDescriptionRepository
@@ -82,16 +85,23 @@ export class AutomaticMessageService {
     }
   }
 
-  async getallAutomaticWelcomeMessagesFromChannel(categoryId: number)
+  public async getallAutomaticWelcomeMessagesFromChannel(categoryId: number): Promise<string[]>
   {
-    // const exist = await this.repository.findAll({
-    //     where: { categoryId: categoryId },
-    //     include: [{ 
-    //       model: AutomaticMessageDescription, 
-    //       required: false,
-    //       order: [['order', 'ASC']]
-    //     }],
-    //   });
+    const exist = (await this.automaticMessageDescriptionRepository.findAll({
+        where: { 
+          automaticMessageId: {
+            [Op.in]: this.welcomeMessagesId
+          },
+        },
+        include: [{ 
+          model: AutomaticMessage, 
+          required: true,
+          where: {
+            categoryId: categoryId
+          }
+        }],
+      })).map(x => x.toJSON()?.description);
+    return exist;
   }
 
   /**

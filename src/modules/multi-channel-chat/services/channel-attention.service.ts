@@ -39,7 +39,7 @@ import {
   ChannelAttentionDto,
   MessagesResponseDto,
 } from '../dto/channel-attentions/get-assistance.dto';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { AssignAttentionDetailDto } from '../dto/channel-attentions/assign-attention-detail.dto';
@@ -158,7 +158,7 @@ export class ChannelAttentionService {
 
       this.channelRoomRepository.update(channelRoomIdToClose, {
         status: 'completado',
-        botReplies: true,
+        botReplies: true
       });
 
       this.channelAttentionRepository.update(assistanceIdToClose, {
@@ -283,8 +283,7 @@ export class ChannelAttentionService {
         const lastMessage = channelMessages[0];
         const lastMessageParsed = channelMessages[0].toJSON();
 
-        const formatDate = (date: Date) =>
-          dayjs(date).format('DD/MM/YYYY HH:mm');
+        const formatDate = (date: Date) => dayjs(date).format('DD/MM/YYYY HH:mm');
         const messageAdvisor = lastMessage?.get('user')?.toJSON() as User | null;
         const messageAttachments = lastMessage?.get(
           'attachments',

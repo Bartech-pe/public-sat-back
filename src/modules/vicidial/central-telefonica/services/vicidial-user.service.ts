@@ -5,7 +5,7 @@ import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
 import { CreateVicidialCampaignDto } from '../dto/create-vicidial-campaing.dto';
 import { UpdateVicidialCampaignDto } from '../dto/update-vicidial-campaing.dto';
 import { Sequelize } from 'sequelize';
-
+import * as cron from 'node-cron';
 @Injectable()
 export class VicidialUserService {
   constructor(
@@ -13,8 +13,11 @@ export class VicidialUserService {
     private readonly model: typeof VicidialUser,
     @InjectModel(VicidialCampaign, 'central')
     private readonly campaignModel: typeof VicidialCampaign,
-     @InjectConnection('central') private readonly centralConnection: Sequelize, 
-  ) {}
+   @InjectConnection('central') private readonly centralConnection: Sequelize, 
+   
+  ) {
+    this.scheduleCampaignControl();
+  }
 
   findAll(): Promise<VicidialUser[]> {
     return this.model.findAll();
@@ -24,7 +27,7 @@ export class VicidialUserService {
     return this.campaignModel.findAll({ where: { dial_method: 'RATIO' }});
   }
 
-   async getByIdCampain(campaignId: string) {
+  async getByIdCampain(campaignId: string) {
     const campaign = await this.campaignModel.findOne({
       where: { campaign_id: campaignId },
     });
@@ -214,7 +217,48 @@ export class VicidialUserService {
       console.error('Error al obtener los agentes remotos:', error);
       throw new InternalServerErrorException('Error al obtener los agentes remotos de Vicidial');
     }
-}
+  }
+
+  async  scheduleCampaignControl() {
+    // se ejecuta cada 5 minutos
+    cron.schedule('*/1 * * * *', async () => {
+      const now = new Date();
+      const day = now.getDay(); // 0=Domingo, 1=Lunes,...,6=Sábado
+      const hour = now.getHours();
+      let active = 'N';
+
+      if (
+        (day >= 1 && day <= 5 && hour >= 8 && hour < 20) || // lunes a viernes
+        (day === 6 && hour >= 8 && hour < 13) // sábado
+      ) {
+        active = 'Y';
+      }
+
+      // const  listCampaignRatio = await this.campaignModel.findAll({ where: { dial_method: 'RATIO' }});
+
+      // const result = listCampaignRatio.map(c => c.toJSON());
+
+      const listCampaignRatio2 = await this.campaignModel.findAll({
+        where: { dial_method: 'RATIO' },
+        attributes: ['campaign_id']
+      });
+
+      const CAMPAIGNS = listCampaignRatio2.map(c => c.getDataValue('campaign_id'));
+
+      await this.centralConnection.query(
+          `UPDATE vicidial_campaigns 
+           SET active = :active 
+           WHERE campaign_id IN (:campaigns)`,
+          { replacements: { active, campaigns: CAMPAIGNS } },
+        );
+      // console.log(CAMPAIGNS);
+
+      // console.log("===========================================")
+
+
+      //  console.log("=========================================== ",CAMPAIGNS)
+    })
+  }
 
 
 }

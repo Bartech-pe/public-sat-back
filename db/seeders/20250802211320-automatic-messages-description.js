@@ -139,7 +139,7 @@ module.exports = {
         // WhatsApp - ID 14: Bienvenida IA
         {
           automatic_message_id: 14,
-          description: 'Primer contacto con bot inteligente',
+          description: 'Bienvenido al SAT, ¿en qué podemos ayudarlo?',
           order: 1,
           status: true,
           created_at: new Date(),
@@ -179,8 +179,16 @@ module.exports = {
         // Telegram - ID 18: Bienvenida IA
         {
           automatic_message_id: 18,
-          description: 'Primer contacto con bot inteligente',
+          description: 'Bienvenido al *SAT DE LIMA*',
           order: 1,
+          status: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          automatic_message_id: 18,
+          description: 'Hola! Soy su asesor virtual 🤖',
+          order: 2,
           status: true,
           created_at: new Date(),
           updated_at: new Date(),

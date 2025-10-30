@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateSurveyDto } from './dto/create-survey.dto';
@@ -13,6 +14,8 @@ import { roleIdAdministrador } from '@common/constants/role.constant';
 
 @Injectable()
 export class SurveyService {
+  private readonly logger = new Logger(SurveyService.name);
+  
   constructor(private readonly repository: SurveyRepository) {}
 
   async findAll(
@@ -65,8 +68,10 @@ export class SurveyService {
 
   async create(dto: CreateSurveyDto): Promise<Survey> {
     try {
-      return this.repository.create(dto);
+      this.logger.debug(dto)
+      return await this.repository.create(dto);
     } catch (error) {
+      this.logger.error(error)
       throw new InternalServerErrorException(
         error,
         'Error interno del servidor',

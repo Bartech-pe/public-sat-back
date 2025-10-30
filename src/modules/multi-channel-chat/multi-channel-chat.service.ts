@@ -143,9 +143,11 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
         };
         try {
           if (data.type !== MessageType.INCOMING) return null;
-
+          console.log(data)
           if (data.payload.channel == ChannelType.CHATSAT) {
             const isValidToken = await this.checkCitizenToken(data?.token);
+             console.log("===================================================  ")
+            console.log(isValidToken)
             if (!isValidToken) {
               result.error = 'No autorizado.';
               if (typeof callback === 'function') {

@@ -11,6 +11,6 @@ import { AutomaticMessageDescriptionRepository } from './repositories/automatic-
   imports: [SequelizeModule.forFeature([AutomaticMessage, AutomaticMessageDescription])],
   controllers: [AutomaticMessageController],
   providers: [AutomaticMessageService, AutomaticMessageRepository, AutomaticMessageDescriptionRepository],
-  exports: [AutomaticMessageRepository],
+  exports: [AutomaticMessageRepository, AutomaticMessageService],
 })
 export class AutomaticMessageModule {}

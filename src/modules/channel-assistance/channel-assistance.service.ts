@@ -112,6 +112,7 @@ export class ChannelAssistanceService {
             docIde: dto.contact.docIde,
             contactType: dto.contact.contactType,
             value: dto.contact.value,
+            isAdditional: dto.contact.isAdditional,
           },
           { raw: true },
         );

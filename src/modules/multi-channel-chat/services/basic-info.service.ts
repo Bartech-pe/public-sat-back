@@ -26,6 +26,8 @@ import { ChannelAttentionService } from './channel-attention.service';
 import { ChannelRoomNewMessageDto } from '@common/interfaces/multi-channel-chat/channel-room/channel-room-summary.dto';
 import { MultiChannelChatGateway } from '../multi-channel-chat.gateway';
 import { ChannelMessageRepository } from '../repositories/channel-messages.repository';
+import { AutomaticMessageService } from '@modules/automatic-message/automatic-message.service';
+import { AutomaticMessageDescription } from '@modules/automatic-message/entities/automatic-message-description.entity';
 
 @Injectable()
 export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
@@ -39,6 +41,7 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     @Inject(forwardRef(() => MultiChannelChatService))
     private readonly multiChannelChatService: MultiChannelChatService,
     private readonly channelMessageRepository: ChannelMessageRepository,
+    private readonly automaticMessageService: AutomaticMessageService,
     private readonly assistanceRepository: ChannelAttentionRepository,
     @Inject(forwardRef(() => ChannelAttentionService))
     private readonly assistanceService: ChannelAttentionService,
@@ -206,10 +209,11 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     includeGreeting: boolean,
   ) {
     if (!includeGreeting) return;
-    const greetings = [
-      'Bienvenido al *SAT DE LIMA*',
-      'Hola! Soy su asesor virtual 🤖',
-    ];
+    const greetings: string[] = await (this.automaticMessageService.getallAutomaticWelcomeMessagesFromChannel(4))
+    // const greetings = [
+    //   'Bienvenido al *SAT DE LIMA*',
+    //   'Hola! Soy su asesor virtual 🤖',
+    // ];
     for (const g of greetings) {
       message.data.payload.message.body = g;
       await this.sendAndPersist(message, { type: 'text', text: g });

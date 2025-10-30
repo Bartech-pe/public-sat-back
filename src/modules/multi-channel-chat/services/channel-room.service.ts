@@ -136,7 +136,6 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
               ? {
                   status: ChannelAttentionStatus.CLOSED,
                   endDate: { [Op.not]: null },
-                  userId: { [Op.not]: null }
                 }
               : query?.chatStatus === 'prioridad'
                 ? {

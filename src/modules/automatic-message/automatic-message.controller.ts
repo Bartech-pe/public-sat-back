@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { AutomaticMessageService } from './automatic-message.service';
 import { CreateAutomaticMessageDto } from './dto/create-automatic-message.dto';
@@ -18,6 +19,8 @@ import { AutomaticMessage } from './entities/automatic-message.entity';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { JwtCitizenGuard } from '@common/guards/jwt-citizen.guard';
+import { Public } from '@common/decorators/public.decorator';
 
 /**
  * Controller for managing Automatic Message.
@@ -48,8 +51,9 @@ export class AutomaticMessageController {
     return this.service.findAll(user, limit, offset, query.q);
   }
 
-  @ApiBearerAuth()
-  @Get('descriptions-by-channel/:channel')
+  @Public()
+  @UseGuards(JwtCitizenGuard)
+  @Get('descriptions-by-channel/:categoryId')
   getallAutomaticWelcomeMessagesFromChannel(@Param('categoryId') categoryId: number)
   {
     return this.service.getallAutomaticWelcomeMessagesFromChannel(categoryId)
