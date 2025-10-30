@@ -17,7 +17,7 @@ module.exports = {
       },
       code: {
         type: Sequelize.STRING,
-        allowNull: false,
+        allowNull: true,
         comment: 'Código corto de la respuesta predefinida',
       },
       content: {

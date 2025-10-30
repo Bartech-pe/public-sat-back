@@ -37,10 +37,10 @@ export class PredefinedResponse extends Model {
   @Column({
     field: 'code',
     type: DataType.STRING,
-    allowNull: false,
+    allowNull: true,
     comment: 'Código corto',
   })
-  code: string;
+  code?: string | null;
 
   @Column({
     field: 'title',

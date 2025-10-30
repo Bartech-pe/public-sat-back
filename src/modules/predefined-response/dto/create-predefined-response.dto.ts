@@ -14,12 +14,17 @@ import { IsUnique } from '@common/validators/is-unique/is-unique.decorator';
 import { Transform } from 'class-transformer';
 
 export class CreatePredefinedResponseDto {
-  @ApiProperty({ example: 'codigo', description: 'Código corto' })
-  @IsNotEmpty({ message: v.isNotEmpty('code') })
+  // @ApiProperty({ example: 'codigo', description: 'Código corto' })
+  // @IsNotEmpty({ message: v.isNotEmpty('code') })
+  // @IsString({ message: v.isString('code') })
+  // @Transform(({ value }) => String(value).toLowerCase())
+  // @IsUnique(PredefinedResponse, 'code', { message: v.isUnique('code') })
+  // code: string;
+
+  @IsOptional()
   @IsString({ message: v.isString('code') })
-  @Transform(({ value }) => String(value).toLowerCase())
-  @IsUnique(PredefinedResponse, 'code', { message: v.isUnique('code') })
-  code: string;
+  @Transform(({ value }) => (value ? String(value).toLowerCase() : value))
+  code?: string | null;
 
   @ApiProperty({
     description: 'Título de la respuesta predefinida',
