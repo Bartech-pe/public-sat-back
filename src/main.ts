@@ -6,11 +6,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import { ValidationExceptionFilter } from '@common/filters/validation-exception.filter';
+// import { initSocket } from '@common/lib/socket-server';
 import { join } from 'path';
 import { envConfig } from 'config/env';
-import * as helmet from 'helmet';
 
-// Winston Logger
 const winstonLogger = winston.createLogger({
   transports: [
     new winston.transports.Console({
@@ -31,113 +30,11 @@ const winstonLogger = winston.createLogger({
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  // CORS
-  const FRONTEND_ORIGINS = envConfig.crmUrl;
-  app.enableCors({
-    origin: FRONTEND_ORIGINS,
-    methods: 'GET,POST,PATCH,PUT,DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
-    credentials: true,
-  });
-
-  // Helmet con CSP, anti-clickjacking, y políticas adicionales
-  const cspDirectives: Record<string, string[]> = {
-    'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-    'img-src': ["'self'", 'data:', 'https:'],
-    'font-src': ["'self'", 'https://fonts.gstatic.com'],
-    'connect-src': ["'self'", FRONTEND_ORIGINS],
-    'frame-ancestors': ["'none'"],
-  };
-
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          'default-src': ["'self'"],
-          'script-src': [
-            "'self'",
-            "'unsafe-inline'",
-            "'unsafe-eval'",
-            "'unsafe-hashes'",
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-          ],
-          'script-src-attr': ["'self'", "'unsafe-inline'"],
-          'style-src': [
-            "'self'",
-            "'unsafe-inline'",
-            'blob:',
-            'https://fonts.googleapis.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-          ],
-          'img-src': [
-            "'self'",
-            'data:',
-            'blob:',
-            'https://i.pravatar.cc',
-            'https://api.iconify.design',
-            'https://api.simplesvg.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-            'https://fonts.gstatic.com',
-            'https://www.sat.gob.pe',
-            'https://marketplace.canva.com',
-            'https://cdn2.hubspot.net',
-            'https://uploads.chat',
-            'https://*',
-          ],
-          'font-src': [
-            "'self'",
-            'data:',
-            'https://fonts.gstatic.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-          ],
-          'connect-src': [
-            "'self'",
-            'ws:',
-            'wss:',
-            'http://localhost:4200',
-            'http://localhost:9000',
-            'https://api.iconify.design',
-            'https://api.simplesvg.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-            'http://24.144.82.222:8000',
-            'https://24.144.82.222:8000',
-            'https://api.unisvg.com',
-          ],
-          'frame-src': [
-            "'self'",
-            'https://172.29.55.44:9000',
-          ],
-          'object-src': ["'none'"],
-          'frame-ancestors': ["'none'"],
-          'base-uri': ["'self'"],
-          'upgrade-insecure-requests': [],
-          'media-src': [
-            "'self'",
-            'blob:',
-            'data:',
-            'https://satvcwebcc01.sat.gob.pe',
-            'https://cc-demo.xyzconn.xyz',
-          ],
-        },
-      },
-      crossOriginEmbedderPolicy: false,
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-      frameguard: { action: 'deny' },
-      referrerPolicy: { policy: 'no-referrer' },
-    }),
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule,
+    //  { logger: winstonLogger }
   );
 
-  // Swagger
   const config = new DocumentBuilder()
     .setTitle('SAT CRM - API')
     .setDescription('API para el manejo de SAT CRM')
@@ -148,40 +45,25 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, documentFactory);
 
-  // Prefijo global
   app.setGlobalPrefix('v1');
 
-  // Parsers
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,POST,PATCH,PUT,DELETE',
+    allowedHeaders: 'Content-Type, Authorization',
+    credentials: true,
+  });
 
-  // Archivos estáticos y uploads
   app.useStaticAssets(join(process.cwd(), 'public'));
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads',
-  });
 
-  // Endpoint opcional para reportes CSP
-  const expressApp = app.getHttpAdapter().getInstance();
-  expressApp.post('/csp-report', (req, res) => {
-    try {
-      winstonLogger.warn('CSP report received', { report: req.body });
-    } catch (e) {
-      winstonLogger.error('Error processing CSP report', { error: e });
-    }
-    res.status(204).send();
-  });
-
-  // Fallback SPA (Angular)
   app.use((req, res, next) => {
     if (
       !req.originalUrl.startsWith('/v1') &&
-      !req.originalUrl.startsWith('/swagger') &&
-      !req.originalUrl.startsWith('/uploads')
+      !req.originalUrl.startsWith('/swagger')
     ) {
       try {
         res.sendFile(join(process.cwd(), 'public', 'index.html'));
-      } catch {
+      } catch (e) {
         return null;
       }
     } else {
@@ -189,25 +71,36 @@ async function bootstrap() {
     }
   });
 
-  // Pipes globales
+  // Aquí sirves archivos desde /uploads con la ruta pública /uploads
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads', // Esto hace que se accedan desde http://localhost:3000/uploads
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: { enableImplicitConversion: true },
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 
-  // Filtro global de validaciones
   app.useGlobalFilters(new ValidationExceptionFilter());
 
-  // Inicia servidor
+  // Habilitar el manejo de JSON y formularios en NestJS
+  app.use(json({ limit: '50mb' })); // Ajusta el límite según necesites
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
   await app.listen(envConfig.port, '0.0.0.0');
+
+  // const httpServer = app.getHttpServer();
+  // initSocket(httpServer);
+
   winstonLogger.log({
     level: 'info',
-    message: `Application running on http://localhost:${envConfig.port}`,
+    message: `Application started on http://localhost:${envConfig.port}`,
   });
 }
-
 bootstrap();
