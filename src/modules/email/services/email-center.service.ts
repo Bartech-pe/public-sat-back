@@ -1,11 +1,10 @@
-import { Op } from 'sequelize';
+import { literal, Op } from 'sequelize';
 import {
   forwardRef,
   Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-  OnModuleInit,
 } from '@nestjs/common';
 import { EmailAttentionRepository } from '../repositories/email-attention.repository';
 import { AssistanceStateService } from '@modules/assistance-state/assistance-state.service';
@@ -13,9 +12,8 @@ import { ReplyCenterMail } from '../dto/reply-center-mail.dto';
 import { EmailAttention } from '../entities/email-attention.entity';
 import { MailFilter } from '../dto/mail-filter.dto';
 import { EmailStateRepository } from '../repositories/email-state.repository';
-import { EmailTicketList, GetTypeEmail } from '../email-ticket-list';
+import { EmailTicketList } from '../email-ticket-list';
 import { RequestContextService } from '@common/context/request-context.service';
-import { EmailState } from '../entities/email-state.entity';
 import { EmailChannelService } from './email-channel.service';
 import { ReplyEmail } from '../dto/email-channel/reply-email.dto';
 import { ForwardTo } from '../dto/email-channel/forward-to.dto';
@@ -33,19 +31,19 @@ import { EmailCredentialRepository } from '../repositories/email-credential.repo
 import { EmailWorkerService } from './email-worker.service';
 import { MailType } from '../enum/mail-type.enum';
 import { EmailAttachmentRepository } from '../repositories/email-attachment.repository';
-import { groupBy } from '@common/helpers/group.helper';
-import { Channel } from '@modules/channel/entities/channel.entity';
 import { EmailThreadRepository } from '../repositories/email-thread.repository';
 import { InboxRepository } from '@modules/inbox/repositories/inbox.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { EmailThread } from '../entities/email-thread.entity';
-import { roleIdAsesor } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { EmailGateway } from '../email.gateway';
+import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { EmailAttachment } from '../entities/email-attachment.entity';
 
 @Injectable()
-export class EmailCenterService implements OnModuleInit {
+export class EmailCenterService {
   constructor(
     private readonly emailAttentionRepository: EmailAttentionRepository,
     private readonly assistanceStateService: AssistanceStateService,
@@ -56,51 +54,120 @@ export class EmailCenterService implements OnModuleInit {
     private readonly channelStateRepository: ChannelStateRepository,
     private readonly emailCredentialRepository: EmailCredentialRepository,
     private readonly emailWorkerService: EmailWorkerService,
-    private readonly emailAttachmentRepository: EmailAttachmentRepository,
     private readonly inboxRepository: InboxRepository,
     @Inject(forwardRef(() => EmailGateway))
     private readonly emailGateway: EmailGateway,
   ) {}
-  async onModuleInit() {
-    const credential = await this.emailCredentialRepository.findOne({
+
+  async getTickets(user: User, q: MailFilter): Promise<PaginatedResponse<any>> {
+    const { from, to, contains, startDate, endDate, stateId, type, userId } = q;
+
+    const isAdvisor = user.roleId == UserRole.Ase;
+
+    const result = await this.emailAttentionRepository.findAndCountAll({
+      attributes: {
+        include: [
+          [
+            literal(`(
+              SELECT \`subject\`
+              FROM \`email_threads\`
+              WHERE \`email_threads\`.\`email_attention_id\` = \`EmailAttention\`.\`id\`
+              ORDER BY \`id\` ASC
+              LIMIT 1
+            )`),
+            'subject',
+          ],
+          [
+            literal(`(
+              SELECT \`from\`
+              FROM \`email_threads\`
+              WHERE \`email_threads\`.\`email_attention_id\` = \`EmailAttention\`.\`id\`
+              ORDER BY \`id\` ASC
+              LIMIT 1
+            )`),
+            'from',
+          ],
+          [
+            literal(`(
+              SELECT \`name\`
+              FROM \`email_threads\`
+              WHERE \`email_threads\`.\`email_attention_id\` = \`EmailAttention\`.\`id\`
+              ORDER BY \`id\` ASC
+              LIMIT 1
+            )`),
+            'name',
+          ],
+        ],
+      },
+      where: {
+        ...(isAdvisor ? { advisorUserId: user.id } : {}),
+      },
       include: [
         {
-          model: Inbox,
+          model: EmailThread,
+          attributes: [
+            'id',
+            'subject',
+            'from',
+            'name',
+            'to',
+            'date',
+            'content',
+            'type',
+            'mailStateId',
+            'isRead',
+            'createdAt',
+          ],
           include: [
             {
-              model: Channel,
-              where: { id: 4 },
+              model: EmailAttachment,
+              attributes: [
+                'id',
+                'attachmentGmailId',
+                'cid',
+                'filename',
+                'mimeType',
+                'publicUrl',
+              ],
+              required: false,
             },
           ],
+          separate: true,
+          order: [['id', 'DESC']],
+          limit: 1,
+        },
+
+        {
+          model: User,
+          as: 'advisor',
+        },
+        {
+          model: AssistanceState,
         },
       ],
+      order: [['id', 'DESC']],
     });
-    if (!credential) {
-      console.log('Sin credencial');
-      return;
-    }
-    const refreshToken = credential.toJSON().refreshToken;
-    if (
-      credential.toJSON().refreshToken &&
-      credential.toJSON().clientTopic &&
-      credential.toJSON().clientSecret &&
-      credential.toJSON().clientID &&
-      credential.toJSON().clientProject
-    ) {
-      try {
-        const oAuth = await this.emailChannelService.setOAuth(
-          credential.toJSON().clientID,
-          credential.toJSON().clientSecret,
-        );
-        const watch = await this.emailChannelService.setWatch(
-          refreshToken,
-          credential.toJSON().clientTopic,
-          credential.toJSON().clientProject,
-        );
-      } catch (error) {
-        console.error('Error inicializando las credenciales:', error.message);
-      }
-    }
+    return {
+      ...result,
+      data: result.data
+        .map((r) => r.toJSON())
+        .map((r: any) => ({
+          id: r.id,
+          from: r.from,
+          to: r.threads[0].to,
+          date: r.threads[0].date,
+          subject: r.subject,
+          content: r.threads[0].content,
+          ticketCode: r.ticketCode,
+          name: r.name,
+          state: r.assistanceState,
+          attachments: r.threads[0].attachments,
+          advisor: r.advisor,
+          isRead: r.threads[0].isRead,
+          createdAt: r.threads[0].createdAt,
+          firstThread: r.firstThread,
+        })),
+    };
   }
 
   async CloseTicket(mailAttentionId: number) {
@@ -213,6 +280,7 @@ export class EmailCenterService implements OnModuleInit {
       assistanceStateId: state.toJSON().id,
     });
   }
+
   async GetTicketsByAdvisorEmailId(query: MailFilter) {
     const send = await this.emailStateRepository.getSend();
     if (!send)
@@ -221,8 +289,8 @@ export class EmailCenterService implements OnModuleInit {
       mailStateId: send.toJSON().id,
     };
     const fullUser = RequestContextService.get<any>('user');
-    if (fullUser.roleId == roleIdAsesor) {
-      query.advisorEmailId = fullUser.id;
+    if (fullUser.roleId == UserRole.Ase) {
+      query.userId = fullUser.id;
     }
     return await EmailTicketList(
       whereThread,
@@ -242,8 +310,8 @@ export class EmailCenterService implements OnModuleInit {
       mailStateId: send.toJSON().id,
     };
     const fullUser = RequestContextService.get<any>('user');
-    if (fullUser.roleId == roleIdAsesor) {
-      query.advisorEmailId = fullUser.id;
+    if (fullUser.roleId == UserRole.Ase) {
+      query.userId = fullUser.id;
     }
     return await EmailTicketList(
       whereThread,
@@ -263,7 +331,7 @@ export class EmailCenterService implements OnModuleInit {
     };
     const fullUser = RequestContextService.get<any>('user');
     if (fullUser.role.name == 'asesor') {
-      query.advisorEmailId = fullUser.id;
+      query.userId = fullUser.id;
     }
     return await EmailTicketList(
       whereThread,
@@ -283,7 +351,7 @@ export class EmailCenterService implements OnModuleInit {
     };
     const fullUser = RequestContextService.get<any>('user');
     if (fullUser.role.name == 'asesor') {
-      query.advisorEmailId = fullUser.id;
+      query.userId = fullUser.id;
     }
     return await EmailTicketList(
       whereThread,
@@ -303,7 +371,7 @@ export class EmailCenterService implements OnModuleInit {
     };
     const fullUser = RequestContextService.get<any>('user');
     if (fullUser.role.name == 'asesor') {
-      query.advisorEmailId = fullUser.id;
+      query.userId = fullUser.id;
     }
     query.type = MailType.INTERN_REPLY;
     return await EmailTicketList(
@@ -324,7 +392,7 @@ export class EmailCenterService implements OnModuleInit {
     };
     const fullUser = RequestContextService.get<any>('user');
     if (fullUser.role.name == 'asesor') {
-      query.advisorEmailId = fullUser.id;
+      query.userId = fullUser.id;
     }
     return await EmailTicketList(
       whereThread,
@@ -355,71 +423,105 @@ export class EmailCenterService implements OnModuleInit {
     }
   }
   async GetEmailAttentionDetail(mailAttentionId: number) {
-    const state = await this.assistanceStateService.getOpenMailState();
-    const id = state?.toJSON().id;
-    const tickets = await this.emailThreadRepository.findAll({
-      where: {
-        mailAttentionId: mailAttentionId,
-      },
+    const result = await this.emailThreadRepository.findAll({
+      where: { mailAttentionId },
       attributes: [
         'id',
         'subject',
-        'content',
-        'mailAttentionId',
         'from',
+        'name',
         'to',
-        'createdAt',
-        'inReplyTo',
+        'date',
+        'content',
         'type',
+        'mailStateId',
+        'messageHeaderGmailId',
+        'inReplyTo',
+        'isRead',
+        'createdAt',
       ],
       include: [
         {
-          model: EmailAttention,
-          attributes: ['ticketCode', 'emailCitizen', 'assistanceStateId'],
-          include: [AssistanceState],
+          model: EmailAttachment,
+          attributes: [
+            'id',
+            'attachmentGmailId',
+            'cid',
+            'filename',
+            'mimeType',
+            'publicUrl',
+          ],
+          required: false,
         },
         {
-          model: EmailState,
-          attributes: ['name'],
+          model: EmailAttention,
+          attributes: ['id', 'ticketCode', 'emailCitizen', 'assistanceStateId'],
+          include: [
+            {
+              model: User,
+              as: 'advisor',
+            },
+          ],
+          required: true,
         },
       ],
+      order: [['id', 'ASC']],
     });
-    const elements = tickets.map((a) => a.toJSON());
-    if (elements.length == 0) return [];
-    const files = await this.emailAttachmentRepository.findAll({
-      attributes: [
-        'id',
-        'filename',
-        'attachmentGmailId',
-        'mailThreadId',
-        'mimeType',
-      ],
-      where: {
-        mailThreadId: { [Op.in]: elements.map((e) => e.id) },
-      },
-      include: [{ model: EmailThread, attributes: ['messageGmailId'] }],
-    });
-    const filesJson = files.map((a) => a.toJSON());
-    const filesgroup = groupBy(filesJson, (file) => file.mailThreadId ?? '');
 
-    const ticketsJson = elements.map((json) => {
-      return {
-        id: json.id,
-        subject: json.subject,
-        content: json.content,
-        mailAttentionId: json.mailAttentionId,
-        ticketCode: json.emailAttention.ticketCode,
-        from: json.emailAttention.emailCitizen,
-        state: json.emailAttention.assistanceStateId,
-        advisor: json.emailAttention?.advisor?.name,
-        createdAt: json.createdAt,
-        isAnswer: json.inReplyTo ? true : false,
-        type: GetTypeEmail(json.type),
-        files: filesgroup[json.id],
-      };
-    });
-    return ticketsJson;
+    const GetTypeEmail = (type: MailType) => {
+      switch (type) {
+        case MailType.ADVISOR:
+          return 'ASESOR';
+        case MailType.CITIZEN:
+          return 'CIUDADANO';
+        case MailType.INTERN_REPLY:
+          return 'RESPUESTA_INTERNA';
+        case MailType.INTERN_FORWARD:
+          return 'REENVIO_INTERNO';
+        default:
+          return 'SIN_TIPO';
+      }
+    };
+
+    return this.buildThreadTree(
+      result
+        .map((r) => r.toJSON())
+        .map((r: EmailThread) => ({
+          id: r.id,
+          from: r.from,
+          to: r.to,
+          date: r.date,
+          subject: r.subject,
+          content: r.content,
+          ticketCode: r.emailAttention.ticketCode,
+          name: r.name,
+          state: r.emailAttention.assistanceState,
+          attachments: r.attachments,
+          advisor: r.emailAttention.advisor,
+          inReplyTo: r.inReplyTo,
+          isRead: r.isRead,
+          createdAt: r.createdAt,
+          messageHeaderGmailId: r.messageHeaderGmailId,
+          type: GetTypeEmail(r.type),
+        })),
+    );
   }
+
+  private buildThreadTree(messages: any[]) {
+    const map = new Map(messages.map((m) => [m.messageHeaderGmailId, m]));
+
+    // Asignar el correo referenciado a cada mensaje
+    const result = messages.map((msg) => {
+      const current = msg;
+      if (current.inReplyTo && map.has(current.inReplyTo)) {
+        current.repliedTo = map.get(current.inReplyTo); // 🔗 correo referenciado
+      }
+      return current;
+    });
+
+    return result;
+  }
+
   async balanceAdvisors() {
     try {
       const state = await this.assistanceStateService.getOpenMailState();
@@ -444,7 +546,7 @@ export class EmailCenterService implements OnModuleInit {
           {
             model: User,
             as: 'user',
-            where: { roleId: roleIdAsesor },
+            where: { roleId: UserRole.Ase },
           },
         ],
         attributes: ['userId'],
@@ -543,6 +645,7 @@ export class EmailCenterService implements OnModuleInit {
       subject: body.subject,
       text: body.content,
       refreshToken: credential.toJSON().refreshToken,
+      clientId: credential.toJSON().clientID,
     };
     if (files.attachments) {
       const attachments: FileEmail[] = [];

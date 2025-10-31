@@ -33,6 +33,7 @@ import { EmailSignatureController } from './controllers/email-signature.controll
 import { EmailSignatureService } from './services/email-signature.service';
 import { EmailSignature } from './entities/email-signature.entity';
 import { EmailSignatureRepository } from './repositories/email-signature.repository';
+import { RedisService } from './redis/redis.service';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { EmailSignatureRepository } from './repositories/email-signature.reposit
     EmailSignatureService,
     EmailSignatureRepository,
     EmailGateway,
+    RedisService,
   ],
   exports: [
     EmailWorker,
@@ -99,6 +101,7 @@ import { EmailSignatureRepository } from './repositories/email-signature.reposit
     EmailListenService,
     EmailWorkerService,
     EmailSignatureRepository,
+    RedisService,
   ],
 })
 export class EmailModule {}

@@ -23,6 +23,7 @@ import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity
 import { EmailCredential } from '@modules/email/entities/email-credentials.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
+import { CallService } from '@modules/call/services/call.service';
 
 @Injectable()
 export class MonitorService {
@@ -35,7 +36,7 @@ export class MonitorService {
     private readonly channelMessageRepository: ChannelMessageRepository,
     private readonly vicidialService: MonitorVicidialService,
     private readonly userVicidialRepository: VicidialUserRepository,
-    private readonly callHistoryRepository: CallHistoryRepository,
+    private readonly callService: CallService,
     @InjectConnection('central') private readonly db: Sequelize,
   ) {}
 
@@ -202,13 +203,8 @@ export class MonitorService {
             {
               model: Inbox,
               attributes: [],
-              include: [
-                {
-                  model: Channel,
-                  attributes: [],
-                  where: { id: channelId },
-                },
-              ],
+              where: { channelId },
+              required: true,
             },
           ],
         },
@@ -237,17 +233,12 @@ export class MonitorService {
     const vicidialuser = await this.userVicidialRepository.findOne({
       where: { userId: userId },
     });
+
+    console.log('vicidialuser', !!vicidialuser);
     if (vicidialuser) {
       const username = vicidialuser.toJSON().username;
-      const total = await this.callHistoryRepository.count({
-        where: {
-          userId,
-          createdAt: {
-            [Op.gte]: today,
-            [Op.lt]: tomorrow,
-          },
-        },
-      });
+      console.log('username', username);
+      const { total } = await this.callService.getCallsCounterByNow(username);
       alosat = total;
     }
     const count = recievedCount + chat + chatbot + alosat;
@@ -417,7 +408,7 @@ export class MonitorService {
               model: ChannelRoom,
               required: true,
               where: {
-                inboxId: advisorJson.inboxId
+                inboxId: advisorJson.inboxId,
               },
               attributes: [],
             },
@@ -487,7 +478,7 @@ export class MonitorService {
         // Calcular efectividad (atenciones cerradas / total de atenciones del día)
         // const totalAttentions = AttentionsFilteredToday.length;
         const totalAttentions = new Set(
-          AttentionsFilteredToday.map(a => a.id)
+          AttentionsFilteredToday.map((a) => a.id),
         ).size;
         const efectividad =
           totalAttentions > 0

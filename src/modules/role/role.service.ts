@@ -11,7 +11,7 @@ import { UpdateRoleDto } from './dto/update-role.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { User } from '@modules/user/entities/user.entity';
 import { Screen } from '@modules/screen/entities/screen.entity';
-import { roleIdAdministrador } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class RoleService {
@@ -24,7 +24,7 @@ export class RoleService {
   ): Promise<PaginatedResponse<Role>> {
     try {
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {},
             }

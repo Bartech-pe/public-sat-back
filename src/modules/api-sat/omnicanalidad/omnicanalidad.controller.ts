@@ -54,7 +54,11 @@ export class OmnicanalidadController {
       // Si la respuesta es exitosa
       if (res.status === 200 && Array.isArray(res.data)) {
         if (res.data.length === 0) {
-          return await this.citizenService.getBasicInfoFromCitizen(piValPar1);
+          return await this.searchCitizenLocal(
+            psiTipConsulta,
+            piValPar1,
+            pvValPar2,
+          );
         }
         return res.data.map(
           (d) =>
@@ -71,7 +75,11 @@ export class OmnicanalidadController {
         (Array.isArray(res.data) && res.data.length === 0)
       ) {
         // Buscar localmente
-        return await this.citizenService.getBasicInfoFromCitizen(piValPar1);
+        return await this.searchCitizenLocal(
+          psiTipConsulta,
+          piValPar1,
+          pvValPar2,
+        );
       }
 
       // Si el token no es válido
@@ -86,7 +94,26 @@ export class OmnicanalidadController {
     } catch (error) {
       // Si hubo error en la llamada externa, buscar localmente
       console.error('Error al consultar API externa:', error.message || error);
-      return await this.citizenService.getBasicInfoFromCitizen(piValPar1);
+      return await this.searchCitizenLocal(
+        psiTipConsulta,
+        piValPar1,
+        pvValPar2,
+      );
+    }
+  }
+
+  private searchCitizenLocal(
+    psiTipConsulta: '1' | '2',
+    piValPar1: string,
+    pvValPar2: string,
+  ) {
+    if (psiTipConsulta == '1') {
+      return this.citizenService.getBasicInfoFromPhoneCitizen(piValPar1);
+    } else {
+      return this.citizenService.getBasicInfoFromDocCitizen(
+        piValPar1 == '1' ? 'RUC' : 'DNI',
+        pvValPar2,
+      );
     }
   }
 

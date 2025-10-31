@@ -10,13 +10,10 @@ import { EmailThreadRepository } from '../repositories/email-thread.repository';
 import { EmailStateRepository } from '../repositories/email-state.repository';
 import { EmailCredentialRepository } from '../repositories/email-credential.repository';
 import { EmailChannelService } from './email-channel.service';
-import { EmailThread } from '../entities/email-thread.entity';
 import { EmailState } from '../entities/email-state.entity';
 import { GenericEmail } from '../dto/center-email.dto';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
-import { Channel } from '@modules/channel/entities/channel.entity';
 import { BuildCenterEmail } from '../dto/build-email.dto';
-import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
 import { ChannelEnum } from '@common/enums/channel.enum';
 
 @Injectable()
@@ -147,6 +144,7 @@ export class EmailFeaturesService {
       subject: body.subject,
       text: body.content,
       refreshToken: credential.toJSON().refreshToken,
+      clientId: credential.toJSON().clientID,
     };
     if (body.html) {
       mail.html = JSON.parse(body.html);

@@ -9,8 +9,10 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { CreateChannelStateDto } from './dto/create-channel-state.dto';
 import { UpdateChannelStateDto } from './dto/update-channel-state.dto';
 import { User } from '@modules/user/entities/user.entity';
-import { emailCategoryId } from '@common/constants/channel.constant';
+import { ChannelMultichannelCategory, emailCategoryId } from '@common/constants/channel.constant';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
+import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
 
 /**
  * Service layer for managing ChannelState.
@@ -130,6 +132,36 @@ export class ChannelStateService {
     }
   }
 
+
+    async getUserStatusesByChannel(channel: string): Promise<BaseResponseDto<ChannelState[]>>
+    {
+      let response : BaseResponseDto<ChannelState[]> = {
+        success: false,
+        message: ""
+      }
+      try {
+        const channelStates = await this.repository.findAll({
+          include: [
+            {
+              model: CategoryChannel,
+              required: true,
+              where: {
+                id: ChannelMultichannelCategory[channel]
+              }
+            }
+          ]
+        }); 
+
+        response.success = true;
+        response.message = "Listado de estados según el canal";
+        response.data = channelStates;
+        return response;
+      } catch (error) {
+        response.error = error.toString()
+        return response;      
+      }
+    }
+  
   /**
    * Toggles the status (active/inactive) of a channel status.
    * @param id Channel Status identifier

@@ -124,44 +124,39 @@ export class AmiService implements OnModuleInit {
                 entryDate: new Date(),
                 callStatus: VicidialAgentStatus.QUEUE,
               });
-
-              // const viciUsers = await this.vicidialUserRepository.findAll({
-              //   raw: true,
-              //   where: { channelStateId: ChannelPhoneState.READY },
-              // });
-
-              // for (const v of viciUsers) {
-              //   console.log(`Reanudando agente: ${v.username}`);
-              //   await aloSatService.resumeAgent(v.userId);
-              // }
             }
             break;
           case 'MeetmeJoin':
             if (/^SIP\/[^-]+-\w+$/.test(event.channel)) {
               // console.log(`MeetmeJoin:`, event);
-              console.log(`meetme:`, event.meetme);
-              // const username = await aloSatService.getAgentNameByConfExten(
-              //   event.meetme,
-              // );
-              // if (username) {
-              //   // console.log(`username:`, username);
-              //   // const vicidialUser = await this.vicidialUserRepository.findOne({
-              //   //   where: {
-              //   //     username: username,
-              //   //     channelStateId: ChannelPhoneState.READY,
-              //   //   },
-              //   // });
+              console.log(`meetme:`, event);
+              const username = await aloSatService.getAgentNameByConfExten(
+                event.meetme,
+              );
+              if (username) {
+                // console.log(`username:`, username);
+                const vicidialUser = await this.vicidialUserRepository.findOne({
+                  where: {
+                    username: username,
+                  },
+                });
 
-              //   // if (vicidialUser) {
-              //   //   await vicidialUser?.update({
-              //   //     channelStateId: ChannelPhoneState.INCALL,
-              //   //     pauseCode: null,
-              //   //   });
-              //   //   this.userGateway.notifyPhoneStateUser(
-              //   //     vicidialUser.toJSON().userId,
-              //   //   );
-              //   // }
-              // }
+                if (vicidialUser) {
+                  const history = await this.callHistoryRepository.findOne({
+                    where: { uniqueId: event.uniqueid },
+                  });
+                  await history?.update({
+                    userId: vicidialUser.toJSON().userId,
+                  });
+                  // await vicidialUser?.update({
+                  //   channelStateId: ChannelPhoneState.INCALL,
+                  //   pauseCode: null,
+                  // });
+                  // this.userGateway.notifyPhoneStateUser(
+                  //   vicidialUser.toJSON().userId,
+                  // );
+                }
+              }
             }
             break;
           case 'MeetmeLeave':

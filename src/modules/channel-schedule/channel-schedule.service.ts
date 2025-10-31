@@ -9,7 +9,7 @@ import { UpdateChannelScheduleDto } from './dto/update-channel-schedule.dto';
 import { ChannelScheduleRepository } from './repositories/channel-schedule.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { roleIdAdministrador } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class ChannelScheduleService {
@@ -22,7 +22,7 @@ export class ChannelScheduleService {
   ): Promise<PaginatedResponse<ChannelSchedule>> {
     try {
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {},
             }

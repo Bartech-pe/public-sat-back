@@ -47,11 +47,27 @@ export class EmailAttachment extends Model {
 
   @Column({
     field: 'attachment_gmail_id',
-    type: DataType.STRING(255),
+    type: DataType.TEXT('long'),
     allowNull: false,
     comment: 'ID de Gmail del archivo adjunto',
   })
   attachmentGmailId: string;
+
+  @Column({
+    field: 'public_url',
+    type: DataType.TEXT('long'),
+    allowNull: false,
+    comment: 'Ruta del archivo adjunto',
+  })
+  publicUrl: string;
+
+  @Column({
+    field: 'cid',
+    type: DataType.STRING,
+    allowNull: false,
+    comment: 'Content ID del archivo adjunto',
+  })
+  cid: string;
 
   @ForeignKey(() => EmailThread)
   @Column({

@@ -4,7 +4,7 @@ import { MailType } from '../enum/mail-type.enum';
 export class MailFilter {
   @IsNumber()
   @IsOptional()
-  advisorEmailId: number;
+  userId: number;
 
   @IsNumber()
   @IsOptional()
@@ -24,11 +24,11 @@ export class MailFilter {
 
   @IsString()
   @IsOptional()
-  notContains: string;
+  startDate: Date;
 
   @IsString()
   @IsOptional()
-  date: Date;
+  endDate: Date;
 
   @IsString()
   @IsOptional()

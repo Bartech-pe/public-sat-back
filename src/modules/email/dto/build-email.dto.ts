@@ -31,6 +31,8 @@ export class FileEmail {
 export class BuildCenterEmail extends BuildEmail {
   @IsString()
   refreshToken: string;
+  @IsString()
+  clientId: string;
 }
 
 export class AttachementBody {

@@ -88,10 +88,9 @@ module.exports = {
           updated_at: new Date(),
           created_at: new Date(),
         },
-        // WhatsApp - category_id: 3
         {
           id: 11,
-          name: 'Finalización',
+          name: 'Bienvenida IA',
           category_id: 3,
           status: true,
           updated_at: new Date(),
@@ -99,57 +98,6 @@ module.exports = {
         },
         {
           id: 12,
-          name: 'Fuera de Horario',
-          category_id: 3,
-          status: false,
-          updated_at: new Date(),
-          created_at: new Date(),
-        },
-        {
-          id: 13,
-          name: 'Transferencia Humano',
-          category_id: 3,
-          status: false,
-          updated_at: new Date(),
-          created_at: new Date(),
-        },
-
-        {
-          id: 14,
-          name: 'Bienvenida IA',
-          category_id: 3,
-          status: true,
-          updated_at: new Date(),
-          created_at: new Date(),
-        },
-        // Telegram - category_id: 4
-        {
-          id: 15,
-          name: 'Finalización',
-          category_id: 4,
-          status: true,
-          updated_at: new Date(),
-          created_at: new Date(),
-        },
-        {
-          id: 16,
-          name: 'Fuera de Horario',
-          category_id: 4,
-          status: false,
-          updated_at: new Date(),
-          created_at: new Date(),
-        },
-        {
-          id: 17,
-          name: 'Transferencia Humano',
-          category_id: 4,
-          status: false,
-          updated_at: new Date(),
-          created_at: new Date(),
-        },
-
-        {
-          id: 18,
           name: 'Bienvenida IA',
           category_id: 4,
           status: true,

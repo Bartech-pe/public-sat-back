@@ -10,6 +10,7 @@ const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production').required(),
   PORT: Joi.number().default(3000),
   CRM_URL: Joi.string().required(),
+  CRM_API_URL: Joi.string().required(),
   // # DB Config
   DB_DIALECT: Joi.string().required(),
   DB_PORT: Joi.number().required(),
@@ -76,6 +77,10 @@ const envSchema = Joi.object({
 
   // # AUDIOS
   URL_API_AUDIOS: Joi.string().required(),
+
+  // # Configuración redis
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().required(),
 }).unknown();
 
 const { error, value: ev } = envSchema.validate(process.env);
@@ -88,6 +93,7 @@ export const envConfig = {
   isDev: ev.NODE_ENV === 'development',
   port: ev.PORT,
   crmUrl: ev.CRM_URL,
+  baseUri: ev.CRM_API_URL,
 };
 
 export const dbConfig = {
@@ -175,4 +181,9 @@ export const metabaseConfig = {
 
 export const audiobaseConfig = {
   url: ev.URL_API_AUDIOS,
+};
+
+export const redisConfig = {
+  port: ev.REDIS_PORT,
+  host: ev.REDIS_HOST,
 };

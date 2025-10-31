@@ -14,3 +14,19 @@ export enum ChannelAvailable {
   CHAT = 3,
   WSP = 4,
 }
+
+export enum ChannelMultichannelCategory
+{
+  all = 0,
+  chatsat = 3,
+  whatsapp = 4,
+  telegram = 5
+}
+
+
+// export enum ChannelAttentionStatusReverseTag  {
+//     in_progress= 'pendiente',
+//     identity_verification= 'pendiente',
+//     priority= 'prioridad',
+//     closed= 'completado'
+// }

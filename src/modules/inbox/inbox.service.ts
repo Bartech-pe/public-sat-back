@@ -30,9 +30,11 @@ import { CategoryChannelRepository } from '@modules/channel/repositories/categor
 import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
 import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
 import { BaseResponseDto } from '@common/dto/base-response.dto';
-import { chatSatAvailableStateId, wspAvailableStateId } from '@common/constants/channel.constant';
+import { ChannelMultichannelCategory, chatSatAvailableStateId, wspAvailableStateId } from '@common/constants/channel.constant';
 import { AvailableEnumToCategory, UnavailableEnumToCategory } from '@common/enums/channel.enum';
 import { x } from 'joi';
+import { ChannelType } from '@common/interfaces/channel-connector/messaging.interface';
+import { response } from 'express';
 
 
 // CategoryChannelEnum
@@ -353,42 +355,72 @@ export class InboxService {
     }
   }
 
-  async getUserStatus(currentUser: User): Promise<BaseResponseDto<{ userStatus: string }>> {
-    const userId = Number(currentUser.id);
-    const availableChannelStates = [chatSatAvailableStateId, wspAvailableStateId];
-    const inboxOfUser = await this.inboxUserRepository.findAll({
-      include: [
-        {
-          model: Inbox,
-          required: true,
-          include: [
-            {
-              model: Channel,
-              required: true,
-            },
-          ],
+  async getUserStatus(currentUser: User, channel: string): Promise<BaseResponseDto<{ userStatus: string, color?: string | null }>> {
+    try {
+      const userId = Number(currentUser.id);
+      const availableChannelStates = [chatSatAvailableStateId, wspAvailableStateId];
+      const inboxOfUser = await this.inboxUserRepository.findAll({
+        include: [
+          {
+            model: Inbox,
+            required: true,
+            include: [
+              {
+                model: Channel,
+                required: true,
+                where: channel == 'all' ? {}:{
+                  name: channel
+                }
+              },
+            ],
+          },
+          {
+            model: ChannelState,
+            required: true,
+          },
+        ],
+        where: { userId },
+      });
+      if(!inboxOfUser.length)
+      {
+        return{
+          message: 'Estado general para este usuario.',
+          success: true,
+          data: { userStatus: "Fuera de Línea", color: "484848ff" },
+        };
+      }
+      const inboxOfUserParsed: InboxUser[] = inboxOfUser.map(x => x.toJSON())
+  
+      const userStatus = channel == 'all' ?  
+        inboxOfUserParsed.some(x => availableChannelStates.includes(x?.channelState?.id??'')) ? "Disponible":"Fuera de Línea"
+      :
+        inboxOfUserParsed[0].channelState.id.toString();
+      const color = inboxOfUserParsed[0].channelState.color 
+      return {
+        message: 'Estado general para este usuario.',
+        success: true,
+        data: { 
+          userStatus: userStatus,
+          color: color
         },
-        {
-          model: ChannelState,
-          required: false,
-        },
-      ],
-      where: { userId },
-    });
-    const inboxOfUserParsed: InboxUser[] = inboxOfUser.map(x => x.toJSON())
-    
-
-    return {
-      message: 'Estado general para este usuario.',
-      success: true,
-      data: { userStatus: inboxOfUserParsed.some(x => availableChannelStates.includes(x?.channelState?.id??'')) ? "Disponible":"Fuera de LÍnea" },
-    };
+      };
+    } catch (error) {
+      return{
+        message: 'Error de servidor.',
+        success: false,
+        data: { userStatus: "Fuera de Línea", color: "#484848ff" },
+      };    
+    }
   }
 
-  
+
   async changeAllUserStatus(
       currentUser: User,
-      isAvailable: boolean,
+      payload: {
+        channel: string,
+        isAvailable?: boolean | null,
+        channelStateId?: number | null,
+      }
     ): Promise<BaseResponseDto> {
       const response: BaseResponseDto = {
         success: false,
@@ -408,17 +440,36 @@ export class InboxService {
                 },
               ],
             },
+            {
+              model: ChannelState,
+              required: true,
+            },
           ],
           where: {
             userId: currentUser.id,
           },
         });
-
-        for (const inboxUser of inboxOfUser) {
+        const inboxUserFiltered = inboxOfUser.filter((inboxUser) => {
           const inbox = inboxUser.get('inbox') as Inbox;
-          const channel = inbox.get('channel') as Channel;
-          const newState = isAvailable ? AvailableEnumToCategory[channel.id] : UnavailableEnumToCategory[channel.id];
-          await inboxUser.update({ channelStateId: newState });
+          const channel = inbox.get('channel').toJSON() as Channel;
+          const channelState = inboxUser.get('channelState').toJSON() as ChannelState;
+          if (payload.channel === 'all') {
+            return channel.name !== ChannelType.TELEGRAM;
+          }else{
+            return channelState.categoryId === ChannelMultichannelCategory[payload.channel];
+          }
+        });
+
+        for (const inboxUser of inboxUserFiltered) {
+          const inbox = inboxUser.get('inbox') as Inbox;
+          const channel = inbox.get('channel').toJSON() as Channel;
+          if(payload.channel == 'all')
+          {
+            const newState = payload.isAvailable ? AvailableEnumToCategory[channel.id] : UnavailableEnumToCategory[channel.id];
+            await inboxUser.update({ channelStateId: newState });
+          }else{
+            await inboxUser.update({ channelStateId: payload.channelStateId});
+          }
         }
 
         response.message = '✅ Se ha hecho el cambio de estado para todos los canales.';
@@ -430,6 +481,46 @@ export class InboxService {
       }
 
       return response;
+  }
+
+  async getInboxAvailablesForUser (currentUser: User): Promise<BaseResponseDto<string[]>>
+  {
+    let response : BaseResponseDto<string[]> = {
+      message: "",
+      success: false
+    }
+    try {
+      
+      const inboxUser = (await this.inboxUserRepository.findAll(
+        {
+          where : {userId: currentUser.id},
+          include: [
+            {
+              model: Inbox,
+              required: true,
+              include: [
+                {
+                  model: Channel,
+                  required: true
+                }
+              ]
+            }
+          ] 
+        }
+      ))
+      response.data = inboxUser.map((inboxUser: InboxUser) => {
+        const inboxUserItem: InboxUser = inboxUser.toJSON()
+        return inboxUserItem.inbox.channel.name
+      })
+      response.message = "Listado de canales accesibles";
+      response.success = true
+      return response
+    } catch (error) {
+      this.logger.error(error.toString())
+      response.data = [];
+      response.error = error.toString();
+      return response;
+    }
   }
 
 

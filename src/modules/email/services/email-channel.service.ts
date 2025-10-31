@@ -5,7 +5,7 @@ import { Tokencode } from '../dto/email-channel/token-code.dto';
 import { ReplyEmail } from '../dto/email-channel/reply-email.dto';
 import { ForwardTo } from '../dto/email-channel/forward-to.dto';
 import { EmailSent } from '../dto/center-email.dto';
-import { channelConnectorConfig } from 'config/env';
+import { channelConnectorConfig, envConfig } from 'config/env';
 
 @Injectable()
 export class EmailChannelService {
@@ -37,22 +37,23 @@ export class EmailChannelService {
       },
     );
   }
-  async login(email: string) {
-    const response: AxiosResponse<any> = await this.client.post(`/mail`, {
-      email: email,
-    });
-    if (response.status < 200 || response.status >= 300) {
-      throw new InternalServerErrorException(
-        `Error con la peticion para el login AuthUrl de ${response.status}`,
-      );
-    }
-    return response.data;
-  }
-  async setOAuth(clientId: string, clientSecret: string) {
+  async authUrl(
+    email: string,
+    clientId: string,
+    clientSecret: string,
+    state: string,
+  ) {
     const response: AxiosResponse<any> = await this.client.post(
-      `/mail/setOAuth`,
-      { clientId: clientId, clientSecret: clientSecret },
+      `/mail/auth-url`,
+      {
+        email,
+        clientId,
+        clientSecret,
+        redirectUri: `${envConfig.baseUri}/v1/mail-configuration/createCredential`,
+        state,
+      },
     );
+
     if (response.status < 200 || response.status >= 300) {
       throw new InternalServerErrorException(
         `Error con la peticion para el login AuthUrl de ${response.status}`,
@@ -60,13 +61,20 @@ export class EmailChannelService {
     }
     return response.data;
   }
-  async setWatch(refreshToken: string, topicName: string, projectId: string) {
+
+  async setWatch(
+    refreshToken: string,
+    topicName: string,
+    projectId: string,
+    clientId: string,
+  ) {
     const response: AxiosResponse<any> = await this.client.post(
       `/mail/setWatch`,
       {
         refreshToken: refreshToken,
         topicName: topicName,
         projectId: projectId,
+        clientId: clientId,
       },
     );
     if (response.status < 200 || response.status >= 300) {
@@ -76,10 +84,10 @@ export class EmailChannelService {
     }
     return response.data;
   }
-  async exchangeCode(code: string) {
+  async exchangeCode(clientId: string, code: string) {
     const response: AxiosResponse<Tokencode> = await this.client.post(
-      `mail/code`,
-      { code: code },
+      `mail/exchangeCode`,
+      { code, clientId },
     );
     if (response.status < 200 || response.status >= 300) {
       throw new InternalServerErrorException(
@@ -88,28 +96,7 @@ export class EmailChannelService {
     }
     return response.data;
   }
-  async refreshToken(email: string) {
-    const response: AxiosResponse<any> = await this.client.get(
-      `mail/refresh/${email}`,
-    );
-    if (response.status < 200 || response.status >= 300) {
-      throw new InternalServerErrorException(
-        `Error con la peticion para el refreshToken de ${response.status}`,
-      );
-    }
-    return response.data;
-  }
-  async refreshSetToken(email: string) {
-    const response: AxiosResponse<any> = await this.client.get(
-      `mail/refreshset/${email}`,
-    );
-    if (response.status < 200 || response.status >= 300) {
-      throw new InternalServerErrorException(
-        `Error con la peticion para el refreshToken de ${response.status}`,
-      );
-    }
-    return response.data;
-  }
+
   async sendEmail(body: BuildCenterEmail) {
     const response: AxiosResponse<EmailSent> = await this.client.post(
       `mail/sendemail`,
@@ -122,17 +109,19 @@ export class EmailChannelService {
     }
     return response.data;
   }
-  async GetMessage(messageId: string) {
-    const response: AxiosResponse<any> = await this.client.get(
-      `/mail/messages/${messageId}`,
-    );
-    if (response.status < 200 || response.status >= 300) {
-      throw new InternalServerErrorException(
-        `Error con la peticion para el Message de ${response.status}`,
-      );
-    }
-    return response.data;
-  }
+
+  // async GetMessage(messageId: string) {
+  //   const response: AxiosResponse<any> = await this.client.get(
+  //     `/mail/messages/${messageId}`,
+  //   );
+  //   if (response.status < 200 || response.status >= 300) {
+  //     throw new InternalServerErrorException(
+  //       `Error con la peticion para el Message de ${response.status}`,
+  //     );
+  //   }
+  //   return response.data;
+  // }
+
   async GetMessages(body: {
     query?: string;
     maxResults?: number;

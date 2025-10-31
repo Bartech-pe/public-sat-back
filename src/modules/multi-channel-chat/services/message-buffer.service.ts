@@ -345,7 +345,6 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
             await this.multiChannelChatService.sendMessageToExternal(
               outMessage,
             );
-            await this.multiChannelChatService.delay(500);
 
             // RESTAURADO: Usar método específico con gateway
             await this.createChannelMessageFromBuffered(
@@ -378,6 +377,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
     message: BufferedMessage,
     content: string,
   ) {
+    await this.multiChannelChatService.delay(1000);
     const newMessageSaved =
       await this.multiChannelChatService.createChannelMessage({
         assistanceId: message.assistance.id,
@@ -433,13 +433,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
         externalMessageId: message.data.payload.message.id as string,
         message: content,
         status: 'unread',
-        time: new Date(newMessageSaved.dataValues.timestamp).toLocaleTimeString(
-          'es-PE',
-          {
-            hour: '2-digit',
-            minute: '2-digit',
-          },
-        ),
+        time: new Date(),
         fromMe: true,
       },
       botStatus: 'active',

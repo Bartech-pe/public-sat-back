@@ -32,6 +32,7 @@ import { DispoChoiceDto } from '../dto/update-dispo.dto';
 import { CreateChannelAssistanceDto } from '@modules/channel-assistance/dto/create-channel-assistance.dto';
 import { ChannelAssistanceService } from '@modules/channel-assistance/channel-assistance.service';
 import { RegisteerDispoDto } from '../dto/register-dispo.dto';
+import { CallService } from '@modules/call/services/call.service';
 
 @ApiBearerAuth()
 @Controller('alosat')
@@ -41,7 +42,7 @@ export class AloSatController {
     private readonly vicidialUserRepository: VicidialUserRepository,
     @Inject(forwardRef(() => UserGateway))
     private readonly userGateway: UserGateway,
-    private readonly callHistoryRepository: CallHistoryRepository,
+    private readonly callService: CallService,
     private readonly channelAssistanceService: ChannelAssistanceService,
   ) {}
 
@@ -104,22 +105,28 @@ export class AloSatController {
 
   @Get('all-agent-status')
   async allAgentStatus(@CurrentUser() user: User): Promise<any[]> {
-    return (await this.vicidialUserRepository.getAllAloSatState()).map(
-      (data) => {
+    const users = await this.vicidialUserRepository.getAllAloSatState();
+
+    const results = await Promise.all(
+      users.map(async (data) => {
         const item: VicidialUser = data.toJSON();
-        const callHistory = item.user?.callHistory.filter(
-          (call) => call.callStatus == 'SALE',
-        )!;
+
+        const { calls, total, saleTotal } =
+          await this.callService.getCallsCounterByNow(item.username);
+
+        const saleCall = calls.find((call) => call.callStatus === 'SALE');
+
+        console.log(total, saleTotal);
+
         return {
           ...item,
-          average: callHistory.length
-            ? callHistory.reduce((a, b) => a + b.seconds, 0) /
-              callHistory.length
-            : 0,
-          calls: callHistory.length ?? 0,
+          average: saleCall ? saleCall?.duration / saleCall?.total : 0,
+          calls: total,
         };
-      },
+      }),
     );
+
+    return results;
   }
 
   @Post('agent-login')

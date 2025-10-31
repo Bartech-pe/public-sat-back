@@ -16,8 +16,10 @@ import { Portfolio } from './entities/portfolio.entity';
 import { PortfolioService } from './portfolio.service';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+
+@ApiBearerAuth()
 @Controller('portfolios')
 export class PortfolioController {
   constructor(private readonly service: PortfolioService) {}

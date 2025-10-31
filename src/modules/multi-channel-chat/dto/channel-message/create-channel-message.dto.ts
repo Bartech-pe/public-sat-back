@@ -17,9 +17,8 @@ export class CreateChannelMessageDto {
   channelRoomId: number;
 
   @ApiProperty({ description: 'User agent ID' })
-  @IsNotEmpty({ message: v.isNotEmpty('userId') })
   @IsNumber({}, { message: v.isNumber('userId') })
-  userId: number;
+  userId?: number| null;
 
   @ApiProperty({ description: 'ID de la asistencia' })
   @IsNotEmpty({ message: v.isNotEmpty('assistanceId') })

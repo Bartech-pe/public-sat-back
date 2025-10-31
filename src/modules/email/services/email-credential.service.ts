@@ -3,10 +3,8 @@ import { InboxRepository } from '@modules/inbox/repositories/inbox.repository';
 import { EmailChannelService } from './email-channel.service';
 import { EmailCredentialRepository } from '../repositories/email-credential.repository';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
-import { Channel } from '@modules/channel/entities/channel.entity';
-import { CreateMailCredential } from '../dto/create-mail-credential.dto';
-import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
 import { ChannelEnum } from '@common/enums/channel.enum';
+import { CreateMailCredential } from '../dto/create-mail-credential.dto';
 
 @Injectable()
 export class EmailCredentialService {
@@ -16,61 +14,47 @@ export class EmailCredentialService {
     private readonly inboxRepository: InboxRepository,
   ) {}
 
-  async refreshNewToken(code: string) {
+  async initEmail() {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
           model: Inbox,
+          required: true,
           where: { channelId: ChannelEnum.EMAIL },
         },
       ],
     });
-    if (!credential)
-      throw new InternalServerErrorException('no existe la credencial');
-    const infoToken = await this.emailChannelService.exchangeCode(code);
-    const credentialId = credential?.toJSON().id;
-    const updated = await this.emailCredentialRepository.update(credentialId, {
-      refreshToken: infoToken.refreshToken,
-      email: infoToken.email,
-    });
-    const oAuth = await this.emailChannelService.setOAuth(
-      credential.toJSON().clientID,
-      credential.toJSON().clientSecret,
-    );
-    const watch = await this.emailChannelService.setWatch(
-      infoToken.refreshToken,
-      credential.toJSON().clientTopic,
-      credential.toJSON().clientProject,
-    );
-    return updated;
-  }
-  async setOAuth() {
-    const credential = await this.emailCredentialRepository.findOne({
-      include: [
-        {
-          model: Inbox,
-          where: { channelId: ChannelEnum.EMAIL },
-        },
-      ],
-    });
-    if (!credential)
-      throw new InternalServerErrorException('no existe la credencial');
-    const email = await this.emailChannelService.setOAuth(
-      credential.toJSON()?.clientID,
-      credential.toJSON()?.clientSecret,
-    );
-    if (credential.toJSON().refreshToken) {
-      await this.emailChannelService.refreshSetToken(
-        credential.toJSON().refreshToken,
-      );
+    if (!credential) {
+      console.log('Sin credenciales de correo');
+      return;
     }
-    return email;
+    const refreshToken = credential.toJSON().refreshToken;
+    if (
+      credential.toJSON().refreshToken &&
+      credential.toJSON().clientTopic &&
+      credential.toJSON().clientSecret &&
+      credential.toJSON().clientID &&
+      credential.toJSON().clientProject
+    ) {
+      try {
+        const watch = await this.emailChannelService.setWatch(
+          refreshToken,
+          credential.toJSON().clientTopic,
+          credential.toJSON().clientProject,
+          credential.toJSON().clientID,
+        );
+      } catch (error) {
+        console.error('Error inicializando las credenciales:', error.message);
+      }
+    }
   }
+
   async setWatch() {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
           model: Inbox,
+          required: true,
           where: { channelId: ChannelEnum.EMAIL },
         },
       ],
@@ -83,12 +67,17 @@ export class EmailCredentialService {
       credential.toJSON().refreshToken,
       credential.toJSON().clientTopic,
       credential.toJSON().clientProject,
+      credential.toJSON().clientID,
     );
     return watch;
   }
 
-  async createCredential(body: CreateMailCredential) {
+  async createCredential(code: string, body: CreateMailCredential) {
     try {
+      const infoToken = await this.emailChannelService.exchangeCode(
+        body.clientId,
+        code,
+      );
       const checkInbox = await this.inboxRepository.findOne({
         where: { channelId: ChannelEnum.EMAIL },
       });
@@ -99,19 +88,21 @@ export class EmailCredentialService {
         channelId: ChannelEnum.EMAIL,
       });
       const createdInboxId = createdInbox.toJSON().id;
-      const mailCompleted = await this.emailCredentialRepository.create({
+      const credential = await this.emailCredentialRepository.create({
         email: body.email,
         inboxId: createdInboxId,
         clientID: body.clientId,
         clientSecret: body.clientSecret,
         clientTopic: body.topicName,
         clientProject: body.projectId,
+        refreshToken: infoToken.refreshToken,
       });
-      const oAuth = await this.emailChannelService.setOAuth(
-        body.clientId,
-        body.clientSecret,
+      const watch = await this.emailChannelService.setWatch(
+        infoToken.refreshToken,
+        credential.toJSON().clientTopic,
+        credential.toJSON().clientProject,
+        credential.toJSON().clientID,
       );
-      return oAuth;
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException('no existe el refresh token');

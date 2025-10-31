@@ -272,46 +272,53 @@ export class MonitorVicidialService {
   }
 
   async getStateDetailsByAdvisor(userId: number) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    const result = await this.vicidialUserHistoryRepository.findAll({
-      where: {
-        startTime: {
-          [Op.between]: [today, tomorrow],
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const result = await this.vicidialUserHistoryRepository.findAll({
+        where: {
+          startTime: {
+            [Op.between]: [today, tomorrow],
+          },
         },
-      },
-      attributes: [
-        'newPauseCode',
-        'newChannelStateId',
-        [fn('SUM', col('duration')), 'duration'],
-      ],
-      include: [
-        {
-          model: VicidialUser,
-          required: true,
-          where: { userId }, // 🔹 filtra por el user_id de vicidial_users
-          attributes: ['id', 'username'],
-        },
-        {
-          model: ChannelState,
-          as: 'newChannelState',
-          attributes: ['id', 'name'], // 🔹 asegúrate de que 'name' existe en ChannelState
-        },
-      ],
-      group: [
-        'VicidialUserHistory.new_pause_code',
-        'VicidialUserHistory.new_channel_state_id',
-        'newChannelState.id',
-        'VicidialUser.id', // 🔹 también necesario si incluyes VicidialUser
-      ],
-      order: [
-        ['newChannelStateId', 'ASC'],
-        ['newPauseCode', 'ASC'],
-      ],
-    });
-    return result;
+        attributes: [
+          'newChannelStateId',
+          [fn('SUM', col('duration')), 'duration'],
+        ],
+        include: [
+          {
+            model: VicidialUser,
+            required: true,
+            where: { userId }, // 🔹 filtra por el user_id de vicidial_users
+            attributes: ['id', 'username'],
+          },
+          {
+            model: ChannelState,
+            as: 'newChannelState',
+            required: true,
+            attributes: ['id', 'name'], // 🔹 asegúrate de que 'name' existe en ChannelState
+          },
+        ],
+        group: [
+          'VicidialUserHistory.new_channel_state_id',
+          'newChannelState.id',
+          'vicidialUser.id', // 🔹 también necesario si incluyes VicidialUser
+        ],
+        order: [['newChannelStateId', 'ASC']],
+      });
+
+      return {
+        states: result.map((item) => item.toJSON()),
+        total: result.reduce(
+          (acc, item) => acc + parseInt(item.toJSON().duration ?? '0'),
+          0,
+        ),
+      };
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   async getCallsCount() {

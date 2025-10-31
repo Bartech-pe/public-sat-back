@@ -16,9 +16,9 @@ import { Skill } from '@modules/skill/entities/skill.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { Op } from 'sequelize';
-import { roleIdAdministrador } from '@common/constants/role.constant';
 import { VicidialUserRepository } from './repositories/vicidial-user.repository';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class UserService {
@@ -36,7 +36,7 @@ export class UserService {
     try {
       const officeId = q?.officeId;
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {
                 ...(q?.byTransfer
@@ -68,7 +68,7 @@ export class UserService {
         ? {
             id: officeId,
           }
-        : user.roleId == roleIdAdministrador
+        : user.roleId == UserRole.Adm
           ? {}
           : {
               id: user.officeId,

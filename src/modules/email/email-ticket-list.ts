@@ -15,28 +15,28 @@ export const EmailTicketList = async (
   if (query.contains) {
     whereThread.content = { [Op.like]: `%${query.contains}%` };
   }
-  if (query.notContains) {
-    whereThread.content = { [Op.notLike]: `%${query.notContains}%` };
-  }
+  // if (query.notContains) {
+  //   whereThread.content = { [Op.notLike]: `%${query.notContains}%` };
+  // }
   if (query.type) {
     whereThread.type = query.type;
   }
-  if (query.date) {
-    const dateFilter = new Date(query.date);
-    dateFilter.setHours(0, 0, 0, 0);
-    const finishDate = new Date(dateFilter);
-    finishDate.setDate(finishDate.getDate() + 1);
-    whereThread.createdAt = {
-      [Op.gte]: dateFilter,
-      [Op.lt]: finishDate,
-    };
-  }
+  // if (query.date) {
+  //   const dateFilter = new Date(query.date);
+  //   dateFilter.setHours(0, 0, 0, 0);
+  //   const finishDate = new Date(dateFilter);
+  //   finishDate.setDate(finishDate.getDate() + 1);
+  //   whereThread.createdAt = {
+  //     [Op.gte]: dateFilter,
+  //     [Op.lt]: finishDate,
+  //   };
+  // }
   const whereAttention: any = {};
   if (query.stateId) {
     whereAttention.stateId = query.stateId;
   }
-  if (query.advisorEmailId) {
-    whereAttention.advisorUserId = query.advisorEmailId;
+  if (query.userId) {
+    whereAttention.advisorUserId = query.userId;
   }
   if (query.from) {
     whereAttention.emailCitizen = { [Op.like]: `%${query.from}%` };

@@ -18,7 +18,7 @@ module.exports = {
       content: {
         type: Sequelize.TEXT('long'),
         allowNull: false,
-        comment: 'Contenido del correo',
+        comment: 'Contenido del correo text/html',
       },
       from: {
         type: Sequelize.STRING(255),
@@ -29,6 +29,11 @@ module.exports = {
         type: Sequelize.STRING(255),
         allowNull: true,
         comment: 'Correo electrónico del destinatario',
+      },
+      date: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+        comment: 'Fecha de envío',
       },
       email_attention_id: {
         type: Sequelize.BIGINT,

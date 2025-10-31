@@ -190,8 +190,8 @@ export class CitizenService {
     }
   }
 
-  async getBasicInfoFromCitizen(phoneNumber: string) {
-    console.log('getBasicInfoFromCitizen', phoneNumber);
+  async getBasicInfoFromPhoneCitizen(phoneNumber: string) {
+    console.log('getBasicInfoFromPhoneCitizen', phoneNumber);
     try {
       const result = await this.repository.findAll({
         include: [
@@ -200,6 +200,37 @@ export class CitizenService {
             as: 'citizenContacts',
             required: true,
             where: { contactType: 'PHONE', value: phoneNumber },
+          },
+        ],
+      });
+
+      return result.flatMap((r) => {
+        const { citizenContacts, ...citizen } = r.toJSON();
+        return citizenContacts.map(
+          (c: CitizenContact) =>
+            ({
+              vtipDoc: c.tipDoc,
+              vdocIde: c.docIde,
+              vnumTel: c.value,
+              vcontacto: citizen.name,
+            }) as ContactoDto,
+        );
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getBasicInfoFromDocCitizen(tipDoc: string, docIde: string) {
+    console.log('getBasicInfoFromDocCitizen', tipDoc, docIde);
+    try {
+      const result = await this.repository.findAll({
+        include: [
+          {
+            model: CitizenContact,
+            as: 'citizenContacts',
+            required: true,
+            where: { tipDoc, docIde, contactType: 'PHONE' },
           },
         ],
       });

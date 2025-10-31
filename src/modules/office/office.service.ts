@@ -14,7 +14,7 @@ import { Department } from '@modules/department/entities/department.entity';
 import { RoleScreenOfficeRepository } from './repositories/role-screen-office.repository';
 import { CreateRoleScreenOfficeDto } from './dto/create-role-screen.dto';
 import { RoleScreenOffice } from './entities/role-screen-office.entity';
-import { roleIdAdministrador } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class OfficeService {
@@ -30,7 +30,7 @@ export class OfficeService {
   ): Promise<PaginatedResponse<Office>> {
     try {
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {},
             }

@@ -45,9 +45,17 @@ export class InboxController {
     return this.service.findAll(limit, offset);
   }
 
-  @Get('general-status')
-  async getUserStatus(@CurrentUser() currentUser: User): Promise<BaseResponseDto<{ userStatus: string }>> {
-    return this.service.getUserStatus(currentUser);
+  @Get(':channel/general-status')
+  async getUserStatus(
+    @CurrentUser() currentUser: User, 
+    @Param('channel') channel: string
+  ): Promise<BaseResponseDto<{ userStatus: string, color?: string | null }>> {
+    return this.service.getUserStatus(currentUser, channel);
+  }
+
+  @Get('available-channels')
+  async getInboxAvailablesForUser(@CurrentUser() currentUser: User): Promise<BaseResponseDto<string[]>> {
+    return this.service.getInboxAvailablesForUser(currentUser);
   }
 
   @Get(':id')
@@ -98,8 +106,16 @@ export class InboxController {
   }
   
   @Put('inbox-users/change-all-status')
-  changeAllUserStatus(@Body() payload: {isAvailable: boolean}, @CurrentUser() currentUser: User): Promise<BaseResponseDto> {
-    return this.service.changeAllUserStatus(currentUser, payload.isAvailable);
+  changeAllUserStatus(
+    @CurrentUser() currentUser: User,
+    @Body() payload: {
+      channel: string,
+      isAvailable?: boolean | null,
+      channelStateId?: number | null
+    }): Promise<BaseResponseDto> {
+    console.log('💥 CONTROLADOR payload:', payload);
+    console.log('👤 currentUser:', currentUser);
+    return this.service.changeAllUserStatus(currentUser, payload);
   }
 
   @Delete(':id')

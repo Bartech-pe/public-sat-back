@@ -6,6 +6,7 @@ import {
 import { HolidayRepository } from '../repositories/holiday.repository';
 import { CreateHolidayDto } from '../dto/holiday/create-holiday.dto';
 import { UpdateHolidayDto } from '../dto/holiday/update-holiday.dto';
+import { Holiday } from '../entities/holiday.entity';
 
 @Injectable()
 export class HolidayService {
@@ -46,20 +47,40 @@ export class HolidayService {
       );
     }
   }
-  async update(id: number, body: UpdateHolidayDto) {
-    const exist = await this.repository.findById(id);
-    if (!exist) {
-      throw new NotFoundException('feriado no existe');
+
+
+    async update(id: number, dto: UpdateHolidayDto): Promise<Holiday> {
+      try {
+        const exist = await this.repository.findById(id);
+  
+        await exist.update(dto);
+  
+        return exist;
+      } catch (error) {
+        throw new InternalServerErrorException(
+          error,
+          'Error interno del servidor',
+        );
+      }
     }
-    try {
-      return await this.repository.update(id, body);
-    } catch (error) {
-      throw new InternalServerErrorException(
-        error,
-        'Error interno del servidor',
-      );
+
+  async toggleStatus(id: number): Promise<Holiday> {
+      try {
+        const exist = await this.repository.findById(id);
+  
+        const status = !exist.get().status;
+  
+        exist.update({ status });
+  
+        return exist;
+      } catch (error) {
+        throw new InternalServerErrorException(
+          error,
+          'Error interno del servidor',
+        );
+      }
     }
-  }
+
   async delete(id: number) {
     const exist = await this.repository.findById(id);
     if (!exist) {

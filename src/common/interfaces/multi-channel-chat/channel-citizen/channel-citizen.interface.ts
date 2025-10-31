@@ -19,7 +19,7 @@ export class LastMessage {
   citizen: ChannelCitizen;
   status?: 'read' | 'unread';
   fromMe?: boolean;
-  time?: string;
+  time: Date;
   timestamp: number;
 }
 export interface ChannelSender {

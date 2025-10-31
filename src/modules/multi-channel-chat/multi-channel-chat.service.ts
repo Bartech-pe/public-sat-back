@@ -6,7 +6,6 @@ import {
   Logger,
   forwardRef,
   Inject,
-  UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
 import { io, Socket } from 'socket.io-client';
@@ -51,14 +50,9 @@ import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity
 import { ChannelMessageAttachmentRepository } from './repositories/channel-message-attachments.repository';
 import { channelConnectorConfig, jwtConfig } from 'config/env';
 import { UserRepository } from '@modules/user/repositories/user.repository';
-import {
-  roleIdAdministrador,
-  roleIdSupervisor,
-} from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 import { JwtService } from '@nestjs/jwt';
-import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
-import { NotFoundError } from 'rxjs';
 
 export interface IChannelChatInformation {
   channelRoomId?: number | null;
@@ -146,8 +140,6 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           console.log(data)
           if (data.payload.channel == ChannelType.CHATSAT) {
             const isValidToken = await this.checkCitizenToken(data?.token);
-             console.log("===================================================  ")
-            console.log(isValidToken)
             if (!isValidToken) {
               result.error = 'No autorizado.';
               if (typeof callback === 'function') {
@@ -164,17 +156,17 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             citizen?.id as number,
           );
           const assistance = await this.createAssistance(
-            channelRoom.dataValues.id,
+            channelRoom.id,
             data.payload.channel == ChannelType.WHATSAPP,
           );
           const channelMessage = await this.createChannelMessage({
             assistanceId: assistance.id,
-            channelRoomId: channelRoom.dataValues.id,
+            channelRoomId: channelRoom.id,
             content: data.payload.message.body ?? '',
             senderType: 'citizen',
             status: 'unread',
             timestamp: new Date(),
-            userId: channelRoom?.dataValues?.userId,
+            userId: assistance?.userId,
             externalChannelRoomId: data.payload.chat_id as number,
             externalMessageId: data.payload.message.id as string,
           });
@@ -204,34 +196,36 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
               });
             }
           }
-          let channelRoomParsed = channelRoom.toJSON();
           let channelMessageParsed = channelMessage.toJSON();
           let channelUser: User | null = null;
-          if (channelRoomParsed?.userId) {
+          if (assistance?.userId) {
             channelUser = await this.userRepository.findOne(
-              channelRoomParsed.userId,
+              {where: {id: assistance.userId}},
             );
           }
 
           let countUnreadMessages =
             await this.channelMessageRepository.findAndCountAll({
               where: {
-                channelRoomId: channelRoomParsed.id,
+                channelRoomId: channelRoom.id,
                 status: 'unread',
                 senderType: 'citizen',
               },
             });
 
           let newMessage: ChannelRoomNewMessageDto = {
-            channelRoomId: channelRoomParsed.id,
+            channelRoomId: channelRoom.id,
             attention: {
               id: assistance.id,
-              status: assistance.status
+              status: assistance.status,
             },
-            externalRoomId: channelRoomParsed.externalChannelRoomId,
+            externalRoomId: channelRoom.externalChannelRoomId,
             channel: data.payload.channel,
-            advisor: null,
-            status: channelRoomParsed.status,
+            advisor: {
+              id: channelUser?.id,
+              name: channelUser?.name
+            },
+            status: channelRoom.status,
             message: {
               sender: {
                 id: citizen.id,
@@ -250,22 +244,16 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
               externalMessageId: channelMessageParsed.externalMessageId,
               message: channelMessageParsed.content,
               status: channelMessageParsed.status,
-              time: new Date(channelMessageParsed.timestamp).toLocaleTimeString(
-                'es-PE',
-                {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                },
-              ),
+              time: channelMessageParsed.timestamp,
               fromMe: false,
             },
             unreadCount: countUnreadMessages.total as number,
-            botStatus: channelRoomParsed.botReplies ? 'active' : 'paused',
+            botStatus: channelRoom.botReplies ? 'active' : 'paused',
           };
           this.multiChannelChatGateway.handleNewMessage(newMessage);
           let inboxCredential: InboxCredential[] =
             await this.inboxCredentialRepository.findAll({
-              where: { inboxId: channelRoomParsed.inboxId },
+              where: { inboxId: channelRoom.inboxId },
               order: [['createdAt', 'DESC']],
               limit: 1,
             });
@@ -274,7 +262,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             data,
             assistance: assistance,
             citizen: citizen as ChannelCitizen,
-            channelRoom: channelRoom.toJSON(),
+            channelRoom: channelRoom,
             user: channelUser,
             credentials,
             externalMessageId: channelMessageParsed.externalMessageId,
@@ -305,9 +293,9 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           result = {
             registered: true,
             assistanceId: assistance.id,
-            channelRoomId: channelRoom.dataValues.id,
+            channelRoomId: channelRoom.id,
             channelCitizenId: citizen.id,
-            userId: channelRoomParsed?.userId,
+            userId: channelRoom?.userId,
           };
           if (typeof callback === 'function') {
             this.logger.debug(result);
@@ -406,7 +394,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
               model: Role,
               required: true,
               where: {
-                id: { [Op.notIn]: [roleIdAdministrador, roleIdSupervisor] },
+                id: { [Op.notIn]: [UserRole.Adm, UserRole.Sup] },
               },
             },
           ],
@@ -510,7 +498,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    let selectedUserId: number | null = null 
+    let selectedUserId: number | null = null;
     // if(![ChannelType.CHATSAT, ChannelType.WHATSAPP].includes(newMessage.payload.channel))
     // {
     //   selectedUserId = await this.searchAdvisorAvailable(
@@ -542,28 +530,58 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       });
 
     if (channelRoomExists.length) {
+      const channelRoom = channelRoomExists[0].toJSON();
       const attentions = await this.ChannelAttentionRepository.findAll({
         where: {
-          channelRoomId: channelRoomExists[0].dataValues.id,
-          status: ChannelAttentionStatus.IN_PROGRESS,
-        },
-      });
-
-      if (
-        channelRoomExists[0].dataValues.status == 'completado' ||
-        (channelRoomExists[0].dataValues.status == 'completado' &&
-          attentions.length > 0)
-      ) {
-        const [_, [updatedRoom]] = await this.channelRoomRepository.update(
-          channelRoomExists[0].dataValues.id,
-          {
-            status: 'pendiente',
-            userId: selectedUserId,
+          channelRoomId: channelRoom.id,
+          status:{
+            [Op.in]: [
+              ChannelAttentionStatus.IDENTITY_VERIFICATION,
+              ChannelAttentionStatus.IN_PROGRESS,
+              ChannelAttentionStatus.PRIORITY,
+            ]
           },
-        );
-        return updatedRoom;
+          endDate: null
+        },
+        order: [['createdAt', 'DESC']],
+        limit: 1
+      });
+      if(attentions.length > 0)
+      {
+          const attention = attentions[0].toJSON();
+          
+          const isPendingCorrect = channelRoom.status == 'pendiente' && 
+            [
+              ChannelAttentionStatus.IDENTITY_VERIFICATION,
+              ChannelAttentionStatus.IN_PROGRESS,
+            ].includes(attention.status)
+          const isPriorityCorrect = channelRoom.status == 'prioridad' && 
+            [
+              ChannelAttentionStatus.PRIORITY
+            ].includes(attention.status)
+          if(!isPendingCorrect || !isPriorityCorrect || channelRoom.status == 'completado')
+          {
+              const status = attention.status == ChannelAttentionStatus.PRIORITY ? 'prioridad': 'pendiente'
+              const [_, [updatedRoom]] = await this.channelRoomRepository.update(
+                channelRoom.id,
+                {
+                  status: status,
+                  userId: attention?.userId,
+                },
+              );
+              return updatedRoom.toJSON();
+          }
+          return channelRoom;
+      }else{
+          const [_, [updatedRoom]] = await this.channelRoomRepository.update(
+            channelRoom.id,
+            {
+              status: 'pendiente',
+              userId: null,
+            },
+          );
+          return updatedRoom.toJSON();
       }
-      return channelRoomExists[0];
     }
 
     const channelRoomDto: CreateChannelRoomDto = {
@@ -574,7 +592,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       inboxId: inboxCredential?.dataValues?.inboxId!,
     };
 
-    return this.channelRoomRepository.create(channelRoomDto);
+    return (await this.channelRoomRepository.create(channelRoomDto)).toJSON();
   }
 
   public async createChannelMessage(

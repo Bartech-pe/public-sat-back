@@ -91,7 +91,7 @@ import { join } from 'path';
     EmailModule,
     NotificationModule,
     ChannelScheduleModule,
-    SurveyModule,
+    SurveyModule, 
 
     // Modulos externos
     VicidialModule,

@@ -14,7 +14,7 @@ import { PortfolioDetailRepository } from '@modules/portfolio-detail/repositorie
 import { Office } from '@modules/office/entities/office.entity';
 import { PortfolioDetail } from '@modules/portfolio-detail/entities/portfolio-detail.entity';
 import { Portfolio } from '@modules/portfolio/entities/portfolio.entity';
-import { roleIdAdministrador } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 import { Op } from 'sequelize';
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
@@ -33,7 +33,7 @@ export class CitizenAssistanceService {
   ): Promise<PaginatedResponse<CitizenAssistance>> {
     try {
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {},
             }

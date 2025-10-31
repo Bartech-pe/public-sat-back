@@ -10,7 +10,7 @@ import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { User } from '@modules/user/entities/user.entity';
-import { roleIdAdministrador } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class DepartmentService {
@@ -23,7 +23,7 @@ export class DepartmentService {
   ): Promise<PaginatedResponse<Department>> {
     try {
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {},
             }

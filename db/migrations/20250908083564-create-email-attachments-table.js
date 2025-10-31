@@ -21,7 +21,7 @@ module.exports = {
         comment: 'Tipo de archivo adjunto',
       },
       attachment_gmail_id: {
-        type: Sequelize.STRING(255),
+        type: Sequelize.TEXT('long'),
         allowNull: true,
         comment: 'ID de Gmail del archivo adjunto',
       },

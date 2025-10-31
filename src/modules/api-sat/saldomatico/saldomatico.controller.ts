@@ -1,4 +1,9 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  InternalServerErrorException,
+  Param,
+} from '@nestjs/common';
 import { SaldomaticoService } from './saldomatico.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
@@ -31,16 +36,22 @@ export class SaldomaticoController {
     @Param('psiTipConsulta') psiTipConsulta: string,
     @Param('pvValor') pvValor: string,
   ) {
-    const response = await this.service.deudasInfo(
-      psiTipConsulta,
-      pvValor,
-      '0',
-      '23',
-      '10',
-    );
-    return response.filter(
-      (item) => item.cuota != '0' && item.concepto == 'Imp. Predial',
-    );
+    try {
+      const response = await this.service.deudasInfo(
+        psiTipConsulta,
+        pvValor,
+        '0',
+        '23',
+        '10',
+      );
+      return response.filter(
+        (item) => item.cuota != '0' && item.concepto == 'Imp. Predial',
+      );
+    } catch (e) {
+      throw new InternalServerErrorException(
+        e?.message || `Error en la api de saldomatico`,
+      );
+    }
   }
 
   @Public()

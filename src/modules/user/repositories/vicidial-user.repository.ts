@@ -46,9 +46,9 @@ export class VicidialUserRepository extends GenericCrudRepository<VicidialUser> 
               order: [['createdAt', 'DESC']],
             },
           ],
-          required: false,
+          required: true,
         },
-        ChannelState,
+        { model: ChannelState, required: true },
       ],
     });
   }

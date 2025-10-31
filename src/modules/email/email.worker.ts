@@ -1,5 +1,5 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { EmailSent } from './dto/center-email.dto';
 import { MailType } from './enum/mail-type.enum';
@@ -10,6 +10,7 @@ import { MailStates } from '@common/enums/assistance-state.enum';
 @Injectable()
 export class EmailWorker extends WorkerHost {
   private roundRobinIndex: Record<number, number> = {};
+  private readonly logger = new Logger(EmailWorker.name);
 
   constructor(private readonly emailWorkerService: EmailWorkerService) {
     super();
@@ -19,6 +20,13 @@ export class EmailWorker extends WorkerHost {
     try {
       const event = job.data as EmailSent;
       console.log('Procesando evento:', event.messageId);
+
+      const inboxExist = await this.emailWorkerService.inboxExist();
+
+      if (!inboxExist) {
+        this.logger.debug('No se encontró una bandeja de entrada de correo');
+        return;
+      }
 
       // Validar si ya se procesó antes
       const alreadyProcessed =

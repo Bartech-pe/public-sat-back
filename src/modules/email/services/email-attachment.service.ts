@@ -1,5 +1,4 @@
-import { EmailThreadRepository } from '../repositories/email-thread.repository';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EmailThread } from '../entities/email-thread.entity';
 import { AttachementBody } from '../dto/build-email.dto';
 import { EmailChannelService } from './email-channel.service';
@@ -9,7 +8,6 @@ import { EmailAttachmentRepository } from '../repositories/email-attachment.repo
 export class EmailAttachmentService {
   constructor(
     private readonly emailChannelService: EmailChannelService,
-    private readonly mailThreadRepository: EmailThreadRepository,
     private readonly emailAttachmentRepository: EmailAttachmentRepository,
   ) {}
 

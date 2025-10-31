@@ -116,7 +116,7 @@ export class ChannelCitizenService {
           {
             model: ChannelRoom,
             required: true,
-            where: { status: 'pendiente', botReplies: true },
+            where: { botReplies: true },
             include: [
               {
                 model: ChannelCitizen,
@@ -142,6 +142,7 @@ export class ChannelCitizenService {
       }
       channelRoom.update({
         status: 'prioridad',
+        botReplies: false
       });
 
       attention.update({

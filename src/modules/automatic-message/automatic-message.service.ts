@@ -22,7 +22,7 @@ import { Op } from 'sequelize';
  */
 @Injectable()
 export class AutomaticMessageService {
-  private welcomeMessagesId: number[] = [18, 14];
+  private welcomeMessagesId: number[] = [11, 12];
 
   constructor(
     private readonly repository: AutomaticMessageRepository,

@@ -6,6 +6,7 @@ import {
   DefaultScope,
   DeletedAt,
   ForeignKey,
+  HasMany,
   Model,
   Table,
   UpdatedAt,
@@ -13,6 +14,7 @@ import {
 import { User } from '@modules/user/entities/user.entity';
 import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
+import { EmailThread } from './email-thread.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -86,6 +88,9 @@ export class EmailAttention extends Model {
     allowNull: false,
   })
   mailThreadId: string;
+
+  @HasMany(() => EmailThread, { as: 'threads' })
+  threads: EmailThread[];
 
   @Column({
     field: 'closed_at',

@@ -22,7 +22,9 @@ import { ReasignPortfolioDetailListDto } from './dto/reasign-portfolio-detail.dt
 import { CaseInformationDto } from './dto/case-information.dto';
 import { CaseInformation } from './entities/case-information.entity';
 import { CreatePortfolioAssignmentDto } from './dto/create-portfolio-assignment.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('portfolio-details')
 export class PortfolioDetailController {
   constructor(private readonly service: PortfolioDetailService) {}

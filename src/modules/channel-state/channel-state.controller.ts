@@ -18,6 +18,7 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
 
 /**
  * Controller for managing Channel status.
@@ -63,10 +64,12 @@ export class ChannelStateController {
    * @param query Pagination query parameters (limit, offset, filters)
    * @returns PaginatedResponse containing channel status
    */
-  @Put('MyChannelStateEmail')
-  findMyChannelStateEmail(@CurrentUser() user: User): Promise<ChannelState | null> {
-    return this.service.findMyChannelStateEmail(user);
+
+  @Get(':channel/statuses')
+  async getUserStatusesByChannel(@Param('channel') channel: string): Promise<BaseResponseDto<any>> {
+    return this.service.getUserStatusesByChannel(channel);
   }
+
 
   /**
    * Retrieves a single channel by its ID.

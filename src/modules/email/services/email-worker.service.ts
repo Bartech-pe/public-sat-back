@@ -18,16 +18,17 @@ import { User } from '@modules/user/entities/user.entity';
 
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
 import { EmailAttachment } from '../entities/email-attachment.entity';
-import { Channel } from '@modules/channel/entities/channel.entity';
 import { EmailThreadRepository } from '../repositories/email-thread.repository';
 import { InboxRepository } from '@modules/inbox/repositories/inbox.repository';
 import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
-import { Role } from '@modules/role/entities/role.entity';
-import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
-import { roleIdAsesor } from '@common/constants/role.constant';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { EmailGateway } from '../email.gateway';
 import { EmailAttention } from '../entities/email-attention.entity';
+import { FileHelper } from '@common/helpers/file.helper';
+import { UserRole } from '@common/constants/role.constant';
+import e from 'express';
+import { literal, where } from 'sequelize';
+import { EmailThread } from '../entities/email-thread.entity';
 
 @Injectable()
 export class EmailWorkerService {
@@ -88,12 +89,9 @@ export class EmailWorkerService {
     const attentionEntity = await this.emailAttentionRepository.findOne({
       where: { mailThreadId: event.threadId },
     });
-    console.log(attentionEntity);
     if (!attentionEntity) return { success: false };
     const match = event.from.match(/<(.*?)>/);
     const emailOnly = match ? match[1] : event.from;
-    console.log('emailGeneral', emailGeneral);
-    console.log('emailOnly', emailOnly);
     if (emailGeneral === emailOnly) {
       const sendState = await this.emailStateRepository.getSend();
       if (!sendState)
@@ -189,11 +187,11 @@ export class EmailWorkerService {
       console.log('event', event);
       const thread = await this.emailThreadRepository.create({
         subject: event.subject,
-        content:
-          event.content.find((c) => c.mimeType === 'text/html')?.content || '',
+        content: event.content,
         to: this.parseEmail(event.to)?.email,
         from: this.parseEmail(event.from)?.email,
         name: this.parseEmail(event.from)?.name,
+        date: event.date,
         mailAttentionId: mailAttentionId,
         mailStateId: stateId,
         isFavorite: false,
@@ -207,17 +205,46 @@ export class EmailWorkerService {
 
       this.emailGateway.notifyEmailRequest();
 
-      if (event.attachment) {
-        const createFiles = event.attachment.map((a) => {
-          const attach: Partial<EmailAttachment> = {
-            filename: a.filename,
-            mimeType: a.mimeType,
-            attachmentGmailId: a.attachmentId,
-            mailThreadId: thread.toJSON().id,
-          };
-          return attach;
-        });
-        await this.emailAttachmentRepository.bulkCreate(createFiles);
+      console.log('event.attachments', event.attachments);
+
+      if (event.attachments) {
+        const existingAttachments =
+          await this.emailAttachmentRepository.findAll({
+            attributes: ['cid'],
+            include: [
+              {
+                model: EmailThread,
+                attributes: [],
+                where: { mailAttentionId }, // el id de tu atención
+                required: true,
+              },
+            ],
+            raw: true,
+          });
+
+        const existingCidSet = new Set(existingAttachments.map((a) => a.cid));
+
+        const cidsToInsert = event.attachments.filter(
+          (a) => !existingCidSet.has(a.cid),
+        );
+
+        if (cidsToInsert.length) {
+          const createFiles = await Promise.all(
+            cidsToInsert.map(async (a) => {
+              const { publicUrl } = await FileHelper.saveAttachment(a);
+              const attach: Partial<EmailAttachment> = {
+                attachmentGmailId: a.attachmentId,
+                cid: a.cid,
+                filename: a.filename,
+                mimeType: a.mimeType,
+                mailThreadId: thread.toJSON().id,
+                publicUrl: publicUrl,
+              };
+              return attach;
+            }),
+          );
+          await this.emailAttachmentRepository.bulkCreate(createFiles);
+        }
       }
       return thread;
     } catch (error) {
@@ -240,7 +267,7 @@ export class EmailWorkerService {
       const inboxId = ibox.toJSON().id;
       const emailUsers = await this.inboxUserRepository.findAll({
         where: { channelStateId: stateAvalibleJson.id, inboxId: inboxId },
-        include: [{ model: User, as: 'user', where: { roleId: roleIdAsesor } }],
+        include: [{ model: User, as: 'user', where: { roleId: UserRole.Ase } }],
         attributes: ['userId'],
       });
       const emailUserJson = emailUsers.map((a) => a.toJSON());
@@ -292,10 +319,11 @@ export class EmailWorkerService {
       });
       const thread = await this.emailThreadRepository.create({
         subject: event.subject,
-        content: event.content.find((c) => c.mimeType === 'text/html')?.content,
+        content: event.content,
         to: this.parseEmail(event.to)?.email,
         from: this.parseEmail(event.from)?.email,
         name: this.parseEmail(event.from)?.name,
+        date: event.date,
         mailAttentionId: created.toJSON().id,
         mailStateId: sendState.toJSON().id,
         isFavorite: false,
@@ -306,16 +334,20 @@ export class EmailWorkerService {
         inReplyTo: event.inReplyTo,
         type: MailType.CITIZEN,
       });
-      if (event.attachment) {
-        const createFiles = event.attachment.map((a) => {
-          const attach: Partial<EmailAttachment> = {
-            filename: a.filename,
-            mimeType: a.mimeType,
-            attachmentGmailId: a.attachmentId,
-            mailThreadId: thread.toJSON().id,
-          };
-          return attach;
-        });
+      if (event.attachments) {
+        const createFiles = await Promise.all(
+          event.attachments.map(async (a) => {
+            const { publicUrl } = await FileHelper.saveAttachment(a);
+            const attach: Partial<EmailAttachment> = {
+              filename: a.filename,
+              mimeType: a.mimeType,
+              cid: a.cid,
+              mailThreadId: thread.toJSON().id,
+              publicUrl: publicUrl,
+            };
+            return attach;
+          }),
+        );
         await this.emailAttachmentRepository.bulkCreate(createFiles);
       }
       this.emailGateway.notifyEmailRequest();
@@ -332,5 +364,11 @@ export class EmailWorkerService {
 
   isReply(subject: string): boolean {
     return /^(Re|R):/i.test(subject?.trim());
+  }
+
+  async inboxExist(): Promise<boolean> {
+    return !!(await this.inboxRepository.findOne({
+      where: { channelId: ChannelEnum.EMAIL },
+    }));
   }
 }

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
   UseGuards,
@@ -12,6 +13,7 @@ import { HolidayService } from '../service/holiday.service';
 import { CreateHolidayDto } from '../dto/holiday/create-holiday.dto';
 import { UpdateHolidayDto } from '../dto/holiday/update-holiday.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { Holiday } from '../entities/holiday.entity';
 
 @ApiBearerAuth()
 @Controller('holidays')
@@ -38,9 +40,15 @@ export class HolidayController {
     return this.service.create(dto);
   }
 
-  @Put(':id')
-  update(@Param('id') id: number, @Body() dto: UpdateHolidayDto) {
-    return this.service.update(+id, dto);
+  @Patch(':id')
+  update(@Param('id') id: number, @Body() dto: UpdateHolidayDto): Promise<Holiday> {
+      return this.service.update(+id, dto);
+  }
+
+  
+  @Put('toggleStatus/:id')
+    toggleStatus(@Param('id') id: number): Promise<Holiday> {
+      return this.service.toggleStatus(id);
   }
 
   @Delete(':id')

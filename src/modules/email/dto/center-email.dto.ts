@@ -34,11 +34,12 @@ export class EmailSent {
   subject: string;
   from: string;
   to: string;
+  date: string;
   references?: string | null;
   inReplyTo?: string | null;
-  content: EmailSentContent[];
+  content: string;
   forward?: string | null;
-  attachment: AttachmentContent[];
+  attachments: AttachmentContent[];
 }
 export class EmailSentContent {
   mimeType: string;
@@ -46,8 +47,11 @@ export class EmailSentContent {
 }
 export class AttachmentContent {
   attachmentId: string;
+  cid: string;
   filename: string;
   mimeType: string;
+  size: number;
+  content: string;
 }
 export class GmailFileExport {
   @IsString()

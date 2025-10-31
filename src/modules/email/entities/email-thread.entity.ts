@@ -6,6 +6,7 @@ import {
   DefaultScope,
   DeletedAt,
   ForeignKey,
+  HasMany,
   Model,
   Table,
   UpdatedAt,
@@ -14,6 +15,7 @@ import { EmailAttention } from './email-attention.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { MailType } from '../enum/mail-type.enum';
 import { EmailState } from './email-state.entity';
+import { EmailAttachment } from './email-attachment.entity';
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
 }))
@@ -66,6 +68,13 @@ export class EmailThread extends Model {
     allowNull: true,
   })
   to: string;
+
+  @Column({
+    field: 'date',
+    type: DataType.STRING(255),
+    allowNull: true,
+  })
+  date: string;
 
   @ForeignKey(() => EmailAttention)
   @Column({
@@ -141,6 +150,9 @@ export class EmailThread extends Model {
     allowNull: false,
   })
   messageHeaderGmailId: string;
+
+  @HasMany(() => EmailAttachment)
+  attachments: EmailAttachment[];
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

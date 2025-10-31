@@ -11,8 +11,8 @@ export interface ChannelAttentionDto {
   channelRoomId: number;
   lastMessage: ChannelRoomMessage;
   channel?: string;
-  startDate?: string;
-  endDate?: string | null;
+  startDate?: Date;
+  endDate?: Date | null;
   status?: string;
   user?: string;
   citizen?: string;

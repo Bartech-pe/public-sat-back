@@ -38,6 +38,7 @@ import { ChannelQueryHistory } from './entities/channel-query-history.entity';
 import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
 import { AutomaticMessageService } from '@modules/automatic-message/automatic-message.service';
 import { AutomaticMessageModule } from '@modules/automatic-message/automatic-message.module';
+import { TelegramController } from './controllers/telegram.controller';
 @Module({
   imports: [
     forwardRef(() => AuthModule),
@@ -64,6 +65,7 @@ import { AutomaticMessageModule } from '@modules/automatic-message/automatic-mes
     ChannelRoomController,
     ChannelMessageController,
     ChannelCitizenController,
+    TelegramController,
     ChannelAttentionController,
   ],
   providers: [

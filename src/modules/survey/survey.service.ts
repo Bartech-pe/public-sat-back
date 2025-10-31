@@ -10,7 +10,7 @@ import { SurveyRepository } from './repositories/survey.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { Survey } from './entities/survey.entity';
-import { roleIdAdministrador } from '@common/constants/role.constant';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class SurveyService {
@@ -25,7 +25,7 @@ export class SurveyService {
   ): Promise<PaginatedResponse<Survey>> {
     try {
       const whereOpts =
-        user.roleId == roleIdAdministrador
+        user.roleId == UserRole.Adm
           ? {
               where: {},
             }

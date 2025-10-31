@@ -10,8 +10,6 @@ import {
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { Queue } from 'bullmq';
-import { InjectQueue } from '@nestjs/bullmq';
 import { EmailCenterService } from '../services/email-center.service';
 import { MailFilter } from '../dto/mail-filter.dto';
 import { CenterEmail, GmailFileExport } from '../dto/center-email.dto';
@@ -21,17 +19,20 @@ import { ForwardCenterMail } from '../dto/forward-center-mail.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
+import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('mail-center')
 export class EmailCenterController {
-  constructor(
-    private readonly mailCenterService: EmailCenterService,
-    @InjectQueue('mail-events') private readonly mailQueue: Queue,
-  ) {}
+  constructor(private readonly mailCenterService: EmailCenterService) {}
 
   @Get('messagesAdvisor')
-  async MessagesByAdvisor(@Query() query: MailFilter) {
-    return await this.mailCenterService.GetTicketsByAdvisorEmailId(query);
+  messagesAdvisor(
+    @CurrentUser() user: User,
+    @Query() query: MailFilter,
+  ): Promise<PaginatedResponse<any>> {
+    return this.mailCenterService.getTickets(user, query);
   }
 
   @Get('messagesAdvisorOpen')

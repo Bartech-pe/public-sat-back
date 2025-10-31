@@ -106,79 +106,16 @@ module.exports = {
           updated_at: new Date(),
         },
 
-        // WhatsApp - ID 11: Finalización
         {
           automatic_message_id: 11,
-          description: 'Al completar interacción',
-          order: 1,
-          status: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-
-        // WhatsApp - ID 12: Fuera de Horario
-        {
-          automatic_message_id: 12,
-          description: 'Mensaje nocturno/fines de semana',
-          order: 1,
-          status: false,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-
-        // WhatsApp - ID 13: Transferencia Humano
-        {
-          automatic_message_id: 13,
-          description: 'Al escalar a agente humano',
-          order: 1,
-          status: false,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-
-        // WhatsApp - ID 14: Bienvenida IA
-        {
-          automatic_message_id: 14,
           description: 'Bienvenido al SAT, ¿en qué podemos ayudarlo?',
           order: 1,
           status: true,
           created_at: new Date(),
           updated_at: new Date(),
         },
-
-        // Telegram - ID 15: Finalización
         {
-          automatic_message_id: 15,
-          description: 'Al completar interacción',
-          order: 1,
-          status: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-
-        // Telegram - ID 16: Fuera de Horario
-        {
-          automatic_message_id: 16,
-          description: 'Mensaje nocturno/fines de semana',
-          order: 1,
-          status: false,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-
-        // Telegram - ID 17: Transferencia Humano
-        {
-          automatic_message_id: 17,
-          description: 'Al escalar a agente humano',
-          order: 1,
-          status: false,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-
-        // Telegram - ID 18: Bienvenida IA
-        {
-          automatic_message_id: 18,
+          automatic_message_id: 12,
           description: 'Bienvenido al *SAT DE LIMA*',
           order: 1,
           status: true,
@@ -186,7 +123,7 @@ module.exports = {
           updated_at: new Date(),
         },
         {
-          automatic_message_id: 18,
+          automatic_message_id: 12,
           description: 'Hola! Soy su asesor virtual 🤖',
           order: 2,
           status: true,

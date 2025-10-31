@@ -62,7 +62,7 @@ export interface Message {
   sender?: ChannelUser;
   attachments: MessageAttachment[];
   status?: 'read' | 'unread';
-  time?: string;
+  time?: Date;
   fromMe?: boolean;
 }
 

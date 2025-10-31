@@ -527,7 +527,7 @@ export class CallService {
     return resumen;
   }
 
-  async getCallsCounterByNow() {
+  async getCallsCounterByNow(username?: string) {
     const startDay = new Date();
     startDay.setHours(0, 0, 0);
     const endDay = new Date();
@@ -535,19 +535,26 @@ export class CallService {
 
     // Convertir a formato SQL (YYYY-MM-DD HH:MM:SS)
     const formatDateForSQL = (date) => {
-      return date.toISOString().slice(0, 19).replace('T', ' ');
+      const localDate = new Date(date.getTime() - 5 * 60 * 60 * 1000);
+      return localDate.toISOString().slice(0, 19).replace('T', ' ');
     };
 
-    const vUsers = (
-      await this.vicidialUserRepository.findAll({
-        attributes: ['username'],
-        include: [{ model: User, as: 'user' }],
-      })
-    ).map((u) => u.toJSON());
+    let usernames = '';
 
-    const usernames = vUsers.map((u) => `'${u.username}'`).join(',');
+    if (!username) {
+      const vUsers = (
+        await this.vicidialUserRepository.findAll({
+          attributes: ['username'],
+          include: [{ model: User, as: 'user' }],
+        })
+      ).map((u) => u.toJSON());
 
-    let whereOption = [`vl.length_in_sec > 0 AND u.user IN (${usernames})`];
+      usernames = vUsers.map((u) => `'${u.username}'`).join(',');
+    } else {
+      usernames = `'${username}'`;
+    }
+
+    let whereOption = [`u.user IN (${usernames})`];
 
     if (startDay && endDay) {
       whereOption.push(
@@ -641,13 +648,16 @@ export class CallService {
     ) AS llamadas`;
 
     const groupSQL = `
-      SELECT calls.call_category as callStatus, COUNT(*) AS total
+      SELECT calls.call_category as callStatus, SUM(length_in_sec) AS duration, COUNT(*) AS total
       FROM (${mainSql}) as calls
       GROUP BY call_category;
     `;
 
+    console.log('groupSQL', groupSQL);
+
     const resumenRaw = await this.centralConnection.query<{
       callStatus: string;
+      duration: number;
       total: number;
     }>(groupSQL, { replacements: [], type: QueryTypes.SELECT });
 
@@ -659,6 +669,7 @@ export class CallService {
       return {
         callStatus: status,
         callStateName: callstates[status],
+        duration: item ? Number(item.duration) : 0,
         total: item ? Number(item.total) : 0,
       };
     });

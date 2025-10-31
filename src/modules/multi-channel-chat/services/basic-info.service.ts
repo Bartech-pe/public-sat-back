@@ -189,13 +189,7 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
         message: content,
         status: 'unread',
         attachments: [],
-        time: new Date(newMessageSaved.dataValues.timestamp).toLocaleTimeString(
-          'es-PE',
-          {
-            hour: '2-digit',
-            minute: '2-digit',
-          },
-        ),
+        time: new Date(),
         fromMe: true,
       },
       botStatus: 'active',
