@@ -12,7 +12,6 @@ import { EmailAttentionRepository } from '../repositories/email-attention.reposi
 import { EmailSent } from '../dto/center-email.dto';
 import { MailType } from '../enum/mail-type.enum';
 import { EmailStateRepository } from '../repositories/email-state.repository';
-import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
 import { AssistanceStateService } from '@modules/assistance-state/assistance-state.service';
 import { User } from '@modules/user/entities/user.entity';
 
@@ -26,9 +25,11 @@ import { EmailGateway } from '../email.gateway';
 import { EmailAttention } from '../entities/email-attention.entity';
 import { FileHelper } from '@common/helpers/file.helper';
 import { UserRole } from '@common/constants/role.constant';
-import e from 'express';
-import { literal, where } from 'sequelize';
 import { EmailThread } from '../entities/email-thread.entity';
+import { emailAvailableStateId } from '@common/constants/channel.constant';
+import { Op } from 'sequelize';
+import { MailStates } from '@common/enums/assistance-state.enum';
+import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
 
 @Injectable()
 export class EmailWorkerService {
@@ -37,7 +38,6 @@ export class EmailWorkerService {
     private readonly emailAttentionRepository: EmailAttentionRepository,
     private readonly emailThreadRepository: EmailThreadRepository,
     private readonly emailStateRepository: EmailStateRepository,
-    private readonly stateChannelRepository: ChannelStateRepository,
     private readonly assistanceStateService: AssistanceStateService,
     private readonly inboxUserRepository: InboxUserRepository,
     private readonly emailAttachmentRepository: EmailAttachmentRepository,
@@ -65,13 +65,7 @@ export class EmailWorkerService {
     return { name: undefined, email: input.trim() };
   }
 
-  private getNameFormat(email: string) {
-    const match = email.match(/<(.*?)>/);
-    const emailOnly = match ? match[1] : email;
-    return email.replace(emailOnly, '').trim();
-  }
-
-  async getSatCredential() {
+  async getSatCredential(): Promise<{ email: string; clientId: string }> {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
@@ -82,7 +76,10 @@ export class EmailWorkerService {
     });
     if (!credential)
       throw new NotFoundException('No se encontro la credencial');
-    return { email: credential.toJSON().email };
+    return {
+      email: credential.toJSON().email,
+      clientId: credential.toJSON().clientID,
+    };
   }
 
   async caseAdvisor(event: EmailSent, emailGeneral: string) {
@@ -184,11 +181,11 @@ export class EmailWorkerService {
     stateId: number,
   ) {
     try {
-      console.log('event', event);
       const thread = await this.emailThreadRepository.create({
         subject: event.subject,
         content: event.content,
         to: this.parseEmail(event.to)?.email,
+        toName: this.parseEmail(event.to)?.name,
         from: this.parseEmail(event.from)?.email,
         name: this.parseEmail(event.from)?.name,
         date: event.date,
@@ -204,8 +201,6 @@ export class EmailWorkerService {
       });
 
       this.emailGateway.notifyEmailRequest();
-
-      console.log('event.attachments', event.attachments);
 
       if (event.attachments) {
         const existingAttachments =
@@ -252,30 +247,73 @@ export class EmailWorkerService {
     }
   }
 
-  async getAdvisorsAvaliable() {
+  // async getAdvisorsAvaliable() {
+  //   try {
+  //     const stateAvalible =
+  //       await this.stateChannelRepository.findAvalibleEmail();
+  //     if (!stateAvalible)
+  //       throw new InternalServerErrorException(
+  //         'No se encontró el estado DISPONIBLE',
+  //       );
+  //     const stateAvalibleJson = stateAvalible.toJSON();
+  //     const skillId = stateAvalibleJson.id;
+  //     const ibox = await this.inboxRepository.findOne({
+  //       where: { channelId: ChannelEnum.EMAIL },
+  //     });
+  //     if (!ibox) throw new NotFoundException('No se encontro la credencial');
+  //     const inboxId = ibox.toJSON().id;
+  //     const emailUsers = await this.inboxUserRepository.findAll({
+  //       where: { channelStateId: stateAvalibleJson.id, inboxId: inboxId },
+  //       include: [{ model: User, as: 'user', where: { roleId: UserRole.Ase } }],
+  //       attributes: ['userId'],
+  //     });
+  //     const emailUserJson = emailUsers.map((a) => a.toJSON());
+  //     return { skillId, emailUserJson };
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  //   return { skillId: 0, emailUserJson: [] };
+  // }
+
+  async getAdvisorToAssign(): Promise<
+    { userId: number; assigns: number } | undefined
+  > {
     try {
-      const stateAvalible =
-        await this.stateChannelRepository.findAvalibleEmail();
-      if (!stateAvalible)
-        throw new InternalServerErrorException('Estado no disponible');
-      const stateAvalibleJson = stateAvalible.toJSON();
-      const skillId = stateAvalibleJson.id;
-      const ibox = await this.inboxRepository.findOne({
-        where: { channelId: ChannelEnum.EMAIL },
-      });
-      if (!ibox) throw new NotFoundException('No se encontro la credencial');
-      const inboxId = ibox.toJSON().id;
       const emailUsers = await this.inboxUserRepository.findAll({
-        where: { channelStateId: stateAvalibleJson.id, inboxId: inboxId },
-        include: [{ model: User, as: 'user', where: { roleId: UserRole.Ase } }],
+        where: { channelStateId: emailAvailableStateId },
+        include: [
+          {
+            model: User,
+            as: 'user',
+            where: { roleId: UserRole.Ase },
+            include: [
+              {
+                model: EmailAttention,
+                where: {
+                  assistanceStateId: {
+                    [Op.notIn]: [MailStates.SPAM, MailStates.CLOSED],
+                  },
+                },
+                required: false,
+              },
+            ],
+          },
+          { model: Inbox, required: true },
+        ],
         attributes: ['userId'],
       });
-      const emailUserJson = emailUsers.map((a) => a.toJSON());
-      return { skillId, emailUserJson };
+      const arrayUsers = emailUsers
+        .map((a) => a.toJSON())
+        .map((a: InboxUser) => ({
+          userId: a.userId,
+          assigns: a.user.emailAttentions.length,
+        }));
+
+      arrayUsers.sort((a, b) => a.assigns - b.assigns);
+      return arrayUsers[0];
     } catch (error) {
       console.error(error);
     }
-    return { skillId: 0, emailUserJson: [] };
   }
 
   async createAttention(event: EmailSent, userId?: number) {
@@ -294,7 +332,7 @@ export class EmailWorkerService {
           ],
         });
         const mailUserDtoJson = mailUserDto?.toJSON();
-        inboxId = mailUserDtoJson?.inboxId ?? 0;
+        inboxId = mailUserDtoJson?.inboxId;
         attention = await this.assistanceStateService.getOpenMailState();
       } else {
         attention = await this.assistanceStateService.getUnassignedMailState();
@@ -310,29 +348,34 @@ export class EmailWorkerService {
           'Problemas con el estado de envio',
         );
       const created = await this.emailAttentionRepository.create({
-        emailCitizen: this.parseEmail(event.from)?.email,
-        advisorUserId: userId === null ? undefined : userId,
-        advisorInboxId: inboxId === null ? undefined : inboxId,
+        emailCitizen: !!event.userId
+          ? this.parseEmail(event.to)?.email
+          : this.parseEmail(event.from)?.email,
+        advisorUserId: !!userId ? userId : undefined,
+        advisorInboxId: !!inboxId ? inboxId : undefined,
         ticketCode: code,
         mailThreadId: event.threadId,
-        assistanceStateId: attention.toJSON().id,
+        assistanceStateId: !!event.userId
+          ? MailStates.CLOSED
+          : attention.toJSON().id,
       });
       const thread = await this.emailThreadRepository.create({
         subject: event.subject,
         content: event.content,
         to: this.parseEmail(event.to)?.email,
+        toName: this.parseEmail(event.to)?.name,
         from: this.parseEmail(event.from)?.email,
         name: this.parseEmail(event.from)?.name,
         date: event.date,
         mailAttentionId: created.toJSON().id,
         mailStateId: sendState.toJSON().id,
         isFavorite: false,
-        isRead: false,
+        isRead: !!event.userId,
         messageGmailId: event.messageId,
         messageHeaderGmailId: event.referencesMail,
         referencesMail: event.references,
         inReplyTo: event.inReplyTo,
-        type: MailType.CITIZEN,
+        type: !!event.userId ? MailType.ADVISOR : MailType.CITIZEN,
       });
       if (event.attachments) {
         const createFiles = await Promise.all(

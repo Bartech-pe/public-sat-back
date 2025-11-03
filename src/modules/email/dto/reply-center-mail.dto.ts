@@ -1,4 +1,4 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class ReplyCenterMail {
   @IsNumber()
@@ -6,4 +6,8 @@ export class ReplyCenterMail {
 
   @IsString()
   content: string;
+
+  @IsOptional()
+  @IsString()
+  threadId?: string;
 }

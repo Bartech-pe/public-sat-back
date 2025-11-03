@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { EmailFeaturesService } from '../services/email-features.service';
 import { EmailAttachmentService } from '../services/email-attachment.service';
 import { MailFilter } from '../dto/mail-filter.dto';
-import { GenericEmail } from '../dto/center-email.dto';
 
 @Controller('mail-feature')
 export class EmailFeatureController {
@@ -61,8 +60,8 @@ export class EmailFeatureController {
     return await this.mailfeatureService.favoriteList(query);
   }
 
-  @Post('genericEmail')
-  async genericEmail(@Body() body: GenericEmail) {
-    return await this.mailfeatureService.buildGenericEmail(body);
-  }
+  // @Post('genericEmail')
+  // async genericEmail(@Body() body: GenericEmail) {
+  //   return await this.mailfeatureService.buildGenericEmail(body);
+  // }
 }

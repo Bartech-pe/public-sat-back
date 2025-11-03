@@ -127,7 +127,7 @@ export class EmailFeaturesService {
       this.emailThreadRepository,
     );
   }
-  async buildGenericEmail(body: GenericEmail) {
+  async buildGenericEmail(body: GenericEmail, userId: number) {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
@@ -145,6 +145,8 @@ export class EmailFeaturesService {
       text: body.content,
       refreshToken: credential.toJSON().refreshToken,
       clientId: credential.toJSON().clientID,
+      email: credential.toJSON().email,
+      userId: userId,
     };
     if (body.html) {
       mail.html = JSON.parse(body.html);

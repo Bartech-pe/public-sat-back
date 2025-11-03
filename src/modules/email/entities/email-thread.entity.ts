@@ -70,6 +70,13 @@ export class EmailThread extends Model {
   to: string;
 
   @Column({
+    field: 'to_name',
+    type: DataType.STRING(255),
+    allowNull: true,
+  })
+  toName: string;
+
+  @Column({
     field: 'date',
     type: DataType.STRING(255),
     allowNull: true,

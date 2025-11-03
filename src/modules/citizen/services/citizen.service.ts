@@ -191,7 +191,6 @@ export class CitizenService {
   }
 
   async getBasicInfoFromPhoneCitizen(phoneNumber: string) {
-    console.log('getBasicInfoFromPhoneCitizen', phoneNumber);
     try {
       const result = await this.repository.findAll({
         include: [
@@ -219,6 +218,15 @@ export class CitizenService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async getBasicInfoFromEmailCitizen(email: string) {
+    console.log('getBasicInfoFromEmailCitizen', email);
+    const contact = await this.citizenContactRepository.findOne({
+      where: { contactType: 'EMAIL', value: email },
+      include: [{ model: Citizen, as: 'citizen' }],
+    });
+    return contact;
   }
 
   async getBasicInfoFromDocCitizen(tipDoc: string, docIde: string) {

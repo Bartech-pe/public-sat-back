@@ -13,6 +13,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
 import { Citizen } from '@modules/citizen/entities/citizen.entity';
 import { CitizenService } from '@modules/citizen/services/citizen.service';
+import { cleanAttributes } from '@common/helpers/object-atribute.helper';
 
 @Public()
 @Controller('omnicanalidad')
@@ -60,13 +61,25 @@ export class OmnicanalidadController {
             pvValPar2,
           );
         }
-        return res.data.map(
-          (d) =>
-            ({
-              tipDoc: d.vtipDoc,
-              docIde: d.vdocIde,
-            }) as Citizen,
-        );
+        return res.data
+          .map(
+            (d) =>
+              cleanAttributes(d) as {
+                vtipDoc: string;
+                vdocIde: string;
+                vnumTel: string;
+                vcontacto: string;
+              },
+          )
+          .map(
+            (d) =>
+              ({
+                vtipDoc: d.vtipDoc,
+                vdocIde: d.vdocIde,
+                vcontacto: d.vcontacto,
+                vnumTel: d.vnumTel,
+              }) as ContactoDto,
+          );
       }
 
       // Si no encontró resultados en la API externa

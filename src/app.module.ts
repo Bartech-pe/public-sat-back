@@ -48,6 +48,8 @@ import { CampaingEmailConfigModule } from './modules/campaing-email-config/campa
 import { MetabaseModule } from './modules/metabase/metabase.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { AppController } from './app.controller';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -100,6 +102,7 @@ import { join } from 'path';
     CampaignEmailModule,
     CampaingEmailConfigModule,
     MetabaseModule,
+    HealthModule,
   ],
   providers: [
     {

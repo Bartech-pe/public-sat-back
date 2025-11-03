@@ -49,7 +49,7 @@ export class VicidialApiService {
 
     if (data.startsWith('ERROR') && !parts[0].includes('USER ALREADY EXISTS')) {
       throw new InternalServerErrorException(
-        'Ocurrió un error al guardar el usuario vicidial',
+        'Ocurrió un error al guardar el usuario vicidial ' + data,
       );
     }
 
@@ -184,7 +184,7 @@ export class VicidialApiService {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
- 
+
       const data = res.data;
       return { data };
     } catch (error) {

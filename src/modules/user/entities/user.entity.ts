@@ -25,6 +25,7 @@ import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { CallHistory } from '@modules/call/entities/call-history.entity';
+import { EmailAttention } from '@modules/email/entities/email-attention.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['password', 'deletedAt', 'deletedBy'] }, // Excluir password y campo de eliminación lógica
@@ -139,6 +140,9 @@ export class User extends Model {
 
   @HasMany(() => CallHistory)
   callHistory: CallHistory[];
+
+  @HasMany(() => EmailAttention)
+  emailAttentions: EmailAttention[];
 
   @Column({
     field: 'status',

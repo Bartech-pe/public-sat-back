@@ -42,6 +42,7 @@ export class EmailCredentialService {
           credential.toJSON().clientTopic,
           credential.toJSON().clientProject,
           credential.toJSON().clientID,
+          credential.toJSON().email,
         );
       } catch (error) {
         console.error('Error inicializando las credenciales:', error.message);
@@ -68,6 +69,7 @@ export class EmailCredentialService {
       credential.toJSON().clientTopic,
       credential.toJSON().clientProject,
       credential.toJSON().clientID,
+      credential.toJSON().email,
     );
     return watch;
   }
@@ -76,6 +78,7 @@ export class EmailCredentialService {
     try {
       const infoToken = await this.emailChannelService.exchangeCode(
         body.clientId,
+        body.email,
         code,
       );
       const checkInbox = await this.inboxRepository.findOne({
@@ -102,6 +105,7 @@ export class EmailCredentialService {
         credential.toJSON().clientTopic,
         credential.toJSON().clientProject,
         credential.toJSON().clientID,
+        credential.toJSON().email,
       );
     } catch (error) {
       console.log(error);

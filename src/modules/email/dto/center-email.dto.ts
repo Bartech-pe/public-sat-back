@@ -10,9 +10,11 @@ export class CenterEmail {
   @IsString()
   to: string;
 
+  @IsOptional()
   @IsNumber()
   mailAttentionId: number;
 }
+
 export class GenericEmail {
   @IsString()
   subject: string;
@@ -37,9 +39,12 @@ export class EmailSent {
   date: string;
   references?: string | null;
   inReplyTo?: string | null;
+  userId?: number;
   content: string;
   forward?: string | null;
   attachments: AttachmentContent[];
+  clientId: string;
+  email: string;
 }
 export class EmailSentContent {
   mimeType: string;

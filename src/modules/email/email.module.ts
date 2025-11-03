@@ -34,6 +34,7 @@ import { EmailSignatureService } from './services/email-signature.service';
 import { EmailSignature } from './entities/email-signature.entity';
 import { EmailSignatureRepository } from './repositories/email-signature.repository';
 import { RedisService } from './redis/redis.service';
+import { CitizenModule } from '@modules/citizen/citizen.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { RedisService } from './redis/redis.service';
     ChannelModule,
     forwardRef(() => AuthModule),
     UserModule,
+    CitizenModule,
   ],
   controllers: [
     EmailCenterController,

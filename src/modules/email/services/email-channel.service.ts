@@ -67,14 +67,16 @@ export class EmailChannelService {
     topicName: string,
     projectId: string,
     clientId: string,
+    email: string,
   ) {
     const response: AxiosResponse<any> = await this.client.post(
       `/mail/setWatch`,
       {
-        refreshToken: refreshToken,
-        topicName: topicName,
-        projectId: projectId,
-        clientId: clientId,
+        refreshToken,
+        topicName,
+        projectId,
+        clientId,
+        email,
       },
     );
     if (response.status < 200 || response.status >= 300) {
@@ -84,10 +86,10 @@ export class EmailChannelService {
     }
     return response.data;
   }
-  async exchangeCode(clientId: string, code: string) {
+  async exchangeCode(clientId: string, email: string, code: string) {
     const response: AxiosResponse<Tokencode> = await this.client.post(
       `mail/exchangeCode`,
-      { code, clientId },
+      { code, clientId, email },
     );
     if (response.status < 200 || response.status >= 300) {
       throw new InternalServerErrorException(
@@ -128,6 +130,8 @@ export class EmailChannelService {
     pageToken?: string;
     accessToken: string;
     refreshToken: string;
+    clientId: string;
+    email: string;
   }) {
     const response: AxiosResponse<any> = await this.client.post(
       `mail/messages`,

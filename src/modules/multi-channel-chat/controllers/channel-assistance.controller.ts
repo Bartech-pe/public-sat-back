@@ -16,10 +16,13 @@ import {
   MessagesResponseDto,
 } from '../dto/channel-attentions/get-assistance.dto';
 import { Public } from '@common/decorators/public.decorator';
-import { JwtSecretRequestType } from '@nestjs/jwt';
 import { JwtCitizenGuard } from '@common/guards/jwt-citizen.guard';
 import { AssignAttentionDetailDto } from '../dto/channel-attentions/assign-attention-detail.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '@modules/user/entities/user.entity';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 
+@ApiBearerAuth()
 @Controller('channel-room/assistances')
 export class ChannelAttentionController {
   constructor(private assistanceService: ChannelAttentionService) {}
@@ -43,7 +46,7 @@ export class ChannelAttentionController {
     @Param('assistanceId') assistanceId: number,
     @Body() payload: AssignAttentionDetailDto,
   ): Promise<BaseResponseDto> {
-    payload.attentionId = assistanceId
+    payload.attentionId = assistanceId;
     return this.assistanceService.assignAttentionDetail(payload);
   }
 
@@ -61,10 +64,12 @@ export class ChannelAttentionController {
 
   @Post(':assistanceId/send-to-email')
   async sendMessagesHtmlFromChannelAttentionForCRM(
+    @CurrentUser() user: User,
     @Param('assistanceId') assistanceId: number,
   ): Promise<any> {
     return this.assistanceService.sendMessagesHtmlFromChannelAttention(
       assistanceId,
+      user.id,
     );
   }
 
@@ -76,6 +81,7 @@ export class ChannelAttentionController {
   ): Promise<any> {
     return this.assistanceService.sendMessagesHtmlFromChannelAttention(
       assistanceId,
+      0,
     );
   }
 }

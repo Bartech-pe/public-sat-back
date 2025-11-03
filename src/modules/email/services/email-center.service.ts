@@ -1,4 +1,4 @@
-import { literal, Op } from 'sequelize';
+import { FindOptions, literal, Op, WhereOptions } from 'sequelize';
 import {
   forwardRef,
   Inject,
@@ -28,9 +28,7 @@ import {
 } from '../dto/build-email.dto';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { EmailCredentialRepository } from '../repositories/email-credential.repository';
-import { EmailWorkerService } from './email-worker.service';
 import { MailType } from '../enum/mail-type.enum';
-import { EmailAttachmentRepository } from '../repositories/email-attachment.repository';
 import { EmailThreadRepository } from '../repositories/email-thread.repository';
 import { InboxRepository } from '@modules/inbox/repositories/inbox.repository';
 import { User } from '@modules/user/entities/user.entity';
@@ -41,6 +39,15 @@ import { ChannelEnum } from '@common/enums/channel.enum';
 import { EmailGateway } from '../email.gateway';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { EmailAttachment } from '../entities/email-attachment.entity';
+import { CitizenService } from '@modules/citizen/services/citizen.service';
+import { MailStates } from '@common/enums/assistance-state.enum';
+import { emailAvailableStateId } from '@common/constants/channel.constant';
+import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
+import { number } from 'joi';
+
+interface FindOptionsWithDistinct<T> extends FindOptions<T> {
+  distinct?: boolean;
+}
 
 @Injectable()
 export class EmailCenterService {
@@ -53,16 +60,80 @@ export class EmailCenterService {
     private readonly inboxUserRepository: InboxUserRepository,
     private readonly channelStateRepository: ChannelStateRepository,
     private readonly emailCredentialRepository: EmailCredentialRepository,
-    private readonly emailWorkerService: EmailWorkerService,
     private readonly inboxRepository: InboxRepository,
     @Inject(forwardRef(() => EmailGateway))
     private readonly emailGateway: EmailGateway,
+    private readonly citizenService: CitizenService,
   ) {}
 
-  async getTickets(user: User, q: MailFilter): Promise<PaginatedResponse<any>> {
-    const { from, to, contains, startDate, endDate, stateId, type, userId } = q;
+  async getTickets(
+    user: User,
+    limit: number,
+    offset: number,
+    q?: Record<string, any>,
+  ): Promise<PaginatedResponse<any>> {
+    const from = q?.from;
+
+    const to = q?.to;
+
+    const contains = q?.contains;
+
+    const startDate = q?.startDate;
+
+    const endDate = q?.endDate;
+
+    const type = q?.type;
+
+    const userIds = q?.userIds;
+
+    const stateId = q?.stateId;
 
     const isAdvisor = user.roleId == UserRole.Ase;
+
+    // 🔹 Filtros principales sobre EmailAttention
+    const where: WhereOptions = {
+      ...(isAdvisor ? { advisorUserId: user.id } : {}),
+      ...(stateId
+        ? { assistanceStateId: stateId }
+        : {
+            assistanceStateId: {
+              [Op.notIn]: [MailStates.SPAM, MailStates.CLOSED],
+            },
+          }),
+      ...(type ? { type } : {}),
+      ...(userIds
+        ? {
+            advisorUserId: {
+              [Op.in]: userIds,
+            },
+          }
+        : {}),
+    };
+
+    // 🔹 Filtros sobre EmailThread (usaremos include con condiciones)
+    const threadWhere: WhereOptions = {
+      ...(from ? { from: { [Op.like]: `%${from}%` } } : {}),
+      ...(to ? { to: { [Op.like]: `%${to}%` } } : {}),
+      ...(contains
+        ? {
+            [Op.or]: [
+              { subject: { [Op.like]: `%${contains}%` } },
+              { content: { [Op.like]: `%${contains}%` } },
+            ],
+          }
+        : {}),
+      ...(startDate && endDate
+        ? {
+            date: {
+              [Op.between]: [new Date(startDate), new Date(endDate)],
+            },
+          }
+        : startDate
+          ? { date: { [Op.gte]: new Date(startDate) } }
+          : endDate
+            ? { date: { [Op.lte]: new Date(endDate) } }
+            : {}),
+    };
 
     const result = await this.emailAttentionRepository.findAndCountAll({
       attributes: {
@@ -99,9 +170,7 @@ export class EmailCenterService {
           ],
         ],
       },
-      where: {
-        ...(isAdvisor ? { advisorUserId: user.id } : {}),
-      },
+      where: where,
       include: [
         {
           model: EmailThread,
@@ -111,6 +180,7 @@ export class EmailCenterService {
             'from',
             'name',
             'to',
+            'toName',
             'date',
             'content',
             'type',
@@ -118,6 +188,7 @@ export class EmailCenterService {
             'isRead',
             'createdAt',
           ],
+          where: Object.keys(threadWhere).length ? threadWhere : undefined,
           include: [
             {
               model: EmailAttachment,
@@ -132,11 +203,9 @@ export class EmailCenterService {
               required: false,
             },
           ],
-          separate: true,
+          required: true,
           order: [['id', 'DESC']],
-          limit: 1,
         },
-
         {
           model: User,
           as: 'advisor',
@@ -145,28 +214,45 @@ export class EmailCenterService {
           model: AssistanceState,
         },
       ],
+      distinct: true,
       order: [['id', 'DESC']],
-    });
+      limit,
+      offset,
+    } as FindOptionsWithDistinct<EmailAttention>);
+
     return {
       ...result,
       data: result.data
         .map((r) => r.toJSON())
-        .map((r: any) => ({
-          id: r.id,
-          from: r.from,
-          to: r.threads[0].to,
-          date: r.threads[0].date,
-          subject: r.subject,
-          content: r.threads[0].content,
-          ticketCode: r.ticketCode,
-          name: r.name,
-          state: r.assistanceState,
-          attachments: r.threads[0].attachments,
-          advisor: r.advisor,
-          isRead: r.threads[0].isRead,
-          createdAt: r.threads[0].createdAt,
-          firstThread: r.firstThread,
-        })),
+        .filter((r) => r.threads.length)
+        .map((r: any) => {
+          const threads = [...r.threads].sort((a, b) => b.id - a.id);
+
+          const firstThread = [...r.threads].sort((a, b) => a.id - b.id);
+
+          return {
+            id: r.id,
+            from: r.from,
+            to: threads[0].to,
+            toName: threads[0].toName,
+            date: threads[0].date,
+            subject: r.subject,
+            content: threads[0].content,
+            ticketCode: r.ticketCode,
+            name: r.name,
+            state: r.assistanceState,
+            attachments: threads[0].attachments,
+            advisor: r.advisor,
+            isSender: firstThread[0].type === MailType.ADVISOR,
+            isRead: threads[0].isRead,
+            createdAt: threads[0].createdAt,
+            firstThread: r.firstThread,
+          };
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        ),
     };
   }
 
@@ -205,54 +291,89 @@ export class EmailCenterService {
     return { status: 'Success', message: 'Ticket Cerrado' };
   }
 
-  async AttenttionTicket(mailAttentionId: number) {
-    const exist = await this.emailAttentionRepository.findById(mailAttentionId);
-    if (!exist) {
+  async attentionTicket(mailAttentionIds: number[]) {
+    const existAttentions = await this.emailAttentionRepository.findAll({
+      where: {
+        id: {
+          [Op.in]: mailAttentionIds,
+        },
+      },
+    });
+    if (!existAttentions) {
       throw new NotFoundException('No se encontro el ticket');
     }
     const state = await this.assistanceStateService.getAttentionMailState();
     if (!state) throw new NotFoundException('No se encontro el estado');
-    const updated = await this.emailAttentionRepository.update(
-      mailAttentionId,
-      {
+    for (const attention of existAttentions) {
+      await attention.update({
         assistanceStateId: state.toJSON().id,
-      },
-    );
+      });
+    }
+
     this.emailGateway.notifyEmailRequest();
     return { status: 'Success', message: 'Ticket en Atención' };
   }
-  async NoWisTicket(mailAttentionId: number) {
-    const exist = await this.emailAttentionRepository.findById(mailAttentionId);
-    if (!exist) {
+  async noWisTicket(mailAttentionIds: number[]) {
+    const existAttentions = await this.emailAttentionRepository.findAll({
+      where: {
+        id: {
+          [Op.in]: mailAttentionIds,
+        },
+      },
+    });
+    if (!existAttentions) {
       throw new NotFoundException('No se encontro el ticket');
     }
     const state = await this.assistanceStateService.getSpamMailState();
     if (!state) throw new NotFoundException('No se encontro el estado');
-    const updated = await this.emailAttentionRepository.update(
-      mailAttentionId,
-      {
+    for (const attention of existAttentions) {
+      await attention.update({
         assistanceStateId: state.toJSON().id,
-      },
-    );
+      });
+    }
+    this.emailGateway.notifyEmailRequest();
     return { status: 'Success', message: 'Ticket en Atención' };
   }
   async RespondMail(body: ReplyCenterMail) {
-    const { mailAttentionId } = body;
-    const mailThreads = await this.emailThreadRepository.findAll({
-      where: { mailAttentionId: mailAttentionId },
-      order: [['createdAt', 'ASC']],
-      include: [{ model: EmailAttention, attributes: ['mailThreadId'] }],
-    });
-    const mailThread = mailThreads[0];
+    const { threadId, mailAttentionId } = body;
+
+    let mailThread;
+    if (!threadId) {
+      const mailThreads = await this.emailThreadRepository.findAll({
+        where: { mailAttentionId: mailAttentionId },
+        order: [['createdAt', 'ASC']],
+        include: [{ model: EmailAttention, attributes: ['mailThreadId'] }],
+      });
+      mailThread = mailThreads[0];
+    } else {
+      mailThread = await this.emailThreadRepository.findOne({
+        where: { id: threadId },
+        include: [{ model: EmailAttention, attributes: ['mailThreadId'] }],
+      });
+    }
     if (!mailThread)
       throw new NotFoundException('No se encontro el hilo del correo');
+    const credential = await this.emailCredentialRepository.findOne({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          where: { channelId: ChannelEnum.EMAIL },
+        },
+      ],
+    });
+    if (!credential)
+      throw new NotFoundException('No se encontro la credencial');
     const mailthreadJson: EmailThread = mailThread.toJSON();
     const messageId = mailthreadJson.messageGmailId;
     const request: ReplyEmail = {
       messageId: messageId,
       content: body.content,
       threadId: mailthreadJson.emailAttention.mailThreadId,
+      clientId: credential.toJSON().clientID,
+      email: credential.toJSON().email,
     };
+    console.log('request', request);
     await this.emailChannelService.replyEmail(request);
   }
 
@@ -266,12 +387,25 @@ export class EmailCenterService {
     const mailThread = mailThreads[0];
     if (!mailThread)
       throw new NotFoundException('No se encontro el hilo del correo');
+    const credential = await this.emailCredentialRepository.findOne({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          where: { channelId: ChannelEnum.EMAIL },
+        },
+      ],
+    });
+    if (!credential)
+      throw new NotFoundException('No se encontro la credencial');
     const mailthreadJson = mailThread.toJSON();
     const messageId = mailthreadJson.messageGmailId;
     const request: ForwardTo = {
       messageId: messageId,
       forwardTo: body.from,
       message: body.message,
+      clientId: credential.toJSON().clientID,
+      email: credential.toJSON().email,
     };
     await this.emailChannelService.forwardTo(request);
     const state = await this.assistanceStateService.getPenddingMailState();
@@ -435,6 +569,7 @@ export class EmailCenterService {
         'content',
         'type',
         'mailStateId',
+        'mailAttentionId',
         'messageHeaderGmailId',
         'inReplyTo',
         'isRead',
@@ -483,6 +618,12 @@ export class EmailCenterService {
       }
     };
 
+    for (const r of result) {
+      if (!r.toJSON().isRead) {
+        await r.update({ isRead: true });
+      }
+    }
+
     return this.buildThreadTree(
       result
         .map((r) => r.toJSON())
@@ -500,6 +641,7 @@ export class EmailCenterService {
           advisor: r.emailAttention.advisor,
           inReplyTo: r.inReplyTo,
           isRead: r.isRead,
+          mailAttentionId: r.mailAttentionId,
           createdAt: r.createdAt,
           messageHeaderGmailId: r.messageHeaderGmailId,
           type: GetTypeEmail(r.type),
@@ -524,91 +666,74 @@ export class EmailCenterService {
 
   async balanceAdvisors() {
     try {
-      const state = await this.assistanceStateService.getOpenMailState();
-      if (!state) throw new NotFoundException('No se encontro el estado');
-      const noAttention =
-        await this.assistanceStateService.getUnassignedMailState();
-      if (!noAttention) throw new NotFoundException('No se encontro el estado');
-      const attentionId = state.toJSON().id;
-      const noAttentionId = noAttention.toJSON().id;
-      const stateAvalible =
-        await this.channelStateRepository.findAvalibleEmail();
-      if (!stateAvalible) throw new NotFoundException('Estado no disponible');
-      const stateAvalibleJson = stateAvalible.toJSON();
-      const ibox = await this.inboxRepository.findOne({
-        where: { channelId: ChannelEnum.EMAIL },
-      });
-      if (!ibox) throw new NotFoundException('No se encontro la credencial');
-      const inboxId = ibox.toJSON().id;
       const emailUsers = await this.inboxUserRepository.findAll({
-        where: { channelStateId: stateAvalibleJson.id, inboxId: inboxId },
+        where: { channelStateId: emailAvailableStateId },
         include: [
           {
             model: User,
             as: 'user',
             where: { roleId: UserRole.Ase },
+            include: [
+              {
+                model: EmailAttention,
+                where: {
+                  assistanceStateId: {
+                    [Op.in]: [MailStates.PENDDING, MailStates.ATTENTION],
+                  },
+                },
+                required: false,
+              },
+            ],
           },
+          { model: Inbox, required: true },
         ],
         attributes: ['userId'],
       });
-      const emailUserJson = emailUsers.map((a) => a.toJSON());
-      if (emailUserJson.length == 0) {
+
+      const arrayUsers = emailUsers
+        .map((a) => a.toJSON())
+        .map((a: InboxUser) => ({
+          userId: a.userId,
+          assigns: a.user.emailAttentions.length,
+        }));
+
+      if (arrayUsers.length == 0) {
         throw new NotFoundException(
           'Por el momento no se encontraron asesores disponibles',
         );
       }
-      const availableUserIds = emailUserJson.map((user) => user.userId);
+
       const opensData = await this.emailAttentionRepository.findAll({
-        where: { assistanceStateId: { [Op.in]: [attentionId, noAttentionId] } },
+        where: {
+          assistanceStateId: {
+            [Op.in]: [MailStates.OPEN, MailStates.UNASSIGNED],
+          },
+        },
+        order: [['id', 'DESC']],
       });
       const opens = opensData.map((a) => a.toJSON());
+
       const caseCounts = new Map<number, number>();
-      availableUserIds.forEach((userId) => {
-        caseCounts.set(userId, 0);
+
+      arrayUsers.forEach((u) => {
+        caseCounts.set(u.userId, u.assigns);
       });
-      const unassignedCases: any[] = [];
-      opens.forEach((openCase) => {
-        if (
-          openCase.advisorUserId &&
-          availableUserIds.includes(openCase.advisorUserId)
-        ) {
-          caseCounts.set(
-            openCase.advisorUserId,
-            (caseCounts.get(openCase.advisorUserId) || 0) + 1,
-          );
-        } else {
-          unassignedCases.push(openCase);
-        }
-      });
+
+      console.log('caseCounts', caseCounts);
+
       const allCases = [...opens];
       for (const openCase of allCases) {
         let leastLoaded = Array.from(caseCounts.entries()).sort(
           (a, b) => a[1] - b[1],
         )[0];
         if (!leastLoaded) continue;
-        if (
-          !openCase.advisorUserId ||
-          !availableUserIds.includes(openCase.advisorUserId)
-        ) {
-          openCase.advisorUserId = leastLoaded[0];
-          await this.emailAttentionRepository.update(openCase.id, {
-            advisorUserId: leastLoaded[0],
-            advisorInboxId: inboxId,
-            assistanceStateId: attentionId,
-          });
-          caseCounts.set(leastLoaded[0], leastLoaded[1] + 1);
-        } else {
-          let currentLoad = caseCounts.get(openCase.advisorUserId)!;
-          if (currentLoad > leastLoaded[1] + 1) {
-            caseCounts.set(openCase.advisorUserId, currentLoad - 1);
-            openCase.advisorUserId = leastLoaded[0];
-            await this.emailAttentionRepository.update(openCase.id, {
-              advisorUserId: leastLoaded[0],
-            });
-            caseCounts.set(leastLoaded[0], leastLoaded[1] + 1);
-          }
-        }
+        console.log('leastLoaded', leastLoaded);
+        await this.emailAttentionRepository.update(openCase.id, {
+          advisorUserId: leastLoaded[0],
+        });
+        caseCounts.set(leastLoaded[0], leastLoaded[1] + 1);
       }
+
       const userLoads = Array.from(caseCounts.entries()).map(
         ([userId, caseCount]) => ({
           userId,
@@ -628,11 +753,13 @@ export class EmailCenterService {
   async SendEmail(
     body: CenterEmail,
     files: { attachments?: Express.Multer.File[] },
+    userId: number,
   ) {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
           model: Inbox,
+          required: true,
           where: { channelId: ChannelEnum.EMAIL },
         },
       ],
@@ -643,9 +770,11 @@ export class EmailCenterService {
       from: credential.toJSON().email,
       to: [body.to],
       subject: body.subject,
-      text: body.content,
+      html: body.content,
       refreshToken: credential.toJSON().refreshToken,
       clientId: credential.toJSON().clientID,
+      email: credential.toJSON().email,
+      userId,
     };
     if (files.attachments) {
       const attachments: FileEmail[] = [];
@@ -659,16 +788,26 @@ export class EmailCenterService {
       }
       mail.attachments = attachments;
     }
-    const email = await this.emailChannelService.sendEmail(mail);
-    const sendState = await this.emailStateRepository.getSend();
-    if (!sendState)
-      throw new InternalServerErrorException('Error interno del servidor');
-    await this.emailWorkerService.createMail(
-      email,
-      MailType.CITIZEN,
-      body.mailAttentionId,
-      sendState.toJSON().id,
+
+    const contact = await this.citizenService.getBasicInfoFromEmailCitizen(
+      body.to,
     );
+
+    if (contact) {
+      mail.name = contact.toJSON()?.citizen?.name;
+    }
+
+    const email = await this.emailChannelService.sendEmail(mail);
+    return true;
+    // const sendState = await this.emailStateRepository.getSend();
+    // if (!sendState)
+    //   throw new InternalServerErrorException('Error interno del servidor');
+    // await this.emailWorkerService.createMail(
+    //   email,
+    //   MailType.CITIZEN,
+    //   body.mailAttentionId,
+    //   sendState.toJSON().id,
+    // );
   }
 
   async changeEmailState(userId, channelStateId) {

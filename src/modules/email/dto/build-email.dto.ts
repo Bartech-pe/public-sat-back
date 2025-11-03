@@ -1,4 +1,10 @@
-import { IsArray, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class BuildEmail {
   @IsString()
@@ -31,8 +37,19 @@ export class FileEmail {
 export class BuildCenterEmail extends BuildEmail {
   @IsString()
   refreshToken: string;
+
   @IsString()
   clientId: string;
+
+  @IsString()
+  email: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsNumber()
+  userId: number;
 }
 
 export class AttachementBody {

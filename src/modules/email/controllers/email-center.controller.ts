@@ -21,6 +21,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 
 @ApiBearerAuth()
 @Controller('mail-center')
@@ -30,9 +31,12 @@ export class EmailCenterController {
   @Get('messagesAdvisor')
   messagesAdvisor(
     @CurrentUser() user: User,
-    @Query() query: MailFilter,
+    @Query() query: PaginationQueryDto,
   ): Promise<PaginatedResponse<any>> {
-    return this.mailCenterService.getTickets(user, query);
+    console.log('query', query);
+    const limit = query.limit!;
+    const offset = query.offset!;
+    return this.mailCenterService.getTickets(user, limit, offset, query.q);
   }
 
   @Get('messagesAdvisorOpen')
@@ -72,10 +76,11 @@ export class EmailCenterController {
     FileFieldsInterceptor([{ name: 'attachments', maxCount: 10 }]),
   )
   async SendEmailCenter(
+    @CurrentUser() user: User,
     @Body() body: CenterEmail,
     @UploadedFiles() files: { attachments?: Express.Multer.File[] },
   ) {
-    return await this.mailCenterService.SendEmail(body, files);
+    return await this.mailCenterService.SendEmail(body, files, user.id);
   }
 
   @Post('replyEmailCenter')
@@ -100,14 +105,14 @@ export class EmailCenterController {
     return await this.mailCenterService.closeTicketMultiple(mailAttentionIds);
   }
 
-  @Put('attentionTicket/:mailAttentionId')
-  async attentionTicket(@Param('mailAttentionId') mailAttentionId: number) {
-    return await this.mailCenterService.AttenttionTicket(mailAttentionId);
+  @Put('attentionTicket')
+  async attentionTicket(@Body('mailAttentionIds') mailAttentionIds: number[]) {
+    return await this.mailCenterService.attentionTicket(mailAttentionIds);
   }
 
-  @Put('noWishTicket/:mailAttentionId')
-  async noWishTicket(@Param('mailAttentionId') mailAttentionId: number) {
-    return await this.mailCenterService.NoWisTicket(mailAttentionId);
+  @Put('noWishTicket')
+  async noWishTicket(@Body('mailAttentionIds') mailAttentionIds: number[]) {
+    return await this.mailCenterService.noWisTicket(mailAttentionIds);
   }
 
   @Put('rebalance')

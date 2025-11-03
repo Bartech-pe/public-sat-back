@@ -66,10 +66,19 @@ export class ChannelStateController {
    */
 
   @Get(':channel/statuses')
-  async getUserStatusesByChannel(@Param('channel') channel: string): Promise<BaseResponseDto<any>> {
+  async getUserStatusesByChannel(
+    @Param('channel') channel: string,
+  ): Promise<BaseResponseDto<any>> {
     return this.service.getUserStatusesByChannel(channel);
   }
 
+  @Get('stateByCategoryId/:categoryId')
+  async getUserChannelStatesByCategoryId(
+    @CurrentUser() user: User,
+    @Param('categoryId') categoryId: number,
+  ): Promise<ChannelState | null> {
+    return this.service.getUserChannelStatesByCategoryId(user.id, categoryId);
+  }
 
   /**
    * Retrieves a single channel by its ID.

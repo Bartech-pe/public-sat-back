@@ -1,18 +1,9 @@
 import { CallStateRepository } from '../repositories/call-state.repository';
-import {
-  Injectable,
-  InternalServerErrorException,
-  Query,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CallRepository } from '../repositories/call.repository';
-import { CallFilter } from '../dto/call-filter.dto';
 import { User } from '@modules/user/entities/user.entity';
-import { col, fn, literal, Op, QueryTypes } from 'sequelize';
-import {
-  DataCollection,
-  GetPages,
-  PaginatedResponse,
-} from '@common/interfaces/paginated-response.interface';
+import { Op, QueryTypes } from 'sequelize';
+import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { Sequelize } from 'sequelize-typescript';
 import {
   AdvisorItem,
@@ -20,8 +11,6 @@ import {
   CallItemNew,
   CallItemRow,
   CallStateItem,
-  StateCountItems,
-  StateCountQuery,
 } from '../dto/call-collection.dto';
 import { InjectConnection } from '@nestjs/sequelize';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
@@ -32,9 +21,9 @@ import { CallHistory } from '../entities/call-history.entity';
 const callstates = {
   XFER: 'Transferidas',
   DROP: 'Abandonadas',
-  SALE: 'Concluidas',
+  SALE: 'Atendidas',
   QUEUE: 'En cola',
-  // OTHER: 'Otros',
+  IVR: 'Llamadas en IVR',
 };
 
 function getPages(limit: number, total: number): number {
@@ -653,15 +642,13 @@ export class CallService {
       GROUP BY call_category;
     `;
 
-    console.log('groupSQL', groupSQL);
-
     const resumenRaw = await this.centralConnection.query<{
       callStatus: string;
       duration: number;
       total: number;
     }>(groupSQL, { replacements: [], type: QueryTypes.SELECT });
 
-    const ESTADOS = ['QUEUE', 'DROP', 'XFER', 'SALE'];
+    const ESTADOS = ['QUEUE', 'DROP', 'XFER', 'SALE', 'IVR'];
 
     // Normalizamos el resultado, garantizando que todos los estados estén presentes
     const resumen = ESTADOS.map((status) => {

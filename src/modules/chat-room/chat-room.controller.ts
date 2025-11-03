@@ -128,7 +128,7 @@ export class ChatRoomController {
       resourceUrl: file ? `/uploads/chat/${file.filename}` : undefined,
     };
 
-    return this.chatService.createRoomMessage(payload);
+    return this.chatService.createRoomMessage(payload,user.id);
   }
 
   @Delete('room/message/:id')

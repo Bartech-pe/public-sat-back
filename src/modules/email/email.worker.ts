@@ -9,7 +9,6 @@ import { MailStates } from '@common/enums/assistance-state.enum';
 @Processor('mail-events')
 @Injectable()
 export class EmailWorker extends WorkerHost {
-  private roundRobinIndex: Record<number, number> = {};
   private readonly logger = new Logger(EmailWorker.name);
 
   constructor(private readonly emailWorkerService: EmailWorkerService) {
@@ -19,6 +18,18 @@ export class EmailWorker extends WorkerHost {
     const start = Date.now();
     try {
       const event = job.data as EmailSent;
+
+      const credentials = await this.emailWorkerService.getSatCredential();
+
+      if (
+        !credentials ||
+        credentials.clientId.trim() !== event.clientId.trim() ||
+        credentials.email.toLowerCase().trim() !==
+          event.email.toLowerCase().trim()
+      ) {
+        return;
+      }
+
       console.log('Procesando evento:', event.messageId);
 
       const inboxExist = await this.emailWorkerService.inboxExist();
@@ -46,7 +57,6 @@ export class EmailWorker extends WorkerHost {
       }
 
       // Flujo de asesor
-      const credentials = await this.emailWorkerService.getSatCredential();
       const advisor = await this.emailWorkerService.caseAdvisor(
         event,
         credentials.email,
@@ -78,20 +88,9 @@ export class EmailWorker extends WorkerHost {
       if (thread.success) {
         if (thread.assistanceState.id === MailStates.CLOSED) {
           // Flujo de nueva atención
-          const { skillId, emailUserJson } =
-            await this.emailWorkerService.getAdvisorsAvaliable();
+          const user = await this.emailWorkerService.getAdvisorToAssign();
 
-          if (emailUserJson.length === 0) {
-            await this.emailWorkerService.createAttention(event, undefined);
-          } else {
-            const index = this.roundRobinIndex[skillId] || 0;
-            const emailUser = emailUserJson[index];
-            this.roundRobinIndex[skillId] = (index + 1) % emailUserJson.length;
-            await this.emailWorkerService.createAttention(
-              event,
-              emailUser?.userId,
-            );
-          }
+          await this.emailWorkerService.createAttention(event, user?.userId);
         } else {
           await this.createMailFlow(
             event,
@@ -106,17 +105,9 @@ export class EmailWorker extends WorkerHost {
       }
 
       // Flujo de nueva atención
-      const { skillId, emailUserJson } =
-        await this.emailWorkerService.getAdvisorsAvaliable();
+      const user = await this.emailWorkerService.getAdvisorToAssign();
 
-      if (emailUserJson.length === 0) {
-        await this.emailWorkerService.createAttention(event, undefined);
-      } else {
-        const index = this.roundRobinIndex[skillId] || 0;
-        const emailUser = emailUserJson[index];
-        this.roundRobinIndex[skillId] = (index + 1) % emailUserJson.length;
-        await this.emailWorkerService.createAttention(event, emailUser?.userId);
-      }
+      await this.emailWorkerService.createAttention(event, user?.userId);
 
       console.log('Flujo completado en', Date.now() - start, 'ms');
     } catch (error) {
@@ -125,7 +116,7 @@ export class EmailWorker extends WorkerHost {
   }
 
   /**
-   * 🔹 Función auxiliar para reducir duplicación de código
+   * Función auxiliar para reducir duplicación de código
    */
   private async createMailFlow(
     event: EmailSent,

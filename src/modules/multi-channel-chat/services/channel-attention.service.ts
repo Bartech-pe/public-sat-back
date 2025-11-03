@@ -65,31 +65,34 @@ export class ChannelAttentionService {
     this.subscriber = new Redis();
   }
 
-  async assignAttentionDetail(payload: AssignAttentionDetailDto): Promise<BaseResponseDto>
-  {
-    let response :BaseResponseDto ={
+  async assignAttentionDetail(
+    payload: AssignAttentionDetailDto,
+  ): Promise<BaseResponseDto> {
+    let response: BaseResponseDto = {
       success: false,
-      message: ""
-    }
+      message: '',
+    };
     try {
-      if(payload.attentionId)
-      {
-        const attentionUpdated = await this.channelAttentionRepository.update(payload.attentionId, {
-          attentionDetail: payload.attentionDetail,
-          consultTypeId: payload.consultTypeId
-        });
+      if (payload.attentionId) {
+        const attentionUpdated = await this.channelAttentionRepository.update(
+          payload.attentionId,
+          {
+            attentionDetail: payload.attentionDetail,
+            consultTypeId: payload.consultTypeId,
+          },
+        );
 
         this.multiChannelChatGateway.notifyAttentionDetailChanged({
-          assistanceId: payload.attentionId
-        })
+          assistanceId: payload.attentionId,
+        });
 
-        response.message = "Se ha creado el detalle de atención correctamente";
+        response.message = 'Se ha creado el detalle de atención correctamente';
         response.success = true;
       }
-      return response
+      return response;
     } catch (error) {
       response.error = error.toString();
-      this.logger.error(error.toString())      
+      this.logger.error(error.toString());
       return response;
     }
   }
@@ -100,7 +103,8 @@ export class ChannelAttentionService {
     try {
       let channelRoomIdToClose: number | null | undefined =
         payload?.channelRoomId;
-      let assistanceIdToClose: number | null | undefined = payload?.assistanceId;
+      let assistanceIdToClose: number | null | undefined =
+        payload?.assistanceId;
       let userIdClosing: number | null | undefined = null;
       let citizenIdToClose: number | null | undefined = null;
       let phoneNumberToCleanup: string | null = null;
@@ -132,7 +136,9 @@ export class ChannelAttentionService {
         });
         channelRoomIdToClose = channelRoom?.dataValues.id;
         citizenIdToClose = channelRoom?.dataValues?.channelCitizenId;
-        const assistanceParsed = channelRoom?.get('assistances')[0].toJSON() as ChannelAttention;
+        const assistanceParsed = channelRoom
+          ?.get('assistances')[0]
+          .toJSON() as ChannelAttention;
         assistanceIdToClose = assistanceParsed?.id;
 
         phoneNumberToCleanup = payload.phoneNumber;
@@ -157,7 +163,7 @@ export class ChannelAttentionService {
 
       this.channelRoomRepository.update(channelRoomIdToClose, {
         status: 'completado',
-        botReplies: true
+        botReplies: true,
       });
 
       this.channelAttentionRepository.update(assistanceIdToClose, {
@@ -178,7 +184,7 @@ export class ChannelAttentionService {
         assistanceId: assistanceIdToClose,
         channelRoomId: channelRoomIdToClose,
         status: 'completado',
-        attentionStatus: ChannelAttentionStatus.CLOSED
+        attentionStatus: ChannelAttentionStatus.CLOSED,
       };
       const channelChatInformationPayload: IChannelChatInformation = {
         channelRoomId: channelRoomIdToClose,
@@ -282,7 +288,9 @@ export class ChannelAttentionService {
         const lastMessage = channelMessages[0];
         const lastMessageParsed = channelMessages[0].toJSON();
 
-        const messageAdvisor = lastMessage?.get('user')?.toJSON() as User | null;
+        const messageAdvisor = lastMessage
+          ?.get('user')
+          ?.toJSON() as User | null;
         const messageAttachments = lastMessage?.get(
           'attachments',
         ) as ChannelMessageAttachment[];
@@ -308,7 +316,9 @@ export class ChannelAttentionService {
               alias: isAgent ? messageAdvisor?.name : citizen.name,
               avatar: isAgent ? messageAdvisor?.avatarUrl : citizen.avatarUrl,
               fromCitizen: lastMessageParsed.senderType == 'citizen',
-              fullName: isAgent ? messageAdvisor?.displayName : citizen.fullName,
+              fullName: isAgent
+                ? messageAdvisor?.displayName
+                : citizen.fullName,
               isAgent: lastMessageParsed.senderType == 'agent',
             },
             status: lastMessageParsed.status,
@@ -412,7 +422,9 @@ export class ChannelAttentionService {
               alias: isAgent ? messageAdvisor?.name : citizen.name,
               avatar: isAgent ? messageAdvisor?.avatarUrl : citizen.avatarUrl,
               fromCitizen: messageParsed.senderType == 'citizen',
-              fullName: isAgent ? messageAdvisor?.displayName : citizen.fullName,
+              fullName: isAgent
+                ? messageAdvisor?.displayName
+                : citizen.fullName,
               isAgent: messageParsed.senderType == 'agent',
             },
             status: messageParsed.status,
@@ -445,6 +457,7 @@ export class ChannelAttentionService {
 
   async sendMessagesHtmlFromChannelAttention(
     assistanceId: number,
+    userId: number,
   ): Promise<BaseResponseDto> {
     let response: BaseResponseDto = {
       message: '',
@@ -489,8 +502,7 @@ export class ChannelAttentionService {
         html: JSON.stringify(html),
       };
 
-      await this.mailFeaturesService.buildGenericEmail(payload);
-
+      await this.mailFeaturesService.buildGenericEmail(payload, userId);
 
       response.message = 'Correo generado y enviado correctamente.';
       response.success = true;
@@ -505,9 +517,12 @@ export class ChannelAttentionService {
       return response;
     }
   }
-  
-  async getAttentionCurrentStatus(attentionId: number): Promise<ChannelAttention>
-  {
-    return (await this.channelAttentionRepository.findById(attentionId)).toJSON()
+
+  async getAttentionCurrentStatus(
+    attentionId: number,
+  ): Promise<ChannelAttention> {
+    return (
+      await this.channelAttentionRepository.findById(attentionId)
+    ).toJSON();
   }
 }

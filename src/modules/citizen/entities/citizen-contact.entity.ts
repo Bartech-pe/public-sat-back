@@ -82,9 +82,9 @@ export class CitizenContact extends Model {
   })
   status: boolean;
 
-  @HasOne(() => Citizen, {
+  @BelongsTo(() => Citizen, {
     foreignKey: 'docIde',
-    sourceKey: 'docIde',
+    targetKey: 'docIde',
     as: 'citizen',
   })
   citizen: Citizen;
