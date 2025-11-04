@@ -1,4 +1,3 @@
-import { groupBy } from '@common/helpers/group.helper';
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { EmailAttentionRepository } from '@modules/email/repositories/email-attention.repository';
@@ -13,16 +12,12 @@ import { Role } from '@modules/role/entities/role.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { Injectable } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { MonitorVicidialService } from './monitor-vicidial.service';
 import { getDayMonth } from '@common/helpers/time.helper';
 import { ChannelType } from '@common/interfaces/channel-connector/messaging.interface';
 import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity';
-import { EmailCredential } from '@modules/email/entities/email-credentials.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
-import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
 import { CallService } from '@modules/call/services/call.service';
 
 @Injectable()
@@ -34,10 +29,8 @@ export class MonitorService {
     private readonly sequelize: Sequelize,
     private readonly inboxCredentialRepository: InboxCredentialRepository,
     private readonly channelMessageRepository: ChannelMessageRepository,
-    private readonly vicidialService: MonitorVicidialService,
     private readonly userVicidialRepository: VicidialUserRepository,
     private readonly callService: CallService,
-    @InjectConnection('central') private readonly db: Sequelize,
   ) {}
 
   getBaseInclude(channelId: number) {

@@ -80,12 +80,12 @@ export class Campaign extends Model {
   })
   active?: string;
 
-  // @Column({
-  //   field: 'type',
-  //   type: DataType.ENUM('I', 'M'),
-  //   defaultValue: 'I',
-  // })
-  // type?: string;
+  @Column({
+    field: 'type',
+    type: DataType.ENUM('I', 'M'),
+    defaultValue: 'I',
+  })
+  type?: string;
  
 
   @Column({

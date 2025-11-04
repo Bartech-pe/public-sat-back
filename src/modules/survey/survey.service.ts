@@ -69,7 +69,7 @@ export class SurveyService {
   async create(dto: CreateSurveyDto): Promise<Survey> {
     try {
       this.logger.debug(dto)
-      return await this.repository.create(dto);
+      return await this.repository.create({...dto, createdBy: null, updatedBy: null});
     } catch (error) {
       this.logger.error(error)
       throw new InternalServerErrorException(

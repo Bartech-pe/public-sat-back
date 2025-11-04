@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/sequelize';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { col, fn, QueryTypes } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
@@ -8,15 +11,22 @@ import { VicidialUserHistoryRepository } from '@modules/user/repositories/vicidi
 import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 import { Op } from 'sequelize';
+import { CENTRAL_DB } from '@database/central/database-central.service';
 
 @Injectable()
 export class MonitorVicidialService {
   constructor(
-    @InjectConnection('central') private readonly db: Sequelize,
     private readonly userVicidialRepository: VicidialUserRepository,
     private readonly vicidialUserHistoryRepository: VicidialUserHistoryRepository,
+    @Inject(CENTRAL_DB) private readonly db: Sequelize | null,
   ) {}
+
   async vicidialReport() {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const agentsQuery = `
       SELECT
         COUNT(*) AS agentes_logueados,
@@ -32,10 +42,10 @@ export class MonitorVicidialService {
         SUM(CASE WHEN vac.status = 'IVR' THEN 1 ELSE 0 END) AS llamadas_en_ivr
       FROM vicidial_auto_calls vac;
       `;
-    const [agents] = await this.db.query<any>(agentsQuery, {
+    const [agents] = await this.db!.query<any>(agentsQuery, {
       type: QueryTypes.SELECT,
     });
-    const [calls] = await this.db.query<any>(callsQuery, {
+    const [calls] = await this.db!.query<any>(callsQuery, {
       type: QueryTypes.SELECT,
     });
     return {
@@ -43,13 +53,19 @@ export class MonitorVicidialService {
       ...calls,
     };
   }
+
   async vicidialCount(agent: string) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const query = `
     SELECT COUNT(*) AS total
     FROM vicidial_agent_log
     WHERE user = :agent
   `;
-    const [result] = await this.db.query<{ total: number }>(query, {
+    const [result] = await this.db!.query<{ total: number }>(query, {
       type: QueryTypes.SELECT,
       replacements: { agent },
     });
@@ -57,6 +73,11 @@ export class MonitorVicidialService {
   }
 
   async vicidialTable() {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const users = await this.userVicidialRepository.findAll({
       attributes: ['userId', 'phoneLogin'],
       include: [
@@ -122,7 +143,7 @@ export class MonitorVicidialService {
       advisorJson.map((user) => [user.phoneLogin, user.userId]),
     );
 
-    const table = await this.db.query<any>(query, {
+    const table = await this.db!.query<any>(query, {
       type: QueryTypes.SELECT,
       replacements: { phoneLogins },
     });
@@ -322,6 +343,11 @@ export class MonitorVicidialService {
   }
 
   async getCallsCount() {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const query = `
       SELECT
         -- Llamadas atendidas (usa event_time en lugar de call_date)
@@ -351,7 +377,7 @@ export class MonitorVicidialService {
         ) AS llamadas_en_cola;
     `;
 
-    const result = await this.db.query(query, {
+    const result = await this.db!.query(query, {
       type: QueryTypes.SELECT,
     });
 

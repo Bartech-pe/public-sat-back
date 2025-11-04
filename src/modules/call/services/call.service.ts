@@ -1,5 +1,9 @@
 import { CallStateRepository } from '../repositories/call-state.repository';
-import { Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { CallRepository } from '../repositories/call.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { Op, QueryTypes } from 'sequelize';
@@ -17,6 +21,7 @@ import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user
 import { AdvisorDTO } from '../../vicidial/ami/dto/ami.dto';
 import { CallHistoryRepository } from '../repositories/call-history.repository';
 import { CallHistory } from '../entities/call-history.entity';
+import { CENTRAL_DB } from '@database/central/database-central.service';
 
 const callstates = {
   XFER: 'Transferidas',
@@ -36,7 +41,7 @@ export class CallService {
     private readonly repository: CallRepository,
     private readonly stateRepository: CallStateRepository,
     private readonly vicidialUserRepository: VicidialUserRepository,
-    @InjectConnection('central') private readonly centralConnection: Sequelize,
+    @Inject(CENTRAL_DB) private readonly db: Sequelize | null,
     private readonly callHistoryRepository: CallHistoryRepository,
   ) {}
 
@@ -44,6 +49,12 @@ export class CallService {
     limit?: number,
     offset?: number,
   ): Promise<PaginatedResponse<CallHistory & { callSateName: string }>> {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+
     const res = await this.callHistoryRepository.findAndCountAll({
       include: [{ model: User, as: 'user', required: false }],
       order: [['entryDate', 'DESC']],
@@ -69,6 +80,12 @@ export class CallService {
     offset?: number,
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<CallItemNew>> {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+
     const userIds = q?.userIds;
 
     const search = q?.search;
@@ -199,12 +216,11 @@ export class CallService {
       FROM (${mainSql}) as calls
     `;
 
-    const [totalResult] = await this.centralConnection.query<{ total: number }>(
-      totalSQL,
-      { replacements: [], type: QueryTypes.SELECT },
-    );
+    const [totalResult] = await this.db!.query<{
+      total: number;
+    }>(totalSQL, { replacements: [], type: QueryTypes.SELECT });
 
-    const results = await this.centralConnection.query<CallItemRow>(sql, {
+    const results = await this.db!.query<CallItemRow>(sql, {
       replacements: [],
       type: QueryTypes.SELECT,
     });
@@ -309,7 +325,7 @@ export class CallService {
 
     // console.log("totalSQL", totalSQL)
 
-    // const totalResult = await this.centralConnection.query<{ total: number }>(
+    // const totalResult = await this.centralConnection!.query<{ total: number }>(
     //   totalSQL,
     //   { replacements, type: QueryTypes.SELECT },
     // );
@@ -350,7 +366,7 @@ export class CallService {
 
     // replacements.push(limit, offset);
 
-    // const results = await this.centralConnection.query<CallItemRow>(sql, {
+    // const results = await this.centralConnection!.query<CallItemRow>(sql, {
     //   replacements,
     //   type: QueryTypes.SELECT,
     // });
@@ -366,6 +382,11 @@ export class CallService {
   }
 
   async getCallsCountersFromVicidial(q?: Record<string, any>) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const userIds = q?.userIds;
 
     const search = q?.search;
@@ -497,7 +518,7 @@ export class CallService {
       GROUP BY call_category;
     `;
 
-    const resumenRaw = await this.centralConnection.query<{
+    const resumenRaw = await this.db!.query<{
       callStatus: string;
       total: number;
     }>(groupSQL, { replacements: [], type: QueryTypes.SELECT });
@@ -517,6 +538,12 @@ export class CallService {
   }
 
   async getCallsCounterByNow(username?: string) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+
     const startDay = new Date();
     startDay.setHours(0, 0, 0);
     const endDay = new Date();
@@ -642,7 +669,7 @@ export class CallService {
       GROUP BY call_category;
     `;
 
-    const resumenRaw = await this.centralConnection.query<{
+    const resumenRaw = await this.db!.query<{
       callStatus: string;
       duration: number;
       total: number;
@@ -671,6 +698,12 @@ export class CallService {
   }
 
   async findByCategories() {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+
     const allStates = await this.stateRepository.findAll({
       attributes: ['id', 'name', 'icon', 'style'],
       where: {
@@ -754,7 +787,7 @@ export class CallService {
     //   AND vu.phone_login IN (:phoneLogins)
     //   ORDER BY vu.full_name
     // `;
-    //   const results = await this.centralConnection.query<AdvisorItem>(sql, {
+    //   const results = await this.centralConnection!.query<AdvisorItem>(sql, {
     //     type: QueryTypes.SELECT,
     //     replacements: { phoneLogins },
     //   });
@@ -765,6 +798,11 @@ export class CallService {
     // }
   }
   async GetAdvisorsInfo() {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const getAdvisors = await this.vicidialUserRepository.findAll({
       attributes: ['username', 'phoneLogin'],
       include: [
@@ -796,7 +834,7 @@ export class CallService {
       AND vu.phone_login IN (:phoneLogins)
       ORDER BY vu.full_name
     `;
-    const results = await this.centralConnection.query<AdvisorItemInfo>(sql, {
+    const results = await this.db!.query<AdvisorItemInfo>(sql, {
       type: QueryTypes.SELECT,
       replacements: { phoneLogins },
     });
@@ -813,6 +851,11 @@ export class CallService {
     return filteredAdvisors;
   }
   async getAdvisorByPhoneLogin(phoneLogin: string) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     try {
       const sql = `
       SELECT DISTINCT 
@@ -830,7 +873,7 @@ export class CallService {
       //console.log("============================ DEBUG ADVISORS ===============================");
       //console.log("SQL:", sql);
 
-      const results = await this.centralConnection.query<AdvisorItem>(sql, {
+      const results = await this.db!.query<AdvisorItem>(sql, {
         type: QueryTypes.SELECT,
       });
       if (results.length == 0) {

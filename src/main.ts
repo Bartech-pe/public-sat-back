@@ -39,7 +39,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // CORS
-  const FRONTEND_ORIGINS = envConfig.crmUrl;
+  const FRONTEND_ORIGINS = [
+    envConfig.crmUrl,
+    'https://c2cb72ss-4200.brs.devtunnels.ms',
+  ];
   const META_BASE = metabaseConfig.url;
   const API_AUDIOS = audiobaseConfig.url;
   const CHANNEL_CONECTOR = channelConnectorConfig.baseUrl;
@@ -106,8 +109,7 @@ async function bootstrap() {
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
             'https://api.unisvg.com',
-            'https://satsttcc01.sat.gob.pe',
-            FRONTEND_ORIGINS,
+            ...FRONTEND_ORIGINS,
             CHANNEL_CONECTOR,
             API_AUDIOS,
             META_BASE,

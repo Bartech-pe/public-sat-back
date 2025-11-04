@@ -7,6 +7,7 @@ import { MonitorVicidialService } from './monitor-vicidial.service';
 import { EmailModule } from '@modules/email/email.module';
 import { UserModule } from '@modules/user/user.module';
 import { CallModule } from '@modules/call/call.module';
+import { DatabaseCentralModule } from '@database/central/database-central.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CallModule } from '@modules/call/call.module';
     EmailModule,
     UserModule,
     CallModule,
+    DatabaseCentralModule,
   ],
   controllers: [MonitorController],
   providers: [MonitorService, MonitorVicidialService],

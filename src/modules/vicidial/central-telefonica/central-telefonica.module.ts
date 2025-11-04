@@ -1,19 +1,11 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { CentralTelefonicaController } from './controllers/central-telefonica.controller';
 import { VicidialUserService } from './services/vicidial-user.service';
-import { VicidialUser } from './entities/vicidial-user.entity';
-import { SequelizeModule } from '@nestjs/sequelize';
-import { VicidialCampaign } from './entities/vicidial-campaign.entity';
 import { AudioController } from './audio.controller';
 import { AudioService } from './services/audio.service';
-import { AudioStoreDetails } from './entities/audio-store-details.entity';
-import { VicidialLead } from './entities/vicidial-list.entity';
-import { VicidialLists } from './entities/vicidial-lists.entity';
 import { AloSatController } from './controllers/alo-sat.controller';
 import { AloSatService } from './services/alo-sat.service';
 import { UserModule } from '@modules/user/user.module';
-import { VicidialCallTimes } from './entities/vicidial-call-times.entity';
-import { VicidialCallTimesHolidays } from './entities/vicidial-call-times-holidays.entity';
 import { VicidialCallTimeController } from './controllers/vicidial-call-time.controller';
 import { VicidialCallTimesHolidaysService } from './services/vicidial-call-times-holidays.service';
 import { VicidialCallTimesService } from './services/vicidial-call-times.service';
@@ -27,21 +19,16 @@ import { AudioQueueProcessor } from './audioQueueProcessor';
 import { HttpModule } from '@nestjs/axios';
 import { CampaignModule } from '@modules/campaign/campaign.module';
 import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-assistance.module';
+import { DatabaseCentralModule } from '@database/central/database-central.module';
+import { VicidialUserRepository } from './repositories/vicidial-user.repository';
+import { AudioStoreDetailsRepository } from './repositories/audio-store-details.repository';
+import { VicidialListsRepository } from './repositories/vicidial-lists.repository';
+import { VicidialLeadRepository } from './repositories/vicidial-lead.repository';
+import { VicidialCallTimesHolidaysRepository } from './repositories/vicidial-call-times-holidays.repository';
+import { VicidialCallTimesRepository } from './repositories/vicidial-call-times.repository';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature(
-      [
-        VicidialUser,
-        VicidialCampaign,
-        AudioStoreDetails,
-        VicidialLists,
-        VicidialLead,
-        VicidialCallTimes,
-        VicidialCallTimesHolidays,
-      ],
-      'central',
-    ),
     HttpModule,
     CampaignModule,
     UserModule,
@@ -49,9 +36,10 @@ import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-ass
     forwardRef(() => CallModule),
     forwardRef(() => AmiModule),
     BullModule.registerQueue({
-      name: 'register-details-audio', 
+      name: 'register-details-audio',
     }),
     forwardRef(() => ChannelAssistanceModule),
+    DatabaseCentralModule,
   ],
   controllers: [
     CentralTelefonicaController,
@@ -61,14 +49,20 @@ import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-ass
     VicidialCallTimeHolidayController,
   ],
   providers: [
+    AudioQueueProcessor,
     VicidialUserService,
     AudioService,
     AloSatService,
     VicidialCallTimesHolidaysService,
     VicidialCallTimesService,
     VicidialCampaingRepository,
-    AudioQueueProcessor
+    VicidialUserRepository,
+    AudioStoreDetailsRepository,
+    VicidialListsRepository,
+    VicidialLeadRepository,
+    VicidialCallTimesRepository,
+    VicidialCallTimesHolidaysRepository,
   ],
-  exports: [AloSatService, VicidialCampaingRepository,AudioQueueProcessor],
+  exports: [AloSatService, VicidialCampaingRepository, AudioQueueProcessor],
 })
 export class CentralTelefonicaModule {}

@@ -234,7 +234,7 @@ module.exports = {
           path: '/supervisor/channel-management',
           icon: 'fluent:communication-person-20-regular',
           parent_id: 20,
-          status: true,
+          status: false,
           created_at: new Date(),
           updated_at: new Date(),
         },

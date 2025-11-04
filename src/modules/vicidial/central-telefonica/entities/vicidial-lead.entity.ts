@@ -1,20 +1,19 @@
 import { Table, Column, Model, DataType } from 'sequelize-typescript';
 
-@Table({ 
-  tableName: 'vicidial_list', 
-  timestamps: false 
+@Table({
+  tableName: 'vicidial_list',
+  timestamps: false,
 })
-export class VicidialLead  extends Model {
-
-  @Column({ 
-      field: 'lead_id',
-      type: DataType.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
+export class VicidialLead extends Model {
+  @Column({
+    field: 'lead_id',
+    type: DataType.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
   })
   lead_id: number;
 
-  @Column({ type: DataType.STRING(20), allowNull: true})
+  @Column({ type: DataType.STRING(20), allowNull: true })
   status?: string;
 
   @Column({ type: DataType.STRING(100), allowNull: true })
@@ -28,5 +27,4 @@ export class VicidialLead  extends Model {
 
   @Column({ type: DataType.INTEGER, allowNull: true })
   list_id?: number;
-
 }

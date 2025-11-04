@@ -47,6 +47,10 @@ export class CreateCampaignDto {
   })
   endDate?: Date;
 
+  @ApiProperty({ description: 'tipo de la campaña' })
+  @IsString({ message: v.isString('type') })
+  type?: string;
+
   // @ApiPropertyOptional({ description: 'Hora de inicio de la campaña' })
   // @IsOptional()
   // @IsDate({ message: v.isDate('startTime') })

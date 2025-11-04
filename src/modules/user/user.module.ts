@@ -19,7 +19,18 @@ import { VicidialUserHistoryRepository } from './repositories/vicidial-user-hist
     forwardRef(() => AuthModule),
   ],
   controllers: [UserController],
-  providers: [UserService, UserRepository, VicidialUserRepository, UserGateway, VicidialUserHistoryRepository],
-  exports: [UserRepository, VicidialUserRepository, UserGateway, VicidialUserHistoryRepository],
+  providers: [
+    UserService,
+    UserRepository,
+    VicidialUserRepository,
+    UserGateway,
+    VicidialUserHistoryRepository,
+  ],
+  exports: [
+    UserRepository,
+    VicidialUserRepository,
+    UserGateway,
+    VicidialUserHistoryRepository,
+  ],
 })
 export class UserModule {}

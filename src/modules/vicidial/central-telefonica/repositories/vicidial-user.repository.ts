@@ -1,16 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
+import { VicidialUser } from '../entities/vicidial-user.entity';
 import { CENTRAL_DB } from '@database/central/database-central.service';
 import { ModelCtor, Sequelize } from 'sequelize-typescript';
 
 @Injectable()
-export class VicidialCampaingRepository {
-  private model: ModelCtor<VicidialCampaign> | null = null;
+export class VicidialUserRepository {
+  private model: ModelCtor<VicidialUser> | null = null;
   constructor(@Inject(CENTRAL_DB) private readonly db: Sequelize | null) {
     if (this.db) {
-      this.model = this.db.model(
-        VicidialCampaign,
-      ) as ModelCtor<VicidialCampaign>;
+      this.model = this.db.model(VicidialUser) as ModelCtor<VicidialUser>;
     }
   }
 

@@ -8,7 +8,7 @@ function getUserFromContext() {
 export function addAuditHooks(sequelize: Sequelize) {
   sequelize.addHook('beforeCreate', (instance: any) => {
     const user = getUserFromContext();
-    if (user) {
+    if (user && !user.phoneNumber) {
       if ('createdBy' in instance) instance.createdBy = user.id;
       if ('updatedBy' in instance) instance.updatedBy = user.id;
     }

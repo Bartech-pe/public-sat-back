@@ -17,6 +17,7 @@ import { CentralTelefonicaModule } from '@modules/vicidial/central-telefonica/ce
 import { SaldomaticoModule } from '@modules/api-sat/saldomatico/saldomatico.module';
 import { CallHistory } from './entities/call-history.entity';
 import { CallHistoryRepository } from './repositories/call-history.repository';
+import { DatabaseCentralModule } from '@database/central/database-central.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CallHistoryRepository } from './repositories/call-history.repository';
     forwardRef(() => CentralTelefonicaModule),
     forwardRef(() => AmiModule),
     SaldomaticoModule,
+    DatabaseCentralModule,
   ],
   controllers: [CallController, CallStateController],
   providers: [

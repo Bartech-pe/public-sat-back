@@ -84,7 +84,7 @@ export class ScheduleService {
     const campaniasParaDesactivar = debenEstarInactivos
       .map((h) => h.gestion_campania?.campaniaId)
       .filter((id): id is string => !!id);
-    const vicidial_campanias_Y = await this.campaignModel.getModel().update(
+    const vicidial_campanias_Y = await this.campaignModel.getModel()!.update(
       { active: 'Y' },
       {
         where: {
@@ -93,7 +93,7 @@ export class ScheduleService {
         },
       },
     );
-    const vicidial_campanias_N = await this.campaignModel.getModel().update(
+    const vicidial_campanias_N = await this.campaignModel.getModel()!.update(
       { active: 'N' },
       {
         where: {

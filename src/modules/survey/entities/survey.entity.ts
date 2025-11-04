@@ -73,7 +73,7 @@ export class Survey extends Model<Survey> {
   @Column({
     field: 'user_id',
     type: DataType.INTEGER,
-    allowNull: false,
+    allowNull: true,
     comment: 'ID of the user who submitted the survey',
   })
   userId?: number | null;
@@ -87,24 +87,32 @@ export class Survey extends Model<Survey> {
   status?: boolean;
 
   @ForeignKey(() => User)
-  @Column({ field: 'created_by', allowNull: true })
-  declare createdBy: number;
+  @Column({
+    field: 'created_by',
+    type: DataType.BIGINT,
+    allowNull: true,
+  })
+  declare createdBy: number | null;
 
-  @BelongsTo(() => User, 'createdBy')
+  @BelongsTo(() => User, 'created_by')
   declare createdByUser?: User;
 
   @ForeignKey(() => User)
-  @Column({ field: 'updated_by', allowNull: true })
-  declare updatedBy: number;
+  @Column({
+    field: 'updated_by',
+    type: DataType.BIGINT, 
+    allowNull: true,
+  })
+  declare updatedBy: number | null;
 
-  @BelongsTo(() => User, 'updatedBy')
+  @BelongsTo(() => User, 'updated_by')
   declare updatedByUser?: User;
 
   @ForeignKey(() => User)
   @Column({ field: 'deleted_by', allowNull: true })
   declare deletedBy: number;
 
-  @BelongsTo(() => User, 'deletedBy')
+  @BelongsTo(() => User, 'deleted_by')
   declare deletedByUser?: User;
 
   @CreatedAt

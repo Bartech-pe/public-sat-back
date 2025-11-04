@@ -5,7 +5,7 @@ import { AudioService } from './services/audio.service';
 import { VicidialLists } from './entities/vicidial-lists.entity';
 import { CreateVicidialListDto } from './dto/create-vicidial-lists.dto';
 import { ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { VicidialLead } from './entities/vicidial-list.entity';
+import { VicidialLead } from './entities/vicidial-lead.entity';
 import { AudioStoreDetails } from './entities/audio-store-details.entity';
 
 @Controller('central')

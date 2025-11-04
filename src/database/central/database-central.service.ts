@@ -7,10 +7,20 @@ import {
 import { Sequelize } from 'sequelize-typescript';
 import { centralDBConfig } from 'config/env';
 
+import { VicidialUser } from '@modules/vicidial/central-telefonica/entities/vicidial-user.entity';
+import { VicidialCampaign } from '@modules/vicidial/central-telefonica/entities/vicidial-campaign.entity';
+import { AudioStoreDetails } from '@modules/vicidial/central-telefonica/entities/audio-store-details.entity';
+import { VicidialLead } from '@modules/vicidial/central-telefonica/entities/vicidial-lead.entity';
+import { VicidialLists } from '@modules/vicidial/central-telefonica/entities/vicidial-lists.entity';
+import { VicidialCallTimes } from '@modules/vicidial/central-telefonica/entities/vicidial-call-times.entity';
+import { VicidialCallTimesHolidays } from '@modules/vicidial/central-telefonica/entities/vicidial-call-times-holidays.entity';
+
+export const CENTRAL_DB = 'CENTRALDB';
+
 @Injectable()
-export class CentralDatabaseService implements OnModuleInit, OnModuleDestroy {
+export class DatabaseCentralService implements OnModuleInit, OnModuleDestroy {
   private sequelize: Sequelize | null = null;
-  private readonly logger = new Logger(CentralDatabaseService.name);
+  private readonly logger = new Logger(DatabaseCentralService.name);
   private reconnectInterval: NodeJS.Timeout | null = null;
   private connected = false;
 
@@ -37,39 +47,29 @@ export class CentralDatabaseService implements OnModuleInit, OnModuleDestroy {
       });
 
       await sequelize.authenticate();
+      sequelize.addModels([
+        VicidialUser,
+        VicidialCampaign,
+        AudioStoreDetails,
+        VicidialLists,
+        VicidialLead,
+        VicidialCallTimes,
+        VicidialCallTimesHolidays,
+      ]);
       this.sequelize = sequelize;
-      if (!this.connected) {
-        this.connected = true;
-        this.logger.log('Conectado a la DB Central');
-      }
-    } catch (error) {
-      if (this.connected) {
-        this.logger.warn('Conexión con DB Central perdida');
-      } else {
-        this.logger.warn('DB Central no disponible, intentando reconectar...');
-      }
+      this.connected = true;
+      this.logger.log('Conectado a la DB Central');
+    } catch {
       this.connected = false;
       this.sequelize = null;
+      this.logger.warn('DB Central no disponible, reintentando...');
     }
   }
 
   private startReconnectWatcher() {
-    const intervalMs = 15000; // intenta cada 15 segundos
+    const intervalMs = 15000;
     this.reconnectInterval = setInterval(async () => {
-      if (!this.connected) {
-        await this.connect();
-      } else {
-        // Verificar si sigue viva la conexión
-        try {
-          await this.sequelize?.authenticate();
-        } catch {
-          this.logger.warn(
-            '💥 Conexión con DB Central falló, marcando como desconectada.',
-          );
-          this.connected = false;
-          this.sequelize = null;
-        }
-      }
+      if (!this.connected) await this.connect();
     }, intervalMs);
   }
 

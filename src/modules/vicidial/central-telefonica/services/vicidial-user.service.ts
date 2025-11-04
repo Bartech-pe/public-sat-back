@@ -1,39 +1,49 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { VicidialUser } from '../entities/vicidial-user.entity';
-import { InjectConnection, InjectModel } from '@nestjs/sequelize';
+import { InjectModel } from '@nestjs/sequelize';
 import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
 import { CreateVicidialCampaignDto } from '../dto/create-vicidial-campaing.dto';
 import { UpdateVicidialCampaignDto } from '../dto/update-vicidial-campaing.dto';
 import { Sequelize } from 'sequelize';
 import * as cron from 'node-cron';
+import { CENTRAL_DB } from '@database/central/database-central.service';
+import { VicidialCampaingRepository } from '../repositories/vicidial-campaing.repository';
+import { VicidialUserRepository } from '../repositories/vicidial-user.repository';
 @Injectable()
 export class VicidialUserService {
   constructor(
-    @InjectModel(VicidialUser, 'central')
-    private readonly model: typeof VicidialUser,
-    @InjectModel(VicidialCampaign, 'central')
-    private readonly campaignModel: typeof VicidialCampaign,
-   @InjectConnection('central') private readonly centralConnection: Sequelize, 
-   
+    @Inject(CENTRAL_DB) private readonly db: Sequelize | null,
+    private readonly campaignModel: VicidialCampaingRepository,
+    private readonly userModel: VicidialUserRepository,
   ) {
     this.scheduleCampaignControl();
   }
 
   findAll(): Promise<VicidialUser[]> {
-    return this.model.findAll();
+    return this.userModel.getModel()!.findAll();
   }
 
   getCampaignAll(): Promise<VicidialCampaign[]> {
-    return this.campaignModel.findAll({ where: { dial_method: 'RATIO' }});
+    return this.campaignModel
+      .getModel()!
+      .findAll({ where: { dial_method: 'RATIO' } });
   }
 
   async getByIdCampain(campaignId: string) {
-    const campaign = await this.campaignModel.findOne({
+    const campaign = await this.campaignModel.getModel()!.findOne({
       where: { campaign_id: campaignId },
     });
 
     if (!campaign) {
-      throw new NotFoundException(`La campaña con ID ${campaignId} no fue encontrada`);
+      throw new NotFoundException(
+        `La campaña con ID ${campaignId} no fue encontrada`,
+      );
     }
 
     return campaign;
@@ -42,33 +52,39 @@ export class VicidialUserService {
   async createCampaign(body: CreateVicidialCampaignDto): Promise<{
     status: 'created' | 'exists';
     data: VicidialCampaign;
-  }>{
-      const { campaign_id, campaign_name } = body;
+  }> {
+    const { campaign_id, campaign_name } = body;
 
-      const existing = await this.campaignModel.findOne({ where: { campaign_id } });
+    const existing = await this.campaignModel.getModel()!.findOne({
+      where: { campaign_id },
+    });
 
-      if (existing) {
-        return {
-          status: 'exists',
-          data: existing,
-        };
-      }
-
-      const created = await this.campaignModel.create({
-        campaign_id,
-        campaign_name,
-      });
-
+    if (existing) {
       return {
-        status: 'created',
-        data: created,
+        status: 'exists',
+        data: existing,
       };
+    }
+
+    const created = await this.campaignModel.getModel()!.create({
+      campaign_id,
+      campaign_name,
+    });
+
+    return {
+      status: 'created',
+      data: created,
+    };
   }
 
-  async updateCampaign(campaign_id: string, dto: UpdateVicidialCampaignDto): 
-  Promise< | { status: 'updated'; data: VicidialCampaign } | { status: 'not_found' }> {
+  async updateCampaign(
+    campaign_id: string,
+    dto: UpdateVicidialCampaignDto,
+  ): Promise<
+    { status: 'updated'; data: VicidialCampaign } | { status: 'not_found' }
+  > {
     try {
-      const exist = await this.campaignModel.findOne({
+      const exist = await this.campaignModel.getModel()!.findOne({
         where: { campaign_id },
       });
 
@@ -90,32 +106,40 @@ export class VicidialUserService {
     }
   }
 
-  async deleteCampaign(campaign_id: string): Promise< | { status: 'deleted'; data: VicidialCampaign }| { status: 'not_found' }> {
-      try {
-        const campaign = await this.campaignModel.findOne({
-          where: { campaign_id },
-        });
+  async deleteCampaign(
+    campaign_id: string,
+  ): Promise<
+    { status: 'deleted'; data: VicidialCampaign } | { status: 'not_found' }
+  > {
+    try {
+      const campaign = await this.campaignModel.getModel()!.findOne({
+        where: { campaign_id },
+      });
 
-        if (!campaign) {
-          return { status: 'not_found' };
-        }
-
-        await campaign.destroy();
-
-        return {
-          status: 'deleted',
-          data: campaign,
-        };
-
-      } catch (error) {
-        throw new InternalServerErrorException(
-          error,
-          'Error interno del servidor',
-        );
+      if (!campaign) {
+        return { status: 'not_found' };
       }
+
+      await campaign.destroy();
+
+      return {
+        status: 'deleted',
+        data: campaign,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
   }
 
   async getProgreso(campaign_id: string) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const sql = `SELECT
                   (SELECT COUNT(*) FROM vicidial_list WHERE list_id IN (
                     SELECT list_id FROM vicidial_lists WHERE campaign_id = ?
@@ -126,13 +150,11 @@ export class VicidialUserService {
                   )) AS llamadas_pendientes,
                   (SELECT COUNT(*) FROM vicidial_live_agents WHERE campaign_id = ?) AS agentes_conectados`;
 
- 
     try {
-      const [results] = await this.centralConnection.query(sql, {
+      const [results] = await this.db.query(sql, {
         replacements: [campaign_id, campaign_id, campaign_id, campaign_id],
         type: 'SELECT',
       });
-
 
       return results;
     } catch (error) {
@@ -142,6 +164,11 @@ export class VicidialUserService {
   }
 
   async getListProgress(listId: number) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const sql_datos = `SELECT 
             vl.list_id,
             vl.list_name,
@@ -167,14 +194,14 @@ export class VicidialUserService {
         WHERE vl2.list_id = ?
         GROUP BY vl2.status, vs.status_name
       `;
- 
-      try {
-      const [results] = await this.centralConnection.query(sql_datos, {
+
+    try {
+      const [results] = await this.db.query(sql_datos, {
         replacements: [listId],
         type: 'SELECT',
       });
 
-      const detalle = await this.centralConnection.query(sqlDetalle, {
+      const detalle = await this.db.query(sqlDetalle, {
         replacements: [listId],
         type: 'SELECT',
       });
@@ -189,15 +216,17 @@ export class VicidialUserService {
         resumen: results,
         detalle: detalleFormateado,
       };
-
     } catch (error) {
-      
       throw new InternalServerErrorException('Error al obtener el progreso');
-    }    
-
+    }
   }
 
   async getVicidialRemoteAgents(campaign_id: any) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const sql = `
       SELECT 
         remote_agent_id, 
@@ -207,7 +236,7 @@ export class VicidialUserService {
     `;
 
     try {
-      const [results] = await this.centralConnection.query(sql, {
+      const [results] = await this.db.query(sql, {
         replacements: [campaign_id],
         type: 'SELECT',
       });
@@ -215,11 +244,18 @@ export class VicidialUserService {
       return results;
     } catch (error) {
       console.error('Error al obtener los agentes remotos:', error);
-      throw new InternalServerErrorException('Error al obtener los agentes remotos de Vicidial');
+      throw new InternalServerErrorException(
+        'Error al obtener los agentes remotos de Vicidial',
+      );
     }
   }
 
-  async  scheduleCampaignControl() {
+  async scheduleCampaignControl() {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     // se ejecuta cada 5 minutos
     cron.schedule('*/1 * * * *', async () => {
       const now = new Date();
@@ -238,27 +274,26 @@ export class VicidialUserService {
 
       // const result = listCampaignRatio.map(c => c.toJSON());
 
-      const listCampaignRatio2 = await this.campaignModel.findAll({
+      const listCampaignRatio2 = await this.campaignModel.getModel()!.findAll({
         where: { dial_method: 'RATIO' },
-        attributes: ['campaign_id']
+        attributes: ['campaign_id'],
       });
 
-      const CAMPAIGNS = listCampaignRatio2.map(c => c.getDataValue('campaign_id'));
+      const CAMPAIGNS = listCampaignRatio2.map((c) =>
+        c.getDataValue('campaign_id'),
+      );
 
-      await this.centralConnection.query(
-          `UPDATE vicidial_campaigns 
+      await this.db!.query(
+        `UPDATE vicidial_campaigns 
            SET active = :active 
            WHERE campaign_id IN (:campaigns)`,
-          { replacements: { active, campaigns: CAMPAIGNS } },
-        );
+        { replacements: { active, campaigns: CAMPAIGNS } },
+      );
       // console.log(CAMPAIGNS);
 
       // console.log("===========================================")
 
-
       //  console.log("=========================================== ",CAMPAIGNS)
-    })
+    });
   }
-
-
 }

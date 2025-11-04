@@ -36,6 +36,11 @@ module.exports = {
         allowNull: false,
         comment: 'Estado actual de la campaña (relación con CampaignState)',
       },
+      type: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'tipo de campaña si es multiple(M) o individual(I)',
+      },
       start_date: {
         type: Sequelize.DATE,
         allowNull: true,
