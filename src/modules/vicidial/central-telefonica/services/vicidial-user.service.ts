@@ -137,7 +137,7 @@ export class VicidialUserService {
   async getProgreso(campaign_id: string) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const sql = `SELECT
@@ -166,7 +166,7 @@ export class VicidialUserService {
   async getListProgress(listId: number) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const sql_datos = `SELECT 
@@ -224,7 +224,7 @@ export class VicidialUserService {
   async getVicidialRemoteAgents(campaign_id: any) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const sql = `
@@ -251,13 +251,13 @@ export class VicidialUserService {
   }
 
   async scheduleCampaignControl() {
-    if (!this.db) {
-      throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
-      );
-    }
     // se ejecuta cada 5 minutos
     cron.schedule('*/1 * * * *', async () => {
+      if (!this.db) {
+        throw new InternalServerErrorException(
+          'No se pudo otener la conexión con la base de datos de la central telefónica.',
+        );
+      }
       const now = new Date();
       const day = now.getDay(); // 0=Domingo, 1=Lunes,...,6=Sábado
       const hour = now.getHours();

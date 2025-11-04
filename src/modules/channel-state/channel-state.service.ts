@@ -11,7 +11,9 @@ import { UpdateChannelStateDto } from './dto/update-channel-state.dto';
 import { User } from '@modules/user/entities/user.entity';
 import {
   ChannelMultichannelCategory,
+  chatSatAvailableStateId,
   emailCategoryId,
+  wspAvailableStateId,
 } from '@common/constants/channel.constant';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { BaseResponseDto } from '@common/dto/base-response.dto';
@@ -229,6 +231,50 @@ export class ChannelStateService {
       return this.repository.findAll({
         where: {
           categoryId: emailCategoryId,
+        },
+        order: [['id', 'DESC']],
+      });
+    } catch (error) {
+      console.log('error', error);
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
+  }
+
+  /**
+   * Retrieves a paginated list of channel status status.
+   * @param user Current authenticated user
+   * @returns PaginatedResponse containing channel status status
+   */
+  async findAllChannelStateChatsat(user: User): Promise<ChannelState[]> {
+    try {
+      return this.repository.findAll({
+        where: {
+          categoryId: chatSatAvailableStateId,
+        },
+        order: [['id', 'DESC']],
+      });
+    } catch (error) {
+      console.log('error', error);
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
+  }
+
+  /**
+   * Retrieves a paginated list of channel status status.
+   * @param user Current authenticated user
+   * @returns PaginatedResponse containing channel status status
+   */
+  async findAllChannelStateWhatsapp(user: User): Promise<ChannelState[]> {
+    try {
+      return this.repository.findAll({
+        where: {
+          categoryId: wspAvailableStateId,
         },
         order: [['id', 'DESC']],
       });

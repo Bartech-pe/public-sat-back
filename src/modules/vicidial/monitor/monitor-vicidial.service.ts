@@ -24,7 +24,7 @@ export class MonitorVicidialService {
   async vicidialReport() {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const agentsQuery = `
@@ -57,7 +57,7 @@ export class MonitorVicidialService {
   async vicidialCount(agent: string) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const query = `
@@ -75,7 +75,7 @@ export class MonitorVicidialService {
   async vicidialTable() {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const users = await this.userVicidialRepository.findAll({
@@ -345,7 +345,7 @@ export class MonitorVicidialService {
   async getCallsCount() {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const query = `

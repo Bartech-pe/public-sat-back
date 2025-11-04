@@ -63,7 +63,7 @@ export class EmailCredentialService {
     if (!credential)
       throw new InternalServerErrorException('no existe la credencial');
     if (!credential.toJSON().refreshToken)
-      throw new InternalServerErrorException('no existe el refresh token');
+      throw new InternalServerErrorException('Watch: No existe el refresh token');
     const watch = await this.emailChannelService.setWatch(
       credential.toJSON().refreshToken,
       credential.toJSON().clientTopic,
@@ -109,7 +109,9 @@ export class EmailCredentialService {
       );
     } catch (error) {
       console.log(error);
-      throw new InternalServerErrorException('no existe el refresh token');
+      throw new InternalServerErrorException(
+        `No existe el refresh token ${error.message}`,
+      );
     }
   }
 

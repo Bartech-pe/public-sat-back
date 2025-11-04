@@ -64,6 +64,28 @@ export class ChannelStateController {
    * @param query Pagination query parameters (limit, offset, filters)
    * @returns PaginatedResponse containing channel status
    */
+  @Put('channelStateChatsat')
+  findAllChannelStateChatsat(@CurrentUser() user: User): Promise<ChannelState[]> {
+    return this.service.findAllChannelStateChatsat(user);
+  }
+
+  /**
+   * Retrieves a paginated list of channel status.
+   * @param user Current authenticated user
+   * @param query Pagination query parameters (limit, offset, filters)
+   * @returns PaginatedResponse containing channel status
+   */
+  @Put('channelStateWhatsapp')
+  findAllChannelStateWhatsapp(@CurrentUser() user: User): Promise<ChannelState[]> {
+    return this.service.findAllChannelStateWhatsapp(user);
+  }
+
+  /**
+   * Retrieves a paginated list of channel status.
+   * @param user Current authenticated user
+   * @param query Pagination query parameters (limit, offset, filters)
+   * @returns PaginatedResponse containing channel status
+   */
 
   @Get(':channel/statuses')
   async getUserStatusesByChannel(

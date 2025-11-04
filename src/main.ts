@@ -39,16 +39,15 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // CORS
-  const FRONTEND_ORIGINS = [
-    envConfig.crmUrl,
-    'https://c2cb72ss-4200.brs.devtunnels.ms',
-  ];
+  const FRONTEND_ORIGINS = [envConfig.crmUrl];
   const META_BASE = metabaseConfig.url;
   const API_AUDIOS = audiobaseConfig.url;
   const CHANNEL_CONECTOR = channelConnectorConfig.baseUrl;
 
+  const ORIGINS = [...FRONTEND_ORIGINS, API_AUDIOS];
+
   app.enableCors({
-    origin: FRONTEND_ORIGINS,
+    origin: ORIGINS,
     methods: 'GET,POST,PATCH,PUT,DELETE',
     allowedHeaders: 'Content-Type, Authorization',
     credentials: true,
@@ -78,21 +77,7 @@ async function bootstrap() {
             'https://unpkg.com',
             'https://accounts.google.com',
           ],
-          'img-src': [
-            "'self'",
-            'data:',
-            'blob:',
-            'https://i.pravatar.cc',
-            'https://api.iconify.design',
-            'https://api.simplesvg.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-            'https://fonts.gstatic.com',
-            'https://www.sat.gob.pe',
-            'https://marketplace.canva.com',
-            'https://cdn2.hubspot.net',
-            'https://uploads.chat',
-          ],
+          'img-src': ["'self'", 'data:', 'blob:', 'cid:', 'https:'],
           'font-src': [
             "'self'",
             'data:',
@@ -118,6 +103,7 @@ async function bootstrap() {
           'object-src': ["'none'"],
           'frame-ancestors': ["'none'"],
           'base-uri': ["'self'"],
+          'upgrade-insecure-requests': [],
           'media-src': [
             "'self'",
             'blob:',

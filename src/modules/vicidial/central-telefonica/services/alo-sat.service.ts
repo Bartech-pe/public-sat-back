@@ -45,7 +45,7 @@ export class AloSatService {
   ): Promise<string | undefined> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const [agentData]: any = await this.db.query(
@@ -78,7 +78,7 @@ export class AloSatService {
   async getAgent(userId: number): Promise<UserAgent> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const userVici = await this.vicidialUserRepository.findOne({
@@ -116,7 +116,7 @@ export class AloSatService {
   async findUserGroups(): Promise<{ userGroup: string; groupName: string }[]> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const response: any[] = await this.db.query(
@@ -137,7 +137,7 @@ export class AloSatService {
   async findAllCampaigns(userId: number): Promise<VicidialCampaign[]> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     /* Obtenemos las credenciales del agente a partir del id del usuario */
@@ -187,7 +187,7 @@ export class AloSatService {
   ): Promise<{ groupId: string; groupName: string }[]> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const response: any[] = await this.db.query(
@@ -234,7 +234,7 @@ export class AloSatService {
   ): Promise<{ statusId: string; statusName: string; campaignId: string }[]> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const defaultStates: any[] = await this.db.query(
@@ -284,7 +284,7 @@ export class AloSatService {
   ): Promise<{ pauseCode: string; pauseCodeName: string }[]> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const response: any[] = campaignId
@@ -323,7 +323,7 @@ export class AloSatService {
   > {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const [response]: {
@@ -364,7 +364,7 @@ export class AloSatService {
   }> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     // 1. Obtener credenciales del agente
@@ -419,7 +419,7 @@ export class AloSatService {
   async agentRelogin(userId: number): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     // 1. Obtener credenciales del agente
@@ -472,7 +472,7 @@ export class AloSatService {
   async onChangeIngroups(userId) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     // 1. Obtener credenciales del agente
@@ -499,7 +499,7 @@ export class AloSatService {
   async agentLogout(userId: number) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     /* Obtenemos las credenciales del agente a partir del id del usuario */
@@ -558,7 +558,7 @@ export class AloSatService {
   async pauseAgent(userId: number, pauseCode?: string): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const { agentUser, userPass, phoneLogin } = await this.getAgent(userId);
@@ -619,7 +619,7 @@ export class AloSatService {
   async resumeAgent(userId: number): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     // 1️⃣ Obtenemos las credenciales del agente
@@ -675,7 +675,7 @@ export class AloSatService {
   > {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     /* Obtenemos las credenciales del agente a partir del id del usuario */
@@ -755,7 +755,7 @@ export class AloSatService {
   async getCallInfo(userId: number) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const { agentUser, campaignId } = await this.getAgent(userId);
@@ -794,7 +794,7 @@ export class AloSatService {
   async endCall(userId: number): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     /* Obtenemos las credenciales del agente a partir del id del usuario */
@@ -894,7 +894,7 @@ export class AloSatService {
   ) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const transaction = await this.db.transaction();
@@ -1028,7 +1028,7 @@ export class AloSatService {
   async transferCall(userId: number, userIdTransfer: number): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const { agentUser, userPass, phoneLogin, campaignId } =
@@ -1107,7 +1107,7 @@ export class AloSatService {
   async parkCall(userId: number, putOn: boolean): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     /* Obtenemos las credenciales del agente a partir del id del usuario */
@@ -1169,7 +1169,7 @@ export class AloSatService {
   async transferSurvey(userId: number, deal: string): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     /* Obtenemos las credenciales del agente a partir del id del usuario */
@@ -1236,7 +1236,7 @@ export class AloSatService {
   async getFinalStatusByLeadId(leadId: string): Promise<string | undefined> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const [result]: any = await this.db.query(
@@ -1262,7 +1262,7 @@ export class AloSatService {
   ): Promise<any> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const { agentUser, userPass, phoneLogin, campaignId, inboundGroups } =

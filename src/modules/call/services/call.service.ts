@@ -51,7 +51,7 @@ export class CallService {
   ): Promise<PaginatedResponse<CallHistory & { callSateName: string }>> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
 
@@ -82,7 +82,7 @@ export class CallService {
   ): Promise<PaginatedResponse<CallItemNew>> {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
 
@@ -384,7 +384,7 @@ export class CallService {
   async getCallsCountersFromVicidial(q?: Record<string, any>) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const userIds = q?.userIds;
@@ -540,7 +540,7 @@ export class CallService {
   async getCallsCounterByNow(username?: string) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
 
@@ -700,7 +700,7 @@ export class CallService {
   async findByCategories() {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
 
@@ -800,7 +800,7 @@ export class CallService {
   async GetAdvisorsInfo() {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     const getAdvisors = await this.vicidialUserRepository.findAll({
@@ -853,7 +853,7 @@ export class CallService {
   async getAdvisorByPhoneLogin(phoneLogin: string) {
     if (!this.db) {
       throw new InternalServerErrorException(
-        'No su pudo otener la conexión con la base de datos de la central telefónica.',
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
     }
     try {
