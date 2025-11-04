@@ -7,7 +7,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import { ValidationExceptionFilter } from '@common/filters/validation-exception.filter';
 import { join } from 'path';
-import { audiobaseConfig, channelConnectorConfig, envConfig, metabaseConfig } from 'config/env';
+import {
+  audiobaseConfig,
+  channelConnectorConfig,
+  envConfig,
+  metabaseConfig,
+} from 'config/env';
 import * as helmet from 'helmet';
 
 // Winston Logger
@@ -49,7 +54,7 @@ async function bootstrap() {
   app.use(
     helmet({
       contentSecurityPolicy: {
-        useDefaults: true,
+        useDefaults: false,
         directives: {
           'default-src': ["'self'"],
           'script-src': [
@@ -68,7 +73,7 @@ async function bootstrap() {
             'https://fonts.googleapis.com',
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
-            'https://accounts.google.com'
+            'https://accounts.google.com',
           ],
           'img-src': [
             "'self'",
@@ -111,14 +116,13 @@ async function bootstrap() {
           'object-src': ["'none'"],
           'frame-ancestors': ["'none'"],
           'base-uri': ["'self'"],
-          'upgrade-insecure-requests': [],
           'media-src': [
             "'self'",
             'blob:',
             'data:',
             'https://satvcwebcc01.sat.gob.pe',
-            'https://satsttcc01.sat.gob.pe',
             'https://cc-demo.xyzconn.xyz',
+            'https://satsttcc01.sat.gob.pe',
           ],
         },
       },
