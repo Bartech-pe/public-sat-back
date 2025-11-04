@@ -35,7 +35,7 @@ module.exports = {
       },
       user_id: {
         type: Sequelize.BIGINT,
-        allowNull: false,
+        allowNull: true,
         comment: 'ID of the user who submitted the survey',
       },
       status: {

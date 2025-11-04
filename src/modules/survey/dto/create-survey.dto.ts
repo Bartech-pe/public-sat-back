@@ -30,7 +30,7 @@ export class CreateSurveyDto {
   @ApiProperty({ description: 'ID of the user who submitted the survey' })
   @IsInt({ message: v.isInt('userId') })
   @IsNotEmpty({ message: v.isNotEmpty('userId') })
-  userId: number;
+  userId?: number | null;
 
 
 }

@@ -76,7 +76,7 @@ export class Survey extends Model<Survey> {
     allowNull: false,
     comment: 'ID of the user who submitted the survey',
   })
-  userId: number;
+  userId?: number | null;
 
   @Column({
     field: 'status',

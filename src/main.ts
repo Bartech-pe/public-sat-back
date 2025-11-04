@@ -46,17 +46,6 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Helmet con CSP, anti-clickjacking, y políticas adicionales
-  const cspDirectives: Record<string, string[]> = {
-    'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-    'img-src': ["'self'", 'data:', 'https:'],
-    'font-src': ["'self'", 'https://fonts.gstatic.com'],
-    'connect-src': ["'self'", FRONTEND_ORIGINS.join(', ')],
-    'frame-ancestors': ["'none'"],
-  };
-
   app.use(
     helmet({
       contentSecurityPolicy: {
