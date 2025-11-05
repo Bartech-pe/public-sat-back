@@ -22,13 +22,14 @@ export class CreateChannelRoomDto {
   inboxId: number;
 
   @ApiProperty({ description: 'ID del ciudadano' })
-  @IsNotEmpty({ message: v.isNotEmpty('channelCitizenId') })
-  @IsNumber({}, { message: v.isNumber('channelCitizenId') })
-  channelCitizenId: number;
+  @IsNotEmpty({ message: v.isNotEmpty('citizenId') })
+  @IsNumber({}, { message: v.isNumber('citizenId') })
+  citizenId: number;
 
   @ApiProperty({ description: 'ID del agente asignado' })
+  @IsNotEmpty({ message: v.isNotEmpty('userId') })
   @IsNumber({}, { message: v.isNumber('userId') })
-  userId?: number| null;
+  userId?: number;
 
   @ApiProperty({
     description: 'Estado del canal',

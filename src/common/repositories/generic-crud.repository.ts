@@ -1,5 +1,6 @@
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { NotFoundException } from '@nestjs/common';
+import { Op } from 'sequelize';
 import {
   BulkCreateOptions,
   DestroyOptions,
@@ -10,10 +11,6 @@ import {
 } from 'sequelize';
 import { Model, ModelStatic } from 'sequelize-typescript';
 
-/**
- * Generic repository for CRUD operations on Sequelize models.
- * Provides reusable methods to manage entities in an abstract way.
- */
 export class GenericCrudRepository<T extends Model> {
   protected readonly model: ModelStatic<T> & typeof Model;
 
@@ -21,11 +18,6 @@ export class GenericCrudRepository<T extends Model> {
     this.model = model as ModelStatic<T> & typeof Model;
   }
 
-  /**
-   * Retrieves all records matching the given options.
-   * @param options Search options (filters, associations, etc.)
-   * @returns List of found records
-   */
   async findAll(options?: FindOptions<T>): Promise<T[]> {
     const results = await this.model.findAll({
       raw: false,
@@ -36,11 +28,6 @@ export class GenericCrudRepository<T extends Model> {
     return results as T[];
   }
 
-  /**
-   * Retrieves records with pagination and includes the total count.
-   * @param options Search options with `limit` and `offset`
-   * @returns Object containing total, limit, offset, and data
-   */
   async findAndCountAll(
     options?: FindOptions<T>,
   ): Promise<PaginatedResponse<T>> {
@@ -56,28 +43,15 @@ export class GenericCrudRepository<T extends Model> {
     };
   }
 
-  /**
-   * Finds a record by its ID.
-   * @param id Unique identifier of the record
-   * @param options Additional search options
-   * @throws NotFoundException if no record is found
-   * @returns The found record
-   */
   async findById(id: number, options?: FindOptions<T>): Promise<T> {
     const item = await this.model.findOne({
       where: { id } as unknown as WhereOptions<any>,
       ...options,
     });
-    if (!item) throw new NotFoundException(`${this.model.name} not found`);
+    if (!item) throw new NotFoundException(`${this.model.name} no encontrado`);
     return item as T;
   }
 
-  /**
-   * Finds a single record based on conditions.
-   * Allows dynamic scopes and the option to throw if not found.
-   * @param options Search options, including `scopes` and `throwIfNotFound`
-   * @returns The found record or null if not found
-   */
   async findOne(
     options?: FindOptions<T> & { scopes?: string[]; throwIfNotFound?: boolean },
   ): Promise<T | null> {
@@ -87,7 +61,7 @@ export class GenericCrudRepository<T extends Model> {
       ...findOptions
     } = options || {};
 
-    // Apply scopes dynamically if present
+    // Aplica los scopes dinámicamente si están presentes
     const query = scopes.length > 0 ? this.model.scope(...scopes) : this.model;
 
     const item = await query.findOne({
@@ -99,46 +73,11 @@ export class GenericCrudRepository<T extends Model> {
     return item as T | null;
   }
 
-  /**
-   * Creates a new record in the database.
-   * @param dto Data to create the record
-   * @param options Additional creation options
-   * @returns The created record
-   */
   async create(dto: Partial<T>, options?: any): Promise<T> {
     const item = await this.model.create(dto, options);
     return item as T;
   }
 
-  /**
-   * Finds a record based on conditions, or creates it if not found.
-   * @param where Condition to search the record
-   * @param defaults Default values to create if not found
-   * @param options Additional Sequelize options
-   * @returns The found or newly created record
-   */
-  async findOrCreate(
-    where: WhereOptions<any>,
-    defaults: Partial<T> = {},
-    options?: any,
-  ): Promise<T> {
-    const [item] = await this.model.findOrCreate({
-      ...options,
-      where,
-      defaults: defaults as unknown as T,
-    });
-
-    return item as T;
-  }
-
-  /**
-   * Creates multiple records in bulk.
-   * If `restoreOpts` is provided, previously deleted records are restored first.
-   * @param dtos List of data to insert
-   * @param options Additional creation options
-   * @param restoreOpts Options for restoring deleted records
-   * @returns List of created records
-   */
   async bulkCreate(
     dtos: Partial<T>[],
     options?: BulkCreateOptions<any>,
@@ -157,12 +96,6 @@ export class GenericCrudRepository<T extends Model> {
     return items as T[];
   }
 
-  /**
-   * Updates a record by its ID.
-   * @param id Identifier of the record to update
-   * @param dto Data to update
-   * @returns Number of affected rows and the updated record
-   */
   async update(
     id: number,
     dto: Partial<T>,
@@ -177,43 +110,33 @@ export class GenericCrudRepository<T extends Model> {
     return [count, [row] as T[]];
   }
 
-  /**
-   * Deletes a record by its ID (soft-delete if enabled).
-   * @param id Identifier of the record
-   */
   async delete(id: number): Promise<void> {
     await this.model.destroy({ where: { id } as unknown as WhereOptions<any> });
   }
 
-  /**
-   * Deletes multiple records based on conditions.
-   * @param options Deletion options
-   */
   async bulkDestroy(options?: DestroyOptions<T>): Promise<void> {
     await this.model.destroy(options);
   }
 
-  /**
-   * Restores a previously deleted record by its ID.
-   * @param id Identifier of the record
-   */
   async restore(id: number): Promise<void> {
     await this.model.restore({ where: { id } as unknown as WhereOptions<any> });
   }
 
-  /**
-   * Restores multiple deleted records based on conditions.
-   * @param options Restore options
-   */
   async bulkRestore(options: RestoreOptions<any>): Promise<void> {
     await this.model.restore(options);
   }
 
-  /**
-   * Coun records  based on conditions.
-   * @param options options Search options (filters, associations, etc.)
-   */
-  async count(options: FindOptions<T>): Promise<number> {
-    return await this.model.count(options);
+  async restoreSoftDeleted(idUser: number, inboxIds: number[]) {
+    return (this.model as any).update(
+      { deletedAt: null },
+      {
+        where: {
+          idUser: idUser,
+          idInbox: { [Op.in]: inboxIds },
+          deletedAt: { [Op.ne]: null }
+        },
+        paranoid: false
+      }
+    );
   }
 }

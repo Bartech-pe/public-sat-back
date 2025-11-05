@@ -35,7 +35,7 @@ export interface OutgoingPayload {
   lastMessageId?: string;
   assistanceId?: number;
   channelRoomId?: number;
-  userId?: number | null;
+  userId?: number;
   citizenId?: number;
   customMessage?: CustomMessage;
   credentials?: MessagingCredentials | null;

@@ -28,6 +28,9 @@ export class CreateSurveyDto {
   rating: number;
 
   @ApiProperty({ description: 'ID of the user who submitted the survey' })
-  @IsOptional()
-  userId?: number | null;
+  @IsInt({ message: v.isInt('userId') })
+  @IsNotEmpty({ message: v.isNotEmpty('userId') })
+  userId: number;
+
+
 }

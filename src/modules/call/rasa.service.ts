@@ -15,7 +15,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import e from 'express';
 interface RasaMessageResponse {
   text: string;
-  recipient_id: number;
+  recipient_id: string;
 }
 @Injectable()
 export class RasaService {

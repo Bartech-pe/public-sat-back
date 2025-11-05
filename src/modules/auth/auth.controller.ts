@@ -13,21 +13,15 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
 import { LoginDTO } from './dto/login.dto';
+import { RoleService } from '@modules/role/role.service';
 import { VerifyScreenDTO } from './dto/verify-screen.dto';
 import { Public } from '@common/decorators/public.decorator';
-import { ScreenService } from '@modules/screen/screen.service';
-import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
-import { AloSatService } from '@modules/vicidial/central-telefonica/services/alo-sat.service';
-import { ChannelPhoneState } from '@common/enums/status-call.enum';
-import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private service: AuthService,
-    private screenService: ScreenService,
-    private readonly vicidialUserRepository: VicidialUserRepository,
-    private readonly aloSatService: AloSatService,
+    private roleService: RoleService,
   ) {}
 
   @UseGuards(AuthGuard('local'))
@@ -51,41 +45,13 @@ export class AuthController {
   @ApiBearerAuth()
   @Post('verify-access')
   verifyAccess(@CurrentUser() user: User, @Body() dto: VerifyScreenDTO) {
-    return this.screenService.getScreenByIdAndScreen(
-      user.roleId,
-      user.officeId,
-      dto?.url,
-    );
+    return this.roleService.getScreenByIdAndScreen(user.idRole, dto?.url);
   }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get('screens')
-  screensByRole(@CurrentUser() user: User): Promise<any[]> {
-    return this.screenService.getScreensByRoleAndOffice(
-      user.roleId,
-      user.officeId,
-    );
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @Get('logout')
-  async logout(@CurrentUser() user: User) {
-    try {
-      const res = await this.aloSatService.agentLogout(user.id);
-      const vicidialUser = await this.vicidialUserRepository.findOne({
-        where: { userId: user.id },
-      });
-      await vicidialUser?.update({
-        channelStateId: ChannelPhoneState.OFFLINE,
-        campaignId: null,
-        pauseCode: null,
-        inboundGroups: null,
-        sessionName: null,
-        confExten: null,
-      } as VicidialUser);
-      return res;
-    } catch (error) {}
+  screensByRole(@CurrentUser() user: User) {
+    return this.roleService.getScreensByRole(user.idRole);
   }
 }

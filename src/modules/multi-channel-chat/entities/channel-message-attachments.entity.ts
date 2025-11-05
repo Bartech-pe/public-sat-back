@@ -6,23 +6,42 @@ import {
   Model,
   Table,
   DefaultScope,
-  CreatedAt,
-  UpdatedAt,
-  DeletedAt,
 } from 'sequelize-typescript';
+import { Optional } from 'sequelize';
 import { ChannelMessage } from './channel-message.entity';
-import { User } from '@modules/user/entities/user.entity';
+
+export interface ChannelMessageAttachmentAttributes {
+  id: number;
+  channelMessageId: number;
+  content: string;
+  name: string;
+  extension: string;
+  size: number;
+  type: 'image' | 'file';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type ChannelMessageAttachmentCreationAttributes = Optional<
+  ChannelMessageAttachmentAttributes,
+  'id' | 'createdAt' | 'updatedAt'
+>;
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deleted_at', 'deleted_by'] },
+  attributes: { exclude: ['deletedAt'] },
 }))
 @Table({
-  tableName: 'channel_message_attachments',
+  tableName: 'channel_message_attachments', // 👈 en BD con snake_case
   timestamps: true,
   paranoid: true,
-  indexes: [{ fields: ['channel_message_id'] }],
+  indexes: [
+    { fields: ['channel_message_id'] }
+  ],
 })
-export class ChannelMessageAttachment extends Model<ChannelMessageAttachment> {
+export class ChannelMessageAttachment extends Model<
+  ChannelMessageAttachmentAttributes,
+  ChannelMessageAttachmentCreationAttributes
+> {
   @Column({
     field: 'id',
     type: DataType.INTEGER,
@@ -33,11 +52,12 @@ export class ChannelMessageAttachment extends Model<ChannelMessageAttachment> {
 
   @ForeignKey(() => ChannelMessage)
   @Column({
-    field: 'channel_message_id', 
+    field: 'channel_message_id', // 👈 en BD con snake_case
     type: DataType.INTEGER,
     allowNull: false,
   })
   channelMessageId: number;
+
 
   @Column({
     field: 'name',
@@ -46,6 +66,7 @@ export class ChannelMessageAttachment extends Model<ChannelMessageAttachment> {
     comment: 'Citizen name',
   })
   name?: string;
+
 
   @Column({
     field: 'content',
@@ -77,41 +98,21 @@ export class ChannelMessageAttachment extends Model<ChannelMessageAttachment> {
     allowNull: true,
     comment: 'File type: image or generic file',
   })
-  type: 'file' | 'image';
+  type?: 'file' | 'image';
+
+  @Column({
+    field: 'created_at',
+    type: DataType.DATE,
+    defaultValue: DataType.NOW,
+  })
+  declare createdAt: Date;
+
+  @Column({
+    field: 'updated_at',
+    type: DataType.DATE,
+  })
+  declare updatedAt: Date;
 
   @BelongsTo(() => ChannelMessage)
   channelMessage: ChannelMessage;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'created_by', allowNull: true })
-  declare createdBy: number;
-
-  @BelongsTo(() => User, 'created_by')
-  declare createdByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'updated_by', allowNull: true })
-  declare updatedBy: number;
-
-  @BelongsTo(() => User, 'updated_by')
-  declare updatedByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'deleted_by', allowNull: true })
-  declare deletedBy: number;
-
-  @BelongsTo(() => User, 'deleted_by')
-  declare deletedByUser?: User;
-
-  @CreatedAt
-  @Column({ field: 'created_at', allowNull: true })
-  declare createdAt: Date;
-
-  @UpdatedAt
-  @Column({ field: 'updated_at', allowNull: true })
-  declare updatedAt: Date;
-
-  @DeletedAt
-  @Column({ field: 'deleted_at', allowNull: true })
-  declare deletedAt: Date;
 }

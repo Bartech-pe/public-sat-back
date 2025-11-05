@@ -9,30 +9,18 @@ module.exports = {
         {
           id: 1,
           name: 'Administrador',
-          display_name: 'Administrador',
+          displayName: 'Administrador',
           email: 'admin@mail.com',
           password:
             '$2b$10$Sn6yEoWy.h7OqtwaNMYVLOCwrsK5.wtHWm3ozBXNIx6G/6n9Mth5a',
-          avatar_url: null,
-          role_id: 1,
-          verified_email: false,
+          avatarUrl:
+            'https://png.pngtree.com/png-vector/20220709/ourmid/pngtree-businessman-user-avatar-wearing-suit-with-red-tie-png-image_5809521.png',
+          idRole: 1,
+          verified: false,
           status: true,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-        {
-          id: 2,
-          name: 'Rasa Bot',
-          display_name: 'Rasa Bot',
-          email: 'rasa-bot@mail.com',
-          password:
-            '$2b$10$HhL6pyJunyPeGS4NIIp3HeXaKOiILZ54PugQJqO0ZRdMVax6ag/9.',
-          avatar_url: null,
-          role_id: 1,
-          verified_email: false,
-          status: true,
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          deletedAt: null,
         },
       ],
       {},
@@ -40,6 +28,11 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    queryInterface.bulkDelete('users', null, {});
+    /**
+     * Add commands to revert seed here.
+     *
+     * Example:
+     * await queryInterface.bulkDelete('People', null, {});
+     */
   },
 };

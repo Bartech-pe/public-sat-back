@@ -21,7 +21,7 @@ export class CreateChatRoomMultipleDto {
     always: true,
   })
   @IsNotEmpty()
-  userIds: number[];
+  idUsers: number[];
 
   @ApiPropertyOptional({ description: 'Indica si es un grupo', default: true })
   @IsOptional()

@@ -1,8 +1,6 @@
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InboxRepository } from './repositories/inbox.repository';
@@ -14,41 +12,29 @@ import { InboxUser } from './entities/inbox-user.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { InboxUserRepository } from './repositories/inbox-user.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { col, fn, Op, where } from 'sequelize';
+import { Op, where } from 'sequelize';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { InboxCredentialRepository } from './repositories/inbox-credential.repository';
 import { CreateInboxCredentialDto } from './dto/create-inbox-credential.dto';
+import { ChannelRoomRepository } from '@modules/multi-channel-chat/repositories/channel-room.repository';
 import { InjectModel } from '@nestjs/sequelize';
+import { ChannelRoom } from '@modules/multi-channel-chat/entities/channel-room.entity';
 import { InvalidateInboxCredentialDto } from './dto/invalidate-inbox-credentials.dto';
-import { InboxCredential } from './entities/inbox-credential.entity';
-import { VicidialCredential } from '@modules/vicidial/entities/vicidial-credentials.entity';
-import { EmailStateEnum } from '@modules/email/enum/email-state.enum';
-import { ChannelStateEnum } from '@common/enums/channel-state.enum';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
-import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
-import { CategoryChannelRepository } from '@modules/channel/repositories/category-channel.repository';
-import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
-import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
-import { BaseResponseDto } from '@common/dto/base-response.dto';
-import { ChannelMultichannelCategory, chatSatAvailableStateId, wspAvailableStateId } from '@common/constants/channel.constant';
-import { AvailableEnumToCategory, UnavailableEnumToCategory } from '@common/enums/channel.enum';
-import { x } from 'joi';
-import { ChannelType } from '@common/interfaces/channel-connector/messaging.interface';
-import { response } from 'express';
+import { InboxCredential } from './entities/inbox-credentials';
+import { EstadoCanalRepository } from '@modules/estado-canal/repositories/estado-canal.repository';
+import { MailCredentialRepository } from '@modules/gmail/repositories/mail-credential.repository';
 
-
-// CategoryChannelEnum
 @Injectable()
 export class InboxService {
-  private readonly logger = new Logger(InboxService.name);
-
   constructor(
     private readonly repository: InboxRepository,
-    private readonly categoryChannelRepository: CategoryChannelRepository,
-    private readonly channelStateRepository: ChannelStateRepository,
     private readonly inboxCredentialRepository: InboxCredentialRepository,
     private readonly inboxUserRepository: InboxUserRepository,
-    @InjectModel(InboxUser) private readonly inboxUser: typeof InboxUser,
+    private readonly stateChannelRepository: EstadoCanalRepository,
+    private readonly mailCredentialService:MailCredentialRepository,
+    // private readonly channelRoomRepository:ChannelRoomRepository,
+   @InjectModel(InboxUser) private readonly inboxUser: typeof InboxUser,
+
   ) {}
 
   async findAll(
@@ -57,7 +43,7 @@ export class InboxService {
   ): Promise<PaginatedResponse<Inbox>> {
     try {
       return this.repository.findAndCountAll({
-        include: [{ model: Channel }, { model: InboxCredential }, { model: VicidialCredential }, {model: User, as: 'users', through: { attributes: [] }}],
+        include: [{ model: Channel }, { model: InboxCredential }],
         limit,
         offset,
         order: [['id', 'DESC']],
@@ -74,7 +60,7 @@ export class InboxService {
     try {
       const exist = await this.repository.findById(id, {
         where: { id: id },
-        include: [{ model: User, as: 'users', through: { attributes: [] } }],
+        include: [{ model: User, through: { attributes: [] } }],
       });
       if (!exist) {
         throw new NotFoundException('Usuario no encontrado');
@@ -132,26 +118,29 @@ export class InboxService {
     dtoList: CreateInboxUserDto[],
   ): Promise<InboxUser[]> {
     try {
+       const inboxChannel = await this.repository.findById(id)
+      let stateChannelId: number | null = null;
+      if (inboxChannel.toJSON().idChannel == 4) {
+        stateChannelId = 12;
+      }
+
       const securedDtoList = await Promise.all(
-        dtoList.map(
-          async (dto) =>
-            ({
-              ...dto,
-              channelStateId: ChannelStateEnum.OFFLINE,
-            }) as InboxUser,
-        ),
+        dtoList.map(async (dto) => ({
+          ...dto,
+          ...(stateChannelId !== null ? { stateChannelId } : {}),
+        })),
       );
 
       await this.inboxUserRepository.bulkDestroy({
         where:
           dtoList.length != 0
             ? {
-                inboxId: id,
-                userId: {
-                  [Op.notIn]: dtoList.map((dto) => dto.userId),
+                idInbox: id,
+                idUser: {
+                  [Op.notIn]: dtoList.map((dto) => dto.idUser),
                 },
               }
-            : { inboxId: id },
+            : { idInbox: id },
       });
 
       if (dtoList.length === 0) {
@@ -160,15 +149,17 @@ export class InboxService {
 
       await this.inboxUserRepository.bulkRestore({
         where: {
-          inboxId: id,
-          userId: {
-            [Op.in]: dtoList.map((dto) => dto.userId),
+          idInbox: id,
+          idUser: {
+            [Op.in]: dtoList.map((dto) => dto.idUser),
           },
         },
       });
 
       return this.inboxUserRepository.bulkCreate(securedDtoList, {
-        updateOnDuplicate: ['channelStateId'],
+        updateOnDuplicate: ['idInbox', 'idUser'],
+        individualHooks: true,
+        ignoreDuplicates: true,
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -183,10 +174,16 @@ export class InboxService {
     dtoList: CreateInboxUserDto[],
   ): Promise<InboxUser[]> {
     try {
+      const inboxChannel = await this.repository.findById(id)
+      let stateChannelId: number | null = null;
+      if (inboxChannel.toJSON().idChannel == 4) {
+        stateChannelId = 12;
+      }
+
       const securedDtoList = await Promise.all(
         dtoList.map(async (dto) => ({
           ...dto,
-          channelStateId: ChannelStateEnum.OFFLINE,
+          ...(stateChannelId !== null ? { stateChannelId } : {}),
         })),
       );
 
@@ -194,12 +191,12 @@ export class InboxService {
         where:
           dtoList.length != 0
             ? {
-                userId: id,
-                inboxId: {
-                  [Op.notIn]: dtoList.map((dto) => dto.inboxId),
+                idUser: id,
+                idInbox: {
+                  [Op.notIn]: dtoList.map((dto) => dto.idInbox),
                 },
               }
-            : { userId: id },
+            : { idUser: id },
       });
 
       if (dtoList.length === 0) {
@@ -208,15 +205,17 @@ export class InboxService {
 
       await this.inboxUserRepository.bulkRestore({
         where: {
-          userId: id,
-          inboxId: {
-            [Op.in]: dtoList.map((dto) => dto.inboxId),
+          idUser: id,
+          idInbox: {
+            [Op.in]: dtoList.map((dto) => dto.idInbox),
           },
         },
       });
 
       return this.inboxUserRepository.bulkCreate(securedDtoList, {
-        updateOnDuplicate: ['channelStateId'],
+        updateOnDuplicate: ['idInbox', 'idUser'],
+        individualHooks: true,
+        ignoreDuplicates: true,
       });
     } catch (error) {
       throw new InternalServerErrorException(
@@ -226,9 +225,9 @@ export class InboxService {
     }
   }
 
-  async findByAssignmentId(userId: number): Promise<InboxUser[]> {
+  async findByAssignmentId(idUser: number): Promise<InboxUser[]> {
     const detalles = await this.inboxUserRepository.findAll({
-      where: { userId: userId },
+      where: { idUser: idUser },
       include: [
         {
           model: Inbox,
@@ -240,29 +239,24 @@ export class InboxService {
   }
 
   async assignmentSupervisor(
-    userId: number,
+    idUser: number,
     dtoList: CreateInboxUserDto[],
   ): Promise<InboxUser[]> {
     try {
-      const inboxIds = dtoList.map((dto) => dto.inboxId);
+      const inboxIds = dtoList.map(dto => dto.idInbox);
       const securedDtoList = await Promise.all(
         dtoList.map(async (dto) => ({
           ...dto,
         })),
       );
 
-      await this.inboxUserRepository.bulkRestore({
-        where: {
-          userId: userId,
-          inboxId: { [Op.in]: inboxIds },
-        },
-      });
+      await this.inboxUserRepository.restoreSoftDeleted(idUser, inboxIds);
 
       await this.inboxUserRepository.bulkDestroy({
         where: {
-          userId: userId,
-          inboxId: {
-            [Op.notIn]: dtoList.map((dto) => dto.inboxId),
+          idUser: idUser,
+          idInbox: {
+            [Op.notIn]: dtoList.map((dto) => dto.idInbox),
           },
         },
       });
@@ -270,13 +264,15 @@ export class InboxService {
       return this.inboxUserRepository.bulkCreate(
         securedDtoList,
         {
-          updateOnDuplicate: ['channelStateId'],
+          updateOnDuplicate: ['idInbox', 'idUser'],
+          individualHooks: true,
+          ignoreDuplicates: true,
         },
         {
           where: {
-            userId: userId,
-            inboxId: {
-              [Op.in]: dtoList.map((dto) => dto.inboxId),
+            idUser: idUser,
+            idInbox: {
+              [Op.in]: dtoList.map((dto) => dto.idInbox),
             },
           },
         },
@@ -355,186 +351,17 @@ export class InboxService {
     }
   }
 
-  async getUserStatus(currentUser: User, channel: string): Promise<BaseResponseDto<{ userStatus: string, color?: string | null }>> {
-    try {
-      const userId = Number(currentUser.id);
-      const availableChannelStates = [chatSatAvailableStateId, wspAvailableStateId];
-      const inboxOfUser = await this.inboxUserRepository.findAll({
-        include: [
-          {
-            model: Inbox,
-            required: true,
-            include: [
-              {
-                model: Channel,
-                required: true,
-                where: channel == 'all' ? {}:{
-                  name: channel
-                }
-              },
-            ],
-          },
-          {
-            model: ChannelState,
-            required: true,
-          },
-        ],
-        where: { userId },
-      });
-      if(!inboxOfUser.length)
-      {
-        return{
-          message: 'Estado general para este usuario.',
-          success: true,
-          data: { userStatus: "Fuera de Línea", color: "484848ff" },
-        };
-      }
-      const inboxOfUserParsed: InboxUser[] = inboxOfUser.map(x => x.toJSON())
-  
-      const userStatus = channel == 'all' ?  
-        inboxOfUserParsed.some(x => availableChannelStates.includes(x?.channelState?.id??'')) ? "Disponible":"Fuera de Línea"
-      :
-        inboxOfUserParsed[0].channelState.id.toString();
-      const color = inboxOfUserParsed[0].channelState.color 
-      return {
-        message: 'Estado general para este usuario.',
-        success: true,
-        data: { 
-          userStatus: userStatus,
-          color: color
-        },
-      };
-    } catch (error) {
-      return{
-        message: 'Error de servidor.',
-        success: false,
-        data: { userStatus: "Fuera de Línea", color: "#484848ff" },
-      };    
-    }
-  }
-
-
-  async changeAllUserStatus(
-      currentUser: User,
-      payload: {
-        channel: string,
-        isAvailable?: boolean | null,
-        channelStateId?: number | null,
-      }
-    ): Promise<BaseResponseDto> {
-      const response: BaseResponseDto = {
-        success: false,
-        message: '',
-      };
-
-      try {
-        const inboxOfUser = await this.inboxUserRepository.findAll({
-          include: [
-            {
-              model: Inbox,
-              required: true,
-              include: [
-                {
-                  model: Channel,
-                  required: true,
-                },
-              ],
-            },
-            {
-              model: ChannelState,
-              required: true,
-            },
-          ],
-          where: {
-            userId: currentUser.id,
-          },
-        });
-        const inboxUserFiltered = inboxOfUser.filter((inboxUser) => {
-          const inbox = inboxUser.get('inbox') as Inbox;
-          const channel = inbox.get('channel').toJSON() as Channel;
-          const channelState = inboxUser.get('channelState').toJSON() as ChannelState;
-          if (payload.channel === 'all') {
-            return channel.name !== ChannelType.TELEGRAM;
-          }else{
-            return channelState.categoryId === ChannelMultichannelCategory[payload.channel];
-          }
-        });
-
-        for (const inboxUser of inboxUserFiltered) {
-          const inbox = inboxUser.get('inbox') as Inbox;
-          const channel = inbox.get('channel').toJSON() as Channel;
-          if(payload.channel == 'all')
-          {
-            const newState = payload.isAvailable ? AvailableEnumToCategory[channel.id] : UnavailableEnumToCategory[channel.id];
-            await inboxUser.update({ channelStateId: newState });
-          }else{
-            await inboxUser.update({ channelStateId: payload.channelStateId});
-          }
-        }
-
-        response.message = '✅ Se ha hecho el cambio de estado para todos los canales.';
-        response.success = true;
-      } catch (error) {
-        this.logger.error(error);
-        response.message = '❌ No se ha podido cambiar el estado de todos los canales.';
-        response.error = error.toString();
-      }
-
-      return response;
-  }
-
-  async getInboxAvailablesForUser (currentUser: User): Promise<BaseResponseDto<string[]>>
-  {
-    let response : BaseResponseDto<string[]> = {
-      message: "",
-      success: false
-    }
-    try {
-      
-      const inboxUser = (await this.inboxUserRepository.findAll(
-        {
-          where : {userId: currentUser.id},
-          include: [
-            {
-              model: Inbox,
-              required: true,
-              include: [
-                {
-                  model: Channel,
-                  required: true
-                }
-              ]
-            }
-          ] 
-        }
-      ))
-      response.data = inboxUser.map((inboxUser: InboxUser) => {
-        const inboxUserItem: InboxUser = inboxUser.toJSON()
-        return inboxUserItem.inbox.channel.name
-      })
-      response.message = "Listado de canales accesibles";
-      response.success = true
-      return response
-    } catch (error) {
-      this.logger.error(error.toString())
-      response.data = [];
-      response.error = error.toString();
-      return response;
-    }
-  }
-
-
-
   async remove(id: number): Promise<void> {
     try {
-      await this.inboxUserRepository.bulkDestroy({
-        where: {
-          inboxId: id,
-        },
-      });
-      const res = await this.repository.delete(id);
+      const exist = await this.repository.findById(id);
+      if (exist) {
+        const inboxId = exist.id;
+        await this.inboxUserRepository.bulkDestroy({ where: { idInbox: inboxId } });
+        await this.mailCredentialService.bulkDestroy({ where: { inboxId: inboxId } });
+      }
 
-      return res;
+      return this.repository.delete(id);
+
     } catch (error) {
       throw new InternalServerErrorException(
         error,
@@ -553,28 +380,46 @@ export class InboxService {
       );
     }
   }
-
-  async invalidateCredentials(payload: InvalidateInboxCredentialDto) {
+  
+  async invalidateCredentials(payload: InvalidateInboxCredentialDto)
+  {
     try {
       let inboxCredentials = await this.inboxCredentialRepository.findAll({
         where: {
           [Op.or]: [
             { accessToken: payload.accessToken },
-            { phoneNumber: payload.phoneNumber },
-          ],
+            { phoneNumber: payload.phoneNumber }
+          ]
         },
         order: [['createdAt', 'DESC']],
-        limit: 1,
-      });
-      if (!inboxCredentials.length) {
-        throw new NotFoundException('No se halló la credencial a desactivar.');
+        limit: 1	
+      })
+      if(!inboxCredentials.length){
+        throw new NotFoundException("No se halló la credencial a desactivar.")
       }
       const dateNow = new Date();
       this.inboxCredentialRepository.update(inboxCredentials[0].dataValues.id, {
-        expiresAt: dateNow,
-      });
+        expiresAt: dateNow
+      })
     } catch (error) {
-      throw error;
+      throw error
     }
+  }
+  async changeAttentionAvaliable(inboxId:number,userId:number){
+       const exist = await this.inboxUserRepository.findOne({ where: { idInbox: inboxId, idUser: userId } });
+       if (!exist) throw new NotFoundException("No se halló la credencial ")
+       const avalible = await this.stateChannelRepository.findAvalibleEmail();
+       if (!avalible) throw new NotFoundException("No se halló la credencial ")
+       const disable = await this.stateChannelRepository.findDisableEmail();
+       if (!disable) throw new NotFoundException("No se halló la credencial ")
+       const statusId = exist.toJSON().stateChannelId
+       if(statusId == avalible.toJSON().id){
+         return  await this.inboxUserRepository.changeAttention(inboxId,userId,disable.toJSON().id)
+       }
+        if(statusId == disable.toJSON().id){
+         return  await this.inboxUserRepository.changeAttention(inboxId,userId,avalible.toJSON().id)
+       }
+       return {message:'Sin actulización'}
+      
   }
 }

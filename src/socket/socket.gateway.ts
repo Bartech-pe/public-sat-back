@@ -8,14 +8,19 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { NotificationService } from '@modules/notification/notification.service';
+import { CreateNotificationDto } from '@modules/notification/dto/create-notification.dto';
 
 @WebSocketGateway({
   cors: {
+    origin: ['http://localhost:4200'], // mejor explícito
     credentials: true,
   },
 })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
-   @WebSocketServer()
+  constructor(private readonly notificationService: NotificationService) {}
+
+  @WebSocketServer()
   server: Server;
 
   private clients: Map<number, string> = new Map(); // userId → socketId
@@ -38,9 +43,41 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   
   @SubscribeMessage('send_alertas')
-  handleAlertas(@MessageBody() alerta: any): void {
-    console.log(alerta);
-    this.server.emit('receive_alertas', alerta);
+  async handleAlertas(@MessageBody() request: { idUser: number; message: string }): Promise<void> {
+    try {
+      console.log("Recibida nueva notificación:", request);
+      
+      // Crear y guardar la notificación
+      const createNotificationDto: CreateNotificationDto = {
+        userId: request.idUser,
+        message: request.message
+      };
+      
+      // Guardar la notificación en la base de datos
+      const notification = await this.notificationService.create(createNotificationDto);
+      console.log('Notificación guardada:', notification);
+      
+      // Emitir la notificación al usuario específico
+      const socketId = this.clients.get(request.idUser);
+      if (socketId) {
+        this.server.to(socketId).emit('receive_alertas', {
+          ...notification,
+          isNew: true
+        });
+      }
+      
+      // También emitir a todos los clientes si es necesario
+      this.server.emit('receive_alertas', notification);
+      
+    } catch (error) {
+      console.error('Error al procesar la notificación:', error);
+      // Puedes manejar el error de la manera que prefieras
+      // Por ejemplo, emitiendo un mensaje de error al cliente
+      this.server.emit('notification_error', {
+        error: 'Error al procesar la notificación',
+        details: error.message
+      });
+    }
   }
 
   // 2. Enviar mensaje a usuarios
@@ -57,7 +94,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
         console.log(`📤 Alerta enviada a ${userId}`);
       } else {
-        console.warn(`Usuario ${userId} no está conectado`);
+        console.warn(`⚠️ Usuario ${userId} no está conectado`);
       }
     }
   }
@@ -85,7 +122,6 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
         break;
       }
     }
-    client.removeAllListeners();
   }
 
   handleConnection(client: Socket) {

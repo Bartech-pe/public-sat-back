@@ -1,15 +1,35 @@
 import { Module } from '@nestjs/common';
-import { CENTRAL_DB, DatabaseCentralService } from './database-central.service';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { centralDBConfig } from 'config/env';
 
 @Module({
-  providers: [
-    DatabaseCentralService,
-    {
-      provide: CENTRAL_DB,
-      useFactory: (service: DatabaseCentralService) => service.getConnection(),
-      inject: [DatabaseCentralService],
-    },
+  imports: [
+    SequelizeModule.forRoot({
+      name: 'central',
+      dialect: centralDBConfig.dialect,
+      timezone: '-05:00',
+      host: centralDBConfig.host,
+      port: centralDBConfig.port,
+      username: centralDBConfig.user,
+      password: centralDBConfig.pass,
+      database: centralDBConfig.name,
+      autoLoadModels: true,
+      // sync: { alter: false },
+      synchronize: false,
+      logging: false,
+      retryAttempts: 5,
+      retryDelay: 3000,
+      pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000,
+      },
+      dialectOptions: {
+        connectTimeout: 60000, // 60 segundos
+        dateStrings: true, // Evita conversión automática a UTC
+      },
+    }),
   ],
-  exports: [CENTRAL_DB, DatabaseCentralService],
 })
 export class DatabaseCentralModule {}

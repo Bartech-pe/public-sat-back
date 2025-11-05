@@ -6,16 +6,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import { ValidationExceptionFilter } from '@common/filters/validation-exception.filter';
+// import { initSocket } from '@common/lib/socket-server';
 import { join } from 'path';
-import {
-  audiobaseConfig,
-  channelConnectorConfig,
-  envConfig,
-  metabaseConfig,
-} from 'config/env';
-import * as helmet from 'helmet';
+import { envConfig } from 'config/env';
 
-// Winston Logger
 const winstonLogger = winston.createLogger({
   transports: [
     new winston.transports.Console({
@@ -36,93 +30,11 @@ const winstonLogger = winston.createLogger({
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  // CORS
-  const FRONTEND_ORIGINS = [envConfig.crmUrl];
-  const META_BASE = metabaseConfig.url;
-  const API_AUDIOS = audiobaseConfig.url;
-  const CHANNEL_CONECTOR = channelConnectorConfig.baseUrl;
-
-  const ORIGINS = [...FRONTEND_ORIGINS, API_AUDIOS];
-
-  app.enableCors({
-    origin: ORIGINS,
-    methods: 'GET,POST,PATCH,PUT,DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
-    credentials: true,
-  });
-
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-          'default-src': ["'self'"],
-          'script-src': [
-            "'self'",
-            "'unsafe-inline'",
-            "'unsafe-eval'",
-            "'unsafe-hashes'",
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-          ],
-          'script-src-attr': ["'self'", "'unsafe-inline'"],
-          'style-src': [
-            "'self'",
-            "'unsafe-inline'",
-            'blob:',
-            'https://fonts.googleapis.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-            'https://accounts.google.com',
-          ],
-          'img-src': ["'self'", 'data:', 'blob:', 'cid:', 'https:'],
-          'font-src': [
-            "'self'",
-            'data:',
-            'https://fonts.gstatic.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-          ],
-          'connect-src': [
-            "'self'",
-            'ws:',
-            'wss:',
-            'https://api.iconify.design',
-            'https://api.simplesvg.com',
-            'https://cdn.jsdelivr.net',
-            'https://unpkg.com',
-            'https://api.unisvg.com',
-            ...FRONTEND_ORIGINS,
-            CHANNEL_CONECTOR,
-            API_AUDIOS,
-            META_BASE,
-          ],
-          'frame-src': ["'self'", META_BASE],
-          'object-src': ["'none'"],
-          'frame-ancestors': ["'none'"],
-          'base-uri': ["'self'"],
-          'form-action': ["'self'"],
-          'upgrade-insecure-requests': [],
-          'media-src': [
-            "'self'",
-            'blob:',
-            'data:',
-            'https://satvcwebcc01.sat.gob.pe',
-            'https://cc-demo.xyzconn.xyz',
-            'https://satsttcc01.sat.gob.pe',
-          ],
-        },
-      },
-      crossOriginEmbedderPolicy: false,
-      crossOriginResourcePolicy: { policy: 'cross-origin' },
-      crossOriginOpenerPolicy: false,
-    }),
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule,
+    //  { logger: winstonLogger }
   );
 
-  // Swagger
   const config = new DocumentBuilder()
     .setTitle('SAT CRM - API')
     .setDescription('API para el manejo de SAT CRM')
@@ -133,67 +45,58 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, documentFactory);
 
-  // Prefijo global
   app.setGlobalPrefix('v1');
 
-  // Parsers
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
-
-  // Archivos estáticos y uploads
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads',
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,POST,PATCH,PUT,DELETE',
+    allowedHeaders: 'Content-Type, Authorization',
+    credentials: true,
   });
 
   app.useStaticAssets(join(process.cwd(), 'public'));
 
-  // Endpoint opcional para reportes CSP
-  const expressApp = app.getHttpAdapter().getInstance();
-  expressApp.post('/csp-report', (req, res) => {
-    try {
-      winstonLogger.warn('CSP report received', { report: req.body });
-    } catch (e) {
-      winstonLogger.error('Error processing CSP report', { error: e });
-    }
-    res.status(204).send();
-  });
-
-  // Fallback SPA (Angular)
   app.use((req, res, next) => {
     if (
       !req.originalUrl.startsWith('/v1') &&
-      !req.originalUrl.startsWith('/swagger') &&
-      !req.originalUrl.startsWith('/uploads')
+      !req.originalUrl.startsWith('/swagger')
     ) {
-      try {
-        res.sendFile(join(process.cwd(), 'public', 'index.html'));
-      } catch {
-        return null;
-      }
+      res.sendFile(join(process.cwd(), 'public', 'index.html'));
     } else {
       next();
     }
   });
 
-  // Pipes globales
+  // Aquí sirves archivos desde /uploads con la ruta pública /uploads
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads', // Esto hace que se accedan desde http://localhost:3000/uploads
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: { enableImplicitConversion: true },
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 
-  // Filtro global de validaciones
   app.useGlobalFilters(new ValidationExceptionFilter());
 
-  // Inicia servidor
+  // Habilitar el manejo de JSON y formularios en NestJS
+  app.use(json({ limit: '50mb' })); // Ajusta el límite según necesites
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
   await app.listen(envConfig.port, '0.0.0.0');
+
+  // const httpServer = app.getHttpServer();
+  // initSocket(httpServer);
+
   winstonLogger.log({
     level: 'info',
-    message: `Application running on http://localhost:${envConfig.port}`,
+    message: `Application started on http://localhost:${envConfig.port}`,
   });
 }
-
 bootstrap();

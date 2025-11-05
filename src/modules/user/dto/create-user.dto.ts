@@ -11,7 +11,7 @@ import {
 import { ValidationMessages as v } from '@common/messages/validation-messages';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { VicidialUserDto } from './vicidial-user.dto';
+import { UserVicidialDto } from './user-vicidial.dto';
 import { IsUnique } from '@common/validators/is-unique/is-unique.decorator';
 import { User } from '../entities/user.entity';
 
@@ -49,18 +49,18 @@ export class CreateUserDto {
   avatarUrl?: string;
 
   @ApiProperty({ description: 'id del rol asignado' })
-  @IsNumber({}, { message: v.isNumber('roleId') })
-  roleId: number;
+  @IsNumber({}, { message: v.isNumber('idRole') })
+  idRole: number;
 
   @ApiPropertyOptional({ description: 'id de la oficina asignado' })
   @IsOptional()
-  @IsNumber({}, { message: v.isNumber('officeId') })
-  officeId: number;
+  @IsNumber({}, { message: v.isNumber('idOficina') })
+  idOficina: number;
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => VicidialUserDto)
-  vicidial?: VicidialUserDto;
+  @Type(() => UserVicidialDto)
+  vicidial?: UserVicidialDto;
 
   @IsOptional()
   @IsBoolean({ message: v.isBoolean('status') })

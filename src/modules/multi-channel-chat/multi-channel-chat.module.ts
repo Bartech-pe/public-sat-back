@@ -1,14 +1,15 @@
-import { forwardRef, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { MultiChannelChatService } from './multi-channel-chat.service';
+import { MultiChannelChatController } from './multi-channel-chat.controller';
 import { UserModule } from '@modules/user/user.module';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthModule } from '@modules/auth/auth.module';
 import { ChannelRoom } from './entities/channel-room.entity';
-import { ChannelCitizen } from './entities/channel-citizen.entity';
+import { Citizen } from './entities/citizen.entity';
 import { ChannelMessage } from './entities/channel-message.entity';
 import { ChannelMessageRepository } from './repositories/channel-messages.repository';
 import { ChannelRoomRepository } from './repositories/channel-room.repository';
-import { ChannelCitizenRepository } from './repositories/channel-citizen.repository';
+import { CitizenRepository } from './repositories/citizen.repository';
 import { ChannelModule } from '@modules/channel/channel.module';
 import { InboxModule } from '@modules/inbox/inbox.module';
 import { ChannelRoomService } from './services/channel-room.service';
@@ -16,6 +17,7 @@ import { ChannelRoomController } from './controllers/channel-room.controller';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { MultiChannelChatGateway } from './multi-channel-chat.gateway';
+import { ConfigService } from '@nestjs/config';
 import { ChannelMessageController } from './controllers/channel-message.controller';
 import { RasaService } from '@modules/call/rasa.service';
 import { RasaProxy } from '@common/proxy/rasa/rasa.proxy';
@@ -23,76 +25,51 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { RedisProvider } from './providers/redis.provider';
 import { MessageBufferService } from './services/message-buffer.service';
 import { BasicInfoService } from './services/basic-info.service';
-import { ChannelAttention } from './entities/channel-attention.entity';
-import { ChannelAttentionRepository } from './repositories/channel-attention.repository';
-import { ChannelCitizenService } from './services/channel-citizen.service';
-import { ChannelAttentionService } from './services/channel-attention.service';
-import { ChannelCitizenController } from './controllers/channel-citizen.controller';
-import { ChannelAttentionController } from './controllers/channel-assistance.controller';
+import { Assistance } from './entities/assistance.entity';
+import { AssistanceRepository } from './repositories/assistance.repository';
+import { CitizenService } from './services/citizen.service';
+import { AssistanceService } from './services/assistance.service';
+import { CitizenController } from './controllers/citizen.controller';
+import { ChannelAssistanceController } from './controllers/channel-assistance.controller';
 import { ChannelMessageAttachment } from './entities/channel-message-attachments.entity';
 import { ChannelMessageAttachmentRepository } from './repositories/channel-message-attachments.repository';
-import { EmailModule } from '@modules/email/email.module';
-import { SurveyModule } from '@modules/survey/survey.module';
-import { ChannelQueryHistoryRepository } from './repositories/channel-room.repository copy';
-import { ChannelQueryHistory } from './entities/channel-query-history.entity';
-import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
-import { AutomaticMessageService } from '@modules/automatic-message/automatic-message.service';
-import { AutomaticMessageModule } from '@modules/automatic-message/automatic-message.module';
-import { TelegramController } from './controllers/telegram.controller';
+import { MailFeaturesService } from '@modules/gmail/services/mail-features.service';
+import { GmailModule } from '@modules/gmail/gmail.module';
 @Module({
   imports: [
-    forwardRef(() => AuthModule),
-    SequelizeModule.forFeature([
-      Channel,
-      Inbox,
-      ChannelRoom,
-      ChannelCitizen,
-      ChannelMessage,
-      ChannelQueryHistory,
-      ChannelAttention,
-      ChannelMessageAttachment,
-    ]),
+    AuthModule,
+    SequelizeModule.forFeature([Channel, Inbox, ChannelRoom, Citizen, ChannelMessage, Assistance, ChannelMessageAttachment]),
     UserModule,
     InboxModule,
     ChannelModule,
-    EmailModule,
-    AutomaticMessageModule,
-    ConsultTypeModule,
+    GmailModule,
     ScheduleModule.forRoot(),
-    SurveyModule,
   ],
-  controllers: [
-    ChannelRoomController,
-    ChannelMessageController,
-    ChannelCitizenController,
-    TelegramController,
-    ChannelAttentionController,
-  ],
+  controllers: [MultiChannelChatController, ChannelRoomController, ChannelMessageController, CitizenController, ChannelAssistanceController],
   providers: [
     MultiChannelChatService,
     ChannelMessageRepository,
-    ChannelQueryHistoryRepository,
     ChannelMessageRepository,
-    ChannelAttentionService,
+    AssistanceService,
     ChannelRoomRepository,
     ChannelRoomService,
     ChannelMessageAttachmentRepository,
     RedisProvider,
-    ChannelCitizenRepository,
-    ChannelAttentionRepository,
-    ChannelCitizenService,
+    CitizenRepository,
+    AssistanceRepository,
+    CitizenService,
     MultiChannelChatGateway,
     BasicInfoService,
     MessageBufferService,
     RasaService,
-    RasaProxy,
+    RasaProxy
   ],
   exports: [
     MultiChannelChatService,
-    ChannelAttentionRepository,
+    AssistanceRepository,
     ChannelMessageRepository,
     ChannelRoomRepository,
-    ChannelCitizenRepository,
+    CitizenRepository
   ],
 })
 export class MultiChannelChatModule {}

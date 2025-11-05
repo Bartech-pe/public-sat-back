@@ -1,16 +1,16 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { ConversationTracker } from './dto/Conversation';
 import { ApiResponseProxyDTO } from '../ApiResponseProxyDTO';
 import { RasaMessage, RasaResponse } from './dto/Rasa';
-import { satConfig } from 'config/env';
 
 @Injectable()
 export class RasaProxy {
   private client: AxiosInstance;
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     this.client = axios.create({
-      baseURL: satConfig.rasaUrl,
+      baseURL: this.configService.get<string>('RASA_URL') ?? '',
       timeout: 10000,
       headers: {
         Accept: 'application/json',

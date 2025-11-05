@@ -2,7 +2,6 @@ import {
   BelongsTo,
   BelongsToMany,
   Column,
-  CreatedAt,
   DataType,
   DefaultScope,
   DeletedAt,
@@ -12,32 +11,49 @@ import {
   Model,
   Scopes,
   Table,
-  UpdatedAt,
 } from 'sequelize-typescript';
+import { Optional } from 'sequelize';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { InboxUser } from './inbox-user.entity';
 import { ChannelRoom } from '@modules/multi-channel-chat/entities/channel-room.entity';
-import { InboxCredential } from './inbox-credential.entity';
-import { EmailCredential } from '@modules/email/entities/email-credentials.entity';
-import { VicidialCredential } from '@modules/vicidial/entities/vicidial-credentials.entity';
+import { InboxCredential } from './inbox-credentials';
+
+export interface InboxAttributes {
+  id: number;
+  name: string;
+  avatarUrl?: string;
+  idChannel: number; // Cambié de idInbox a idChannel para que coincida
+  widgetColor?: string;
+  phoneNumber?: string;
+  status?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;
+}
+
+export type InboxCreationAttributes = Optional<
+  InboxAttributes,
+  'id' | 'avatarUrl' | 'widgetColor' | 'phoneNumber' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
+>;
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
+  attributes: { exclude: ['deletedAt'] },
 }))
-@Scopes(() => ({}))
+@Scopes(() => ({
+
+}))
 @Table({
   tableName: 'inboxes',
   timestamps: true,
   paranoid: true,
 })
-export class Inbox extends Model {
+export class Inbox extends Model<InboxAttributes, InboxCreationAttributes> {
   @Column({
     field: 'id',
-    type: DataType.BIGINT,
+    type: DataType.INTEGER,
     autoIncrement: true,
     primaryKey: true,
-    comment: 'Identificador de la bandeja de entrada',
   })
   declare id: number;
 
@@ -45,12 +61,12 @@ export class Inbox extends Model {
     field: 'name',
     type: DataType.STRING,
     allowNull: false,
-    comment: 'Nombre de la bandeja de entrada',
+    comment: 'Nombre del canal',
   })
   name: string;
 
   @Column({
-    field: 'avatar_url',
+    field: 'avatarUrl',
     type: DataType.STRING,
     allowNull: true,
     comment: 'Imagen del canal',
@@ -58,7 +74,7 @@ export class Inbox extends Model {
   avatarUrl?: string;
 
   @Column({
-    field: 'widget_color',
+    field: 'widgetColor',
     type: DataType.STRING,
     allowNull: true,
     comment: 'Widget color del canal',
@@ -67,12 +83,13 @@ export class Inbox extends Model {
 
   @ForeignKey(() => Channel)
   @Column({
-    field: 'channel_id',
-    type: DataType.BIGINT,
+    field: 'idChannel',
+    type: DataType.INTEGER,
     allowNull: false,
-    comment: 'ID del canal al que pertenece la bandeja de entrada',
+    comment: 'ID del canal al que pertenece este inbox',
   })
-  channelId: number;
+  idChannel: number;
+
 
   @Column({
     field: 'status',
@@ -83,55 +100,31 @@ export class Inbox extends Model {
   status?: boolean;
 
   // Relaciones - Sin declare para evitar problemas
-  @BelongsTo(() => Channel, { foreignKey: 'channelId' })
+  @BelongsTo(() => Channel, { foreignKey: 'idChannel' })
   channel: Channel;
 
   @HasOne(() => InboxCredential, { foreignKey: 'inboxId' })
   credentials: InboxCredential;
-
-  @HasOne(() => VicidialCredential, { foreignKey: 'inboxId' })
-  vicidialCredentials: VicidialCredential;
-
 
   @BelongsToMany(() => User, () => InboxUser)
   users: User[];
 
   @HasMany(() => ChannelRoom)
   channelRooms: ChannelRoom[];
-
-  @HasOne(() => EmailCredential, { foreignKey: 'inboxId' })
-  emailCredentials: EmailCredential;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'created_by', allowNull: true })
-  declare createdBy: number;
-
-  @BelongsTo(() => User, 'createdBy')
-  declare createdByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'updated_by', allowNull: true })
-  declare updatedBy: number;
-
-  @BelongsTo(() => User, 'updatedBy')
-  declare updatedByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'deleted_by', allowNull: true })
-  declare deletedBy: number;
-
-  @BelongsTo(() => User, 'deletedBy')
-  declare deletedByUser?: User;
-
-  @CreatedAt
-  @Column({ field: 'created_at', allowNull: true })
+  
+  @Column({
+    field: 'createdAt',
+    type: DataType.DATE,
+    defaultValue: DataType.NOW,
+  })
   declare createdAt: Date;
 
-  @UpdatedAt
-  @Column({ field: 'updated_at', allowNull: true })
+  @Column({
+    field: 'updatedAt',
+    type: DataType.DATE,
+  })
   declare updatedAt: Date;
 
   @DeletedAt
-  @Column({ field: 'deleted_at', allowNull: true })
-  declare deletedAt: Date;
+  declare deletedAt?: Date;
 }

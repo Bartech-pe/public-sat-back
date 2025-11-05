@@ -1,0 +1,37 @@
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { VicidialUserService } from '../services/vicidial-user.service';
+import { VicidialUser } from '../entities/vicidial-user.entity';
+import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
+import { CreateVicidialCampaignDto } from '../dto/create-vicidial-campaing.dto';
+import { UpdateVicidialCampaignDto } from '../dto/update-vicidial-campaing.dto';
+
+@Controller('central')
+export class CentralTelefonicaController {
+  constructor(private readonly service: VicidialUserService) {}
+
+  @Get('agentes')
+  findAll(): Promise<VicidialUser[]> {
+    return this.service.findAll();
+  }
+
+  @Post('campanias')
+  create(@Body() body: CreateVicidialCampaignDto) {
+     return this.service.createCampaign(body);
+  }
+
+  @Patch('campanias/:campaign_id')
+  update(@Param('campaign_id') campaign_id: string, @Body() dto: UpdateVicidialCampaignDto){
+      return this.service.updateCampaign(campaign_id, dto);
+  }
+
+  @Delete('campanias/:campaign_id')
+  delete(@Param('campaign_id') campaign_id: string) {
+    return this.service.deleteCampaign(campaign_id);
+  }
+
+  @Get('campanias/progreso/:id')
+  getProgreso(@Param('id') campaign_id: string) {
+    return this.service.getProgreso(campaign_id);
+  }
+
+}

@@ -1,81 +1,71 @@
-import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
-import { User } from '@modules/user/entities/user.entity';
 import {
-  BelongsTo,
   Column,
-  CreatedAt,
   DataType,
   DefaultScope,
-  DeletedAt,
-  ForeignKey,
+  DeletedAt, 
   Model,
   Scopes,
   Table,
-  UpdatedAt,
 } from 'sequelize-typescript';
+import { Optional } from 'sequelize';
+
+export interface PredefinedResponseAttributes {
+  id: number;
+  code: string;
+  message?: string;
+  inmutable: boolean;
+  status?: boolean;
+  deletedAt?: Date;
+}
+
+export type PredefinedResponseCreationAttributes = Optional<
+  PredefinedResponseAttributes,
+  'id' | 'message' | 'status' | 'deletedAt'
+>;
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
+  attributes: { exclude: ['deletedAt'] }, // Excluir campo de eliminación lógica y password por defecto
 }))
 @Scopes(() => ({}))
 @Table({
-  tableName: 'predefined_responses',
+  tableName: 'predefined-response',
   timestamps: true,
   paranoid: true,
-  underscored: true,
 })
-export class PredefinedResponse extends Model {
+
+export class PredefinedResponse extends Model<PredefinedResponseAttributes, PredefinedResponseCreationAttributes>{
   @Column({
     field: 'id',
-    type: DataType.BIGINT,
+    type: DataType.INTEGER,
     autoIncrement: true,
     primaryKey: true,
-    comment: 'Identificador de la respuesta predefinida',
   })
   declare id: number;
 
   @Column({
     field: 'code',
     type: DataType.STRING,
-    allowNull: true,
+    allowNull: false,
     comment: 'Código corto',
   })
-  code?: string | null;
+  code: string;
 
   @Column({
-    field: 'title',
+    field: 'message',
     type: DataType.STRING,
     allowNull: true,
-    comment: 'Título del la respuesta',
+    comment: 'Mensaje',
   })
-  title: string;
+  message: string;
 
   @Column({
-    field: 'content',
-    type: DataType.TEXT('long'),
-    allowNull: false,
-    comment: 'Contenido de la respuesta rápida',
+    field: 'inmutable',
+    type: DataType.BOOLEAN,
+    defaultValue: false,
+    comment: 'Campo para habilitar o inhabilitar la edición de un registro',
   })
-  content: string;
+  inmutable: boolean;
 
-  @Column({
-    field: 'keywords',
-    type: DataType.JSON,
-    comment: 'Palabras clave de la respuesta rápida',
-  })
-  keywords: string;
-
-  @ForeignKey(() => CategoryChannel)
-  @Column({
-    field: 'category_id',
-    type: DataType.BIGINT,
-    allowNull: false,
-    comment: 'Parametro para identificar el canal al que pertenece el estado',
-  })
-  categoryId: number;
-
-  @BelongsTo(() => CategoryChannel)
-  category: CategoryChannel;
 
   @Column({
     field: 'status',
@@ -85,36 +75,6 @@ export class PredefinedResponse extends Model {
   })
   status: boolean;
 
-  @ForeignKey(() => User)
-  @Column({ field: 'created_by', allowNull: true })
-  declare createdBy: number;
-
-  @BelongsTo(() => User, 'createdBy')
-  declare createdByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'updated_by', allowNull: true })
-  declare updatedBy: number;
-
-  @BelongsTo(() => User, 'updatedBy')
-  declare updatedByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'deleted_by', allowNull: true })
-  declare deletedBy: number;
-
-  @BelongsTo(() => User, 'deletedBy')
-  declare deletedByUser?: User;
-
-  @CreatedAt
-  @Column({ field: 'created_at', allowNull: true })
-  declare createdAt: Date;
-
-  @UpdatedAt
-  @Column({ field: 'updated_at', allowNull: true })
-  declare updatedAt: Date;
-
   @DeletedAt
-  @Column({ field: 'deleted_at', allowNull: true })
   declare deletedAt: Date;
 }

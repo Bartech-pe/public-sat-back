@@ -43,7 +43,7 @@ export class SkillService {
     try {
       const exist = await this.repository.findById(id, {
         where: { id: id },
-        include: [{ model: User, as: 'users', through: { attributes: [] } }],
+        include: [{ model: User, through: { attributes: [] } }],
       });
       if (!exist) {
         throw new NotFoundException('Usuario no encontrado');
@@ -99,12 +99,12 @@ export class SkillService {
         where:
           dtoList.length != 0
             ? {
-                userId: id,
-                skillId: {
-                  [Op.notIn]: dtoList.map((dto) => dto.skillId),
+                idUser: id,
+                idSkill: {
+                  [Op.notIn]: dtoList.map((dto) => dto.idSkill),
                 },
               }
-            : { userId: id },
+            : { idUser: id },
       });
 
       if (dtoList.length === 0) {
@@ -113,15 +113,17 @@ export class SkillService {
 
       await this.skillUserRepository.bulkRestore({
         where: {
-          userId: id,
-          skillId: {
-            [Op.in]: dtoList.map((dto) => dto.skillId),
+          idUser: id,
+          idSkill: {
+            [Op.in]: dtoList.map((dto) => dto.idSkill),
           },
         },
       });
 
       return this.skillUserRepository.bulkCreate(securedDtoList, {
         updateOnDuplicate: ['score'],
+        individualHooks: true,
+        ignoreDuplicates: true,
       });
     } catch (error) {
       throw new InternalServerErrorException(

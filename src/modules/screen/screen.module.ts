@@ -9,6 +9,6 @@ import { Screen } from './entities/screen.entity';
   imports: [SequelizeModule.forFeature([Screen])],
   controllers: [ScreenController],
   providers: [ScreenService, ScreenRepository],
-  exports: [ScreenService, ScreenRepository],
+  exports: [ScreenRepository],
 })
 export class ScreenModule {}

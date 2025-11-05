@@ -31,10 +31,10 @@ export class ChatRoomGateway {
     @MessageBody() data: { chatRoomId: number; content: string },
     @ConnectedSocket() client: Socket,
   ) {
-    const userId = user.id; // tu lógica de auth
+    const idUser = user.id; // tu lógica de auth
 
     const message = await this.chatService.createMessage(
-      userId,
+      idUser,
       data.chatRoomId,
       data.content,
     );

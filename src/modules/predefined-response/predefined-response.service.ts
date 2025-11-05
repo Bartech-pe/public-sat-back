@@ -8,11 +8,9 @@ import { PredefinedResponseRepository } from './repositories/predefined-response
 import { CreatePredefinedResponseDto } from './dto/create-predefined-response.dto';
 import { UpdatePredefinedResponseDto } from './dto/update-predefined-response.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
 
 @Injectable()
 export class PredefinedResponseService {
-
   constructor(private readonly repository: PredefinedResponseRepository) {}
 
   async findAll(
@@ -132,29 +130,5 @@ export class PredefinedResponseService {
         'Error interno del servidor',
       );
     }
-  }
-
-  allPredefinedResponseMail(): Promise<PredefinedResponse[]> {
-    return this.repository.findAll({
-      where: {
-        categoryId: CategoryChannelEnum.MAIL
-      }
-    })
-  }
-  
-  allPredefinedResponseChatSat(): Promise<PredefinedResponse[]> {
-    return this.repository.findAll({
-      where: {
-        categoryId: CategoryChannelEnum.CHATSAT
-      }
-    })
-  }
-  
-  allPredefinedResponseWhatsapp(): Promise<PredefinedResponse[]> {
-    return this.repository.findAll({
-      where: {
-        categoryId: CategoryChannelEnum.WHATSAPP
-      }
-    })
   }
 }

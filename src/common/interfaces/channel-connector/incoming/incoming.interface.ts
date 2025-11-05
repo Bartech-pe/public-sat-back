@@ -1,24 +1,25 @@
-import { ChannelType, MessageType } from '../messaging.interface';
+import { ChannelType, MessageType } from "../messaging.interface";
 
 export interface IncomingMessage {
   type: MessageType.INCOMING;
   payload: IncomingPayload;
-  token?: string;
 }
 
-export interface Participant {
-  id?: string | number;
-  full_name?: string;
-  alias?: string;
-  phone_number?: string;
-  email?: string;
-  status?: string;
-  avatar?: string;
+export interface Participant
+{
+    id?: string | number;
+    full_name?: string;
+    alias?: string;
+    phone_number?: string;
+    email?: string;
+    status?: string;
+    avatar?: string;
 }
-export interface Message {
-  id: string | number;
-  body?: string | null;
-  botReply?: boolean;
+export interface Message
+{
+    id: string | number,  
+    body?: string | null,
+    botReply?: boolean,
 }
 
 export interface IncomingPayload {
@@ -27,15 +28,16 @@ export interface IncomingPayload {
   sender: Participant;
   token?: string;
   fromMe?: boolean;
-  receiver: Participant;
+  receiver?: Participant;
   message: Message;
   attachments?: Attachment[];
-  timestamp: string | number;
+  timestamp: string | number; 
 }
 
-export interface Attachment {
-  type: 'file' | 'image';
-  name?: string;
-  extension?: string | null;
-  content?: string | null;
+export interface Attachment
+{
+    type: 'file' | 'image';
+    name?: string;
+    extension?: string | null;
+    content?: string | null;
 }

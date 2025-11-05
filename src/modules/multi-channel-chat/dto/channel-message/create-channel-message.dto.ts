@@ -17,14 +17,15 @@ export class CreateChannelMessageDto {
   channelRoomId: number;
 
   @ApiProperty({ description: 'User agent ID' })
+  @IsNotEmpty({ message: v.isNotEmpty('userId') })
   @IsNumber({}, { message: v.isNumber('userId') })
-  userId?: number| null;
+  userId: number;
 
   @ApiProperty({ description: 'ID de la asistencia' })
   @IsNotEmpty({ message: v.isNotEmpty('assistanceId') })
   @IsNumber({}, { message: v.isNumber('assistanceId') })
   assistanceId: number;
-
+  
   @ApiProperty({ description: 'ID de la sala del canal externo (ChannelRoom)' })
   @IsOptional()
   @IsString({ message: v.isString('externalChannelRoomId') })

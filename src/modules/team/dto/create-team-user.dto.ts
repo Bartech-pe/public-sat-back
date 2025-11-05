@@ -6,9 +6,9 @@ export class CreateTeamUserDto {
   @IsNumber({}, { message: v.isNumber('id') })
   id?: number;
 
-  @IsNumber({}, { message: v.isNumber('teamId') })
-  teamId: number;
+  @IsNumber({}, { message: v.isNumber('idTeam') })
+  idTeam: number;
 
-  @IsNumber({}, { message: v.isNumber('userId') })
-  userId: number;
+  @IsNumber({}, { message: v.isNumber('idUser') })
+  idUser: number;
 }

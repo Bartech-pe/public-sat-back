@@ -10,22 +10,16 @@ import { User } from './entities/user.entity';
 import { CryptHelper } from '@common/helpers/crypt.helper';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { Role } from '@modules/role/entities/role.entity';
-import { Office } from '@modules/office/entities/office.entity';
-import { VicidialUser } from './entities/vicidial-user.entity';
 import { Skill } from '@modules/skill/entities/skill.entity';
+import { Oficina } from '@modules/oficina/entities/oficina.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
+import { UserVicidial } from './entities/user-vicidial.entity';
 import { Op } from 'sequelize';
-import { VicidialUserRepository } from './repositories/vicidial-user.repository';
-import { ChannelPhoneState } from '@common/enums/status-call.enum';
-import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class UserService {
-  constructor(
-    private readonly repository: UserRepository,
-    private readonly vicidialUserRepository: VicidialUserRepository,
-  ) {}
+  constructor(private readonly repository: UserRepository) {}
 
   async findAll(
     user: User,
@@ -34,11 +28,11 @@ export class UserService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<User>> {
     try {
-      const officeId = q?.officeId;
       const whereOpts =
-        user.roleId == UserRole.Adm
+        user.idRole == 1
           ? {
               where: {
+                status: true,
                 ...(q?.byTransfer
                   ? {
                       id: {
@@ -50,10 +44,9 @@ export class UserService {
             }
           : {
               where: {
-                roleId: {
-                  ...(q?.byTransfer
-                    ? { [Op.in]: [2, 3] }
-                    : { [Op.gte]: user.roleId }),
+                status: true,
+                idRole: {
+                  [Op.in]: q?.byTransfer ? [2, 3] : [3],
                 },
                 ...(q?.byTransfer
                   ? {
@@ -64,14 +57,11 @@ export class UserService {
                   : {}),
               },
             };
-      const whereOffice = officeId
-        ? {
-            id: officeId,
-          }
-        : user.roleId == UserRole.Adm
-          ? {}
+      const whereOficina =
+        user.idRole == 1
+          ? { status: true }
           : {
-              id: user.officeId,
+              id: user.idOficina,
             };
 
       return this.repository.findAndCountAll({
@@ -79,12 +69,12 @@ export class UserService {
         include: [
           {
             model: Role,
-            attributes: ['name', 'id'],
+            attributes: ['name'],
           },
           {
-            model: Office,
-            where: whereOffice,
-            required: officeId ? true : !!user.officeId,
+            model: Oficina,
+            where: whereOficina,
+            required: !!user.idOficina,
           },
           {
             model: Inbox,
@@ -93,7 +83,7 @@ export class UserService {
             },
           },
           {
-            model: VicidialUser,
+            model: UserVicidial,
           },
           { model: Skill, through: { attributes: [] }, required: false },
         ],
@@ -109,10 +99,10 @@ export class UserService {
     }
   }
 
-  async findAllRolId(roleId: number): Promise<User[]> {
+  async findAllRolId(idRole: number): Promise<User[]> {
     try {
       const detalles = await this.repository.findAll({
-        where: { roleId },
+        where: { idRole },
         include: [
           {
             model: Inbox,
@@ -124,15 +114,15 @@ export class UserService {
       return detalles; // Devuelve el array, aunque esté vacío
     } catch (error) {
       // Puedes registrar el error o transformarlo si deseas
-      console.error(`Error al buscar usuarios con rol ${roleId}:`, error);
-      throw new Error(`Error al buscar usuarios con el rol ${roleId}`);
+      console.error(`Error al buscar usuarios con rol ${idRole}:`, error);
+      throw new Error(`Error al buscar usuarios con el rol ${idRole}`);
     }
   }
 
   async findOne(id: number): Promise<User> {
     try {
       const exist = await this.repository.findOne({
-        where: { id },
+        where: { id, status: true },
         include: [
           {
             model: Skill,
@@ -142,20 +132,20 @@ export class UserService {
             required: false,
           },
           {
-            model: Office,
-            where: {},
+            model: Oficina,
+            where: { status: true },
             required: false,
           },
           {
             model: Inbox,
             through: {
-              attributes: ['userId'],
+              attributes: ['idUser'],
             },
             required: false,
             include: [{ model: Channel }],
           },
           {
-            model: VicidialUser,
+            model: UserVicidial,
           },
         ],
         throwIfNotFound: false,
@@ -180,16 +170,13 @@ export class UserService {
       const dataToCreate: any = { ...restoDto };
 
       if (vicidial) {
-        dataToCreate.vicidial = {
-          ...vicidial,
-          channelStateId: ChannelPhoneState.OFFLINE,
-        }; // No castees el tipo
+        dataToCreate.vicidial = vicidial; // No castees el tipo
       }
 
       return this.repository.create(dataToCreate, {
         include: [
           {
-            model: VicidialUser,
+            model: UserVicidial,
           },
         ],
       });
@@ -221,29 +208,35 @@ export class UserService {
     }
   }
 
+  // async assignment(
+  //     id: number,
+  //     dtoList: CreateTeamUserDto[],
+  //   ): Promise<TeamUser[]> {
+  //     try {
+  //       const securedDtoList = await Promise.all(
+  //         dtoList.map(async (dto) => ({
+  //           ...dto,
+  //         })),
+  //       );
+  //       return this.teamUserModel.bulkCreate(securedDtoList, {
+  //         updateOnDuplicate: ['idTeam', 'idUser'],
+  //         individualHooks: true,
+  //         ignoreDuplicates: true,
+  //       });
+  //     } catch (error) {
+  //       throw new InternalServerErrorException(
+  //         error,
+  //         'Error interno del servidor',
+  //       );
+  //     }
+  //   }
+
   async update(id: number, dto: UpdateUserDto): Promise<User> {
     try {
       const exist = await this.repository.findById(id);
 
       if (dto.password) {
         dto.password = await CryptHelper.hashPassword(dto.password);
-      }
-
-      if (dto.vicidial) {
-        const vUser = await this.vicidialUserRepository.findOne({
-          where: { userId: id },
-        });
-        if (vUser) {
-          await vUser?.update({
-            ...dto.vicidial,
-          });
-        } else {
-          await this.vicidialUserRepository.create({
-            ...dto.vicidial,
-            userId: id,
-            channelStateId: ChannelPhoneState.OFFLINE,
-          });
-        }
       }
 
       await exist.update(dto);

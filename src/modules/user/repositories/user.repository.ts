@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { User } from '../entities/user.entity';
 import { GenericCrudRepository } from '@common/repositories/generic-crud.repository';
-import { col, fn, where } from 'sequelize';
+import { WhereOptions } from 'sequelize';
 
 @Injectable()
 export class UserRepository extends GenericCrudRepository<User> {
@@ -15,7 +15,9 @@ export class UserRepository extends GenericCrudRepository<User> {
 
   async findOneByEmail(email: string): Promise<User> {
     const user = await this.model.scope('withPassword').findOne({
-      where: where(fn('LOWER', col('email')), email.toLowerCase()),
+      where: {
+        email,
+      } as unknown as WhereOptions<any>,
     });
     return user as User;
   }

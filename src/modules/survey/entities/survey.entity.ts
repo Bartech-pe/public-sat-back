@@ -13,41 +13,41 @@ import {
 } from 'sequelize-typescript';
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt', 'deletedBy'] },
+  attributes: { exclude: ['deletedAt'] },
 }))
 @Table({
   tableName: 'surveys',
   timestamps: true,
   paranoid: true,
 })
-export class Survey extends Model<Survey> {
+export class Survey extends Model {
   @Column({
     field: 'id',
-    type: DataType.BIGINT,
+    type: DataType.INTEGER,
     autoIncrement: true,
     primaryKey: true,
   })
   declare id: number;
 
   @Column({
-    field: 'assistance_id',
-    type: DataType.BIGINT,
+    field: 'assistanceId',
+    type: DataType.INTEGER,
     allowNull: false,
     comment: 'ID of the associated assistance',
   })
   assistanceId: number;
 
   @Column({
-    field: 'channel_room_id',
-    type: DataType.BIGINT,
+    field: 'channelRoomId',
+    type: DataType.INTEGER,
     allowNull: false,
     comment: 'ID of the channel room',
   })
   channelRoomId: number;
 
   @Column({
-    field: 'citizen_id',
-    type: DataType.BIGINT,
+    field: 'citizenId',
+    type: DataType.INTEGER,
     allowNull: false,
     comment: 'ID of the citizen',
   })
@@ -63,7 +63,7 @@ export class Survey extends Model<Survey> {
 
   @Column({
     field: 'rating',
-    type: DataType.SMALLINT,
+    type: DataType.INTEGER,
     allowNull: false,
     comment: 'Rating given in the survey (1-5)',
   })
@@ -71,12 +71,12 @@ export class Survey extends Model<Survey> {
 
   @ForeignKey(() => User)
   @Column({
-    field: 'user_id',
+    field: 'userId',
     type: DataType.INTEGER,
-    allowNull: true,
+    allowNull: false,
     comment: 'ID of the user who submitted the survey',
   })
-  userId?: number | null;
+  userId: number;
 
   @Column({
     field: 'status',
@@ -84,46 +84,17 @@ export class Survey extends Model<Survey> {
     defaultValue: true,
     comment: 'Campo para habilitar o inhabilitar un registro',
   })
-  status?: boolean;
+  status: boolean;
 
-  @ForeignKey(() => User)
-  @Column({
-    field: 'created_by',
-    type: DataType.BIGINT,
-    allowNull: true,
-  })
-  declare createdBy: number | null;
-
-  @BelongsTo(() => User, 'created_by')
-  declare createdByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({
-    field: 'updated_by',
-    type: DataType.BIGINT, 
-    allowNull: true,
-  })
-  declare updatedBy: number | null;
-
-  @BelongsTo(() => User, 'updated_by')
-  declare updatedByUser?: User;
-
-  @ForeignKey(() => User)
-  @Column({ field: 'deleted_by', allowNull: true })
-  declare deletedBy: number;
-
-  @BelongsTo(() => User, 'deleted_by')
-  declare deletedByUser?: User;
+  @BelongsTo(() => User, 'userId')
+  declare user?: User;
 
   @CreatedAt
-  @Column({ field: 'created_at', allowNull: true })
   declare createdAt: Date;
 
   @UpdatedAt
-  @Column({ field: 'updated_at', allowNull: true })
   declare updatedAt: Date;
 
   @DeletedAt
-  @Column({ field: 'deleted_at', allowNull: true })
   declare deletedAt: Date;
 }

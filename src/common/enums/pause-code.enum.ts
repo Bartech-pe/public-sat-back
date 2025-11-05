@@ -6,11 +6,8 @@ export enum VicidialPauseCode {
   TRAIN = 'TRAIN', // Capacitación
   PERSN = 'PERSN', // Asunto personal
   TECH = 'TECH', // Problema técnico
-  WRAP = 'WRAP', // Tiempo de post-llamada
-  WRAPUP = 'WRAPUP', // Tiempo pausa de post-llamada
+  WRAP = 'WRAP', // Tiempo de post-llamada / wrap-up
   ADMIN = 'ADMIN', // Tareas administrativas
   COACH = 'COACH', // Escucha o coaching
   QA = 'QA', // Control de calidad
-
-  PARK = 'PARK'
 }

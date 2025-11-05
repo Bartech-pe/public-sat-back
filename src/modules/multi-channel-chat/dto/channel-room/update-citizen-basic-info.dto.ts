@@ -1,12 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty } from "@nestjs/swagger";
+import { IsNotEmpty, IsString } from "class-validator";
 import { ValidationMessages as v } from '@common/messages/validation-messages';
 
-export class UpdateCitizenBasicInformationDto {
+
+export class UpdateCitizenBasicInformationDto  {
   @ApiProperty({ description: 'Número de teléfono' })
   @IsNotEmpty({ message: v.isNotEmpty('phoneNumber') })
   @IsString({ message: v.isString('phoneNumber') })
-  phoneNumber: string;
+  phoneNumber: string;  
 
   @ApiProperty({ description: 'Nombres completos del ciudadano' })
   @IsNotEmpty({ message: v.isNotEmpty('fullName') })
@@ -22,4 +23,5 @@ export class UpdateCitizenBasicInformationDto {
   @IsNotEmpty({ message: v.isNotEmpty('documentNumber') })
   @IsString({ message: v.isString('documentNumber') })
   documentNumber: string;
+
 }
