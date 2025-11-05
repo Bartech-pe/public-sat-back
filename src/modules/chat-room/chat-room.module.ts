@@ -5,17 +5,17 @@ import { ChatRoomGateway } from './gateways/chat-room.gateway';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { ChatRoom } from './entities/chat-room.entity';
 import { UserChatRoom } from './entities/user-chat-room.entity';
-import { Message } from './entities/message.entity';
+import { ChatRoomMessage } from './entities/chat-room-message.entity';
 import { ChatRoomRepository } from './repositories/chat-room.repository';
 import { UserChatRoomRepository } from './repositories/user-chat-room.repository';
-import { MessageRepository } from './repositories/message.repository';
+import { ChatRoomMessageRepository } from './repositories/chat-room-message.repository';
 import { AuthModule } from '@modules/auth/auth.module';
 import { UserModule } from '@modules/user/user.module';
 
 @Module({
   imports: [
     AuthModule,
-    SequelizeModule.forFeature([ChatRoom, UserChatRoom, Message]),
+    SequelizeModule.forFeature([ChatRoom, UserChatRoom, ChatRoomMessage]),
     UserModule,
   ],
   controllers: [ChatRoomController],
@@ -24,8 +24,12 @@ import { UserModule } from '@modules/user/user.module';
     ChatRoomGateway,
     ChatRoomRepository,
     UserChatRoomRepository,
-    MessageRepository,
+    ChatRoomMessageRepository,
   ],
-  exports: [ChatRoomRepository, UserChatRoomRepository, MessageRepository],
+  exports: [
+    ChatRoomRepository,
+    UserChatRoomRepository,
+    ChatRoomMessageRepository,
+  ],
 })
 export class ChatRoomModule {}

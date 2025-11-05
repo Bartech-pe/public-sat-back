@@ -7,15 +7,15 @@ import { dbConfig, envConfig } from 'config/env';
   imports: [
     SequelizeModule.forRoot({
       dialect: dbConfig.dialect,
-      host: dbConfig.host,
+      timezone: '-05:00',
       port: dbConfig.port,
-      username: dbConfig.user,
-      password: dbConfig.pass,
-      database: dbConfig.name,
+      host: envConfig.isDev ? dbConfig.hostDev : dbConfig.hostProd,
+      username: envConfig.isDev ? dbConfig.userDev : dbConfig.userProd,
+      password: envConfig.isDev ? dbConfig.passDev : dbConfig.passProd,
+      database: envConfig.isDev ? dbConfig.nameDev : dbConfig.nameProd,
       autoLoadModels: true,
-      sync: { alter: false },
-      synchronize: envConfig.isDev,
-      logging: envConfig.isDev,
+      synchronize: false,
+      logging: false,
       retryAttempts: 5,
       dialectOptions: {
         connectTimeout: 20000, // 20 segundos

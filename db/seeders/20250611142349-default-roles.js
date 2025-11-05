@@ -12,8 +12,8 @@ module.exports = {
           description: 'Administrador del sistema',
           inmutable: true,
           status: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          created_at: new Date(),
+          updated_at: new Date(),
         },
         {
           id: 2,
@@ -21,8 +21,8 @@ module.exports = {
           description: 'Encargado de supervisar equipos de asesores',
           inmutable: true,
           status: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          created_at: new Date(),
+          updated_at: new Date(),
         },
         {
           id: 3,
@@ -30,29 +30,15 @@ module.exports = {
           description: 'Encargado de asesorar al ciudadano',
           inmutable: true,
           status: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          created_at: new Date(),
+          updated_at: new Date(),
         },
-        // {
-        //   id: 4,
-        //   name: 'sectorista',
-        //   description: 'Encargado de asesorar al ciudadano',
-        //   inmutable: true,
-        //   status: true,
-        //   createdAt: new Date(),
-        //   updatedAt: new Date(),
-        // },
       ],
       {},
     );
   },
 
   async down(queryInterface, Sequelize) {
-    /**
-     * Add commands to revert seed here.
-     *
-     * Example:
-     * await queryInterface.bulkDelete('People', null, {});
-     */
+    queryInterface.bulkDelete('roles', null, {});
   },
 };

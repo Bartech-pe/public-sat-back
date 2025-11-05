@@ -5,11 +5,11 @@ export class CreateInboxUserDto {
   @IsNumber({}, { message: v.isNumber('id') })
   id?: number;
 
-  @IsNumber({}, { message: v.isNumber('idInbox') })
-  idInbox: number;
+  @IsNumber({}, { message: v.isNumber('inboxId') })
+  inboxId: number;
 
-  @IsNumber({}, { message: v.isNumber('idUser') })
-  idUser: number;
+  @IsNumber({}, { message: v.isNumber('userId') })
+  userId: number;
 
   @IsOptional()
   @IsString({ message: v.isString('accessToken') })

@@ -17,7 +17,9 @@ import { Skill } from './entities/skill.entity';
 import { CreateSkillUserDto } from './dto/create-skill-user.dto';
 import { SkillUser } from './entities/skill-user.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('skills')
 export class SkillController {
   constructor(private readonly service: SkillService) {}

@@ -1,42 +1,87 @@
-import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Post, Put, Query } from "@nestjs/common";
-import { AssistanceService } from "../services/assistance.service";
-import { BaseResponseDto } from "@common/dto/base-response.dto";
-import { CloseAssistanceDto } from "../dto/assistances/close-assistance.dto";
-import { ChannelAssistanceDto, MessagesResponseDto } from "../dto/assistances/get-assistance.dto";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
+import { ChannelAttentionService } from '../services/channel-attention.service';
+import { CloseChannelAttentionDto } from '../dto/channel-attentions/close-assistance.dto';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
+import {
+  ChannelAttentionDto,
+  MessagesResponseDto,
+} from '../dto/channel-attentions/get-assistance.dto';
+import { Public } from '@common/decorators/public.decorator';
+import { JwtCitizenGuard } from '@common/guards/jwt-citizen.guard';
+import { AssignAttentionDetailDto } from '../dto/channel-attentions/assign-attention-detail.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '@modules/user/entities/user.entity';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 
-@Controller('channel-room')
-export class ChannelAssistanceController {
+@ApiBearerAuth()
+@Controller('channel-room/assistances')
+export class ChannelAttentionController {
+  constructor(private assistanceService: ChannelAttentionService) {}
 
-	constructor(private assistanceService: AssistanceService) {}
+  @Put('assistance/close')
+  async closeChannelAttentionService(
+    @Body() payload: CloseChannelAttentionDto,
+  ) {
+    return this.assistanceService.closeChannelAttention(payload);
+  }
 
+  @Get(':assistanceId')
+  async getMessagesFromChannelAttention(
+    @Param('assistanceId') assistanceId: number,
+  ): Promise<BaseResponseDto<MessagesResponseDto>> {
+    return this.assistanceService.getMessagesFromChannelAttention(assistanceId);
+  }
 
-	@Put('assistance/close')
-	async closeAssistanceService(@Body() payload : CloseAssistanceDto) {
-		return this.assistanceService.closeAssistance(payload);
-	}
+  @Put(':assistanceId/attention-detail')
+  async assignAttentionDetail(
+    @Param('assistanceId') assistanceId: number,
+    @Body() payload: AssignAttentionDetailDto,
+  ): Promise<BaseResponseDto> {
+    payload.attentionId = assistanceId;
+    return this.assistanceService.assignAttentionDetail(payload);
+  }
 
-	@Get('assistance/:assistanceId')
-	async getMessagesFromAssistance(
-		@Param('assistanceId') assistanceId: number
-	): Promise<BaseResponseDto<MessagesResponseDto>> {
-		return this.assistanceService.getMessagesFromAssistance(assistanceId);
-	}
+  @Get(':channelRoomId/assistance/retrieve')
+  async getChannelAttentions(
+    @Param('channelRoomId') channelRoomId: number,
+  ): Promise<BaseResponseDto<ChannelAttentionDto[]>> {
+    if (!channelRoomId) {
+      throw new BadRequestException(
+        'El parámetro channelRoomId es obligatorio',
+      );
+    }
+    return this.assistanceService.getChannelAttentions(channelRoomId);
+  }
 
-	@Get(':channelRoomId/assistance/retrieve')
-	async getAssistances(
-		@Param('channelRoomId') channelRoomId: number
-	): Promise<BaseResponseDto<ChannelAssistanceDto[]>> {
-		if (!channelRoomId) {
-			throw new BadRequestException('El parámetro channelRoomId es obligatorio');
-		}
-		return this.assistanceService.getAssistances(channelRoomId);
-	}
+  @Post(':assistanceId/send-to-email')
+  async sendMessagesHtmlFromChannelAttentionForCRM(
+    @CurrentUser() user: User,
+    @Param('assistanceId') assistanceId: number,
+  ): Promise<any> {
+    return this.assistanceService.sendMessagesHtmlFromChannelAttention(
+      assistanceId,
+      user.id,
+    );
+  }
 
-	
-	@Post('assistance/:assistanceId/send-to-email')
-	async sendMessagesHtmlFromAssistance(
-		@Param('assistanceId') assistanceId: number
-	): Promise<any> {
-		return this.assistanceService.sendMessagesHtmlFromAssistance(assistanceId);
-	}
+  @Public()
+  @UseGuards(JwtCitizenGuard)
+  @Post(':assistanceId/chatsat/send-to-email')
+  async sendMessagesHtmlFromChannelAttentionForChatsat(
+    @Param('assistanceId') assistanceId: number,
+  ): Promise<any> {
+    return this.assistanceService.sendMessagesHtmlFromChannelAttention(
+      assistanceId,
+      0,
+    );
+  }
 }

@@ -10,6 +10,6 @@ export class PredefinedResponseRepository extends GenericCrudRepository<Predefin
     @InjectModel(PredefinedResponse)
     model: typeof PredefinedResponse,
   ) {
-      super(model);
+    super(model);
   }
 }

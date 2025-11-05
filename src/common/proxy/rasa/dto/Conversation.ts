@@ -20,7 +20,7 @@ export class LatestMessage {
   intent: Intent;
 }
 export class ConversationTracker {
-  sender_id: string;
+  sender_id: number;
   slots: Record<string, any>;
   latest_message: LatestMessage;
   events: ConversationEvent[];

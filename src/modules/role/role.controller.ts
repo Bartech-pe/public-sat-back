@@ -8,18 +8,21 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { RoleService } from './role.service';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
-import { CreateRoleScreenDto } from './dto/create-role-screen.dto';
-import { RoleScreen } from './entities/role-screen.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { User } from '@modules/user/entities/user.entity';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@common/guards/jwt.guard';
 
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('roles')
 export class RoleController {
   constructor(private readonly service: RoleService) {}
@@ -42,14 +45,6 @@ export class RoleController {
   @Post()
   create(@Body() dto: CreateRoleDto): Promise<Role> {
     return this.service.create(dto);
-  }
-
-  @Post('assignment/:id')
-  assignment(
-    @Param('id') id: number,
-    @Body() dto: CreateRoleScreenDto[],
-  ): Promise<RoleScreen[]> {
-    return this.service.assignment(id, dto);
   }
 
   @Patch(':id')

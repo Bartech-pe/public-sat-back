@@ -5,53 +5,88 @@ import {
   ForeignKey,
   DeletedAt,
   BelongsTo,
-  DataType
+  DataType,
+  CreatedAt,
+  UpdatedAt,
 } from 'sequelize-typescript';
 import { User } from '@modules/user/entities/user.entity';
 import { Inbox } from './inbox.entity';
-import { EstadoCanal } from '@modules/estado-canal/entities/estado-canal.entity';
-
-export interface InboxUserAttributes {
-  idUser: number;
-  idInbox: number;
-  stateChannelId?:number|null;
-  updatedAt?: Date | null;
-  deletedAt?: Date | null;
-}
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
 
 @Table({
-  tableName: 'inboxUsers',
+  tableName: 'inbox_users',
   timestamps: true,
   paranoid: true,
 })
-export class InboxUser  extends Model<InboxUserAttributes> implements InboxUserAttributes {
-  @ForeignKey(() => User)
-  @Column
-  idUser: number;
-
-  
+export class InboxUser extends Model {
   @ForeignKey(() => Inbox)
-  @Column
-  idInbox: number;
+  @Column({
+    field: 'inbox_id',
+    type: DataType.BIGINT,
+    allowNull: false,
+    primaryKey: true,
+    comment: 'Id del equipo',
+  })
+  inboxId: number;
 
-  @BelongsTo(() => Inbox)
-  inbox: Inbox;
+  @ForeignKey(() => User)
+  @Column({
+    field: 'user_id',
+    type: DataType.BIGINT,
+    allowNull: false,
+    primaryKey: true,
+    comment: 'Id del usuario',
+  })
+  userId: number;
 
-  @BelongsTo(() => User)
+  @BelongsTo(() => User, { foreignKey: 'userId' })
   user: User;
 
-  @ForeignKey(() => EstadoCanal)
+  @BelongsTo(() => Inbox, { foreignKey: 'inboxId' })
+  inbox: Inbox;
+
+  @ForeignKey(() => ChannelState)
   @Column({
-    field: 'state_channel_id',
+    field: 'channel_state_id',
     type: DataType.INTEGER,
     allowNull: true,
     comment: 'Id Estado de canal asignado al asesor',
   })
-  stateChannelId?: number|null;
+  channelStateId?: number;
 
-  @BelongsTo(() => EstadoCanal)
-  stateChannel: EstadoCanal
+  @BelongsTo(() => ChannelState)
+  channelState: ChannelState;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'created_by', allowNull: true })
+  declare createdBy: number;
+
+  @BelongsTo(() => User, 'createdBy')
+  declare createdByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'updated_by', allowNull: true })
+  declare updatedBy: number;
+
+  @BelongsTo(() => User, 'updatedBy')
+  declare updatedByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'deleted_by', allowNull: true })
+  declare deletedBy: number;
+
+  @BelongsTo(() => User, 'deletedBy')
+  declare deletedByUser?: User;
+
+  @CreatedAt
+  @Column({ field: 'created_at', allowNull: true })
+  declare createdAt: Date;
+
+  @UpdatedAt
+  @Column({ field: 'updated_at', allowNull: true })
+  declare updatedAt: Date;
 
   @DeletedAt
-  declare deletedAt: Date | null;
+  @Column({ field: 'deleted_at', allowNull: true })
+  declare deletedAt: Date;
 }

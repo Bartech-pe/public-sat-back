@@ -8,6 +8,7 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ScreenService } from './screen.service';
 import { CreateScreenDto } from './dto/create-screen.dto';
@@ -15,7 +16,11 @@ import { UpdateScreenDto } from './dto/update-screen.dto';
 import { Screen } from './entities/screen.entity';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@common/guards/jwt.guard';
 
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('screens')
 export class ScreenController {
   constructor(private readonly service: ScreenService) {}
@@ -57,8 +62,8 @@ export class ScreenController {
     return this.service.remove(+id);
   }
 
-  @Get('byRol/:id')
-  findAllByRol(@Param('id') id: string): Promise<Screen[]> {
-    return this.service.findAllByRol(id);
+  @Get('byOffice/:id')
+  findAllByOffice(@Param('id') id: string): Promise<Screen[]> {
+    return this.service.findAllByOffice(id);
   }
 }

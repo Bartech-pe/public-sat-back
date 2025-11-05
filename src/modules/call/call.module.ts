@@ -1,52 +1,44 @@
-import { HttpModule, HttpService } from '@nestjs/axios';
+import { HttpModule } from '@nestjs/axios';
 import { forwardRef, Module } from '@nestjs/common';
 import { CallController } from './call.controller';
-import { SatProxy } from '@common/proxy/sat/sat.proxy';
-import { SMSProxy } from '@common/proxy/sms/sms.proxy';
 import { RasaProxy } from '@common/proxy/rasa/rasa.proxy';
 import { RasaService } from './rasa.service';
-import { AmiService } from './services/ami.service';
 import { CallService } from './services/call.service';
-import { SMSService } from './services/sms.service';
-import { SatService } from './services/sat.service';
-import { CallStateRepository } from './repositories/callState.repository';
+import { CallStateRepository } from './repositories/call-state.repository';
 import { CallRepository } from './repositories/call.repository';
-import { CallStateService } from './services/callState.service';
+import { CallStateService } from './services/call-state.service';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Call } from './entities/call.entity';
-import { CallState } from './entities/callState.entity';
-import { CallStateController } from './callState.controller';
-import { UserRepository } from '@modules/user/repositories/user.repository';
+import { CallState } from './entities/call-state.entity';
+import { CallStateController } from './call-state.controller';
 import { UserModule } from '@modules/user/user.module';
-import { AMIGateway } from './ami.gateway';
+import { AmiModule } from '@modules/vicidial/ami/ami.module';
+import { CentralTelefonicaModule } from '@modules/vicidial/central-telefonica/central-telefonica.module';
+import { SaldomaticoModule } from '@modules/api-sat/saldomatico/saldomatico.module';
+import { CallHistory } from './entities/call-history.entity';
+import { CallHistoryRepository } from './repositories/call-history.repository';
 import { DatabaseCentralModule } from '@database/central/database-central.module';
-import { CentralTelefonicaModule } from '@modules/central-telefonica/central-telefonica.module';
-import { AloSatService } from '@modules/central-telefonica/services/alo-sat.service';
-import { SatController } from './sat.controller';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([Call, CallState]),
+    SequelizeModule.forFeature([Call, CallState, CallHistory]),
     UserModule,
     HttpModule,
-    DatabaseCentralModule,
     forwardRef(() => CentralTelefonicaModule),
+    forwardRef(() => AmiModule),
+    SaldomaticoModule,
+    DatabaseCentralModule,
   ],
-  controllers: [CallController, CallStateController, SatController],
+  controllers: [CallController, CallStateController],
   providers: [
-    AmiService,
     CallService,
-    SatService,
-    SatProxy,
-    SMSProxy,
-    SMSService,
     RasaProxy,
     RasaService,
     CallStateRepository,
     CallRepository,
     CallStateService,
-    AMIGateway,
+    CallHistoryRepository,
   ],
-  exports: [RasaService, RasaProxy, AmiService, SatService],
+  exports: [RasaService, RasaProxy, CallService, CallHistoryRepository],
 })
 export class CallModule {}

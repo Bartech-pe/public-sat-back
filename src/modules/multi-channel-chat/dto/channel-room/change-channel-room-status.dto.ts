@@ -1,7 +1,8 @@
-import { ChatStatus } from "@common/interfaces/multi-channel-chat/channel-message/channel-chat-message.dto";
-import { ApiProperty } from "@nestjs/swagger";
+import { ChatStatus } from '@common/interfaces/multi-channel-chat/channel-message/channel-chat-message.dto';
+import { ApiProperty } from '@nestjs/swagger';
 import { ValidationMessages as v } from '@common/messages/validation-messages';
-import { IsNotEmpty, IsNumber } from "class-validator";
+import { IsNotEmpty, IsNumber } from 'class-validator';
+import { ChannelAttentionStatus } from '@modules/multi-channel-chat/entities/channel-attention.entity';
 
 export class changeChannelRoomStatusDto {
   @ApiProperty({ description: 'ID del canal', example: 1 })
@@ -18,4 +19,7 @@ export class changeChannelRoomStatusDto {
   @IsNotEmpty({ message: v.isNotEmpty('status') })
   status: ChatStatus;
 
+  @ApiProperty({ description: 'Estado de atención ', example: false })
+  @IsNotEmpty({ message: v.isNotEmpty('attentionStatus') })
+  attentionStatus: ChannelAttentionStatus;
 }

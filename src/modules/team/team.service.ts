@@ -12,6 +12,7 @@ import { TeamUser } from './entities/team-user.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { TeamUserRepository } from './repositories/team-user.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class TeamService {
@@ -21,12 +22,14 @@ export class TeamService {
   ) {}
 
   async findAll(
+    user: User,
     limit: number,
     offset: number,
+    q?: Record<string, any>,
   ): Promise<PaginatedResponse<Team>> {
     try {
       return this.repository.findAndCountAll({
-        include: [{ model: User, through: { attributes: [] } }],
+        include: [{ model: User, as: 'users', through: { attributes: [] } }],
         limit,
         offset,
         order: [['id', 'DESC']],
@@ -43,7 +46,7 @@ export class TeamService {
     try {
       const exist = await this.repository.findById(id, {
         where: { id: id },
-        include: [{ model: User, through: { attributes: [] } }],
+        include: [{ model: User, as: 'users', through: { attributes: [] } }],
       });
       if (!exist) {
         throw new NotFoundException('Usuario no encontrado');
@@ -94,9 +97,33 @@ export class TeamService {
           ...dto,
         })),
       );
+
+      await this.teamUserRepository.bulkDestroy({
+        where:
+          dtoList.length != 0
+            ? {
+                userId: id,
+                teamId: {
+                  [Op.notIn]: dtoList.map((dto) => dto.teamId),
+                },
+              }
+            : { userId: id },
+      });
+
+      if (dtoList.length === 0) {
+        return [];
+      }
+
+      await this.teamUserRepository.bulkRestore({
+        where: {
+          userId: id,
+          teamId: {
+            [Op.in]: dtoList.map((dto) => dto.teamId),
+          },
+        },
+      });
+
       return this.teamUserRepository.bulkCreate(securedDtoList, {
-        updateOnDuplicate: ['idTeam', 'idUser'],
-        individualHooks: true,
         ignoreDuplicates: true,
       });
     } catch (error) {

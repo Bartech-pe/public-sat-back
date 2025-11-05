@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   Put,
+  BadRequestException,
 } from '@nestjs/common';
 import { InboxService } from './inbox.service';
 import { CreateInboxDto } from './dto/create-inbox.dto';
@@ -19,9 +20,18 @@ import { InboxUser } from './entities/inbox-user.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { QueryDto } from '@common/dto/query.dto';
 import { InvalidateInboxCredentialDto } from './dto/invalidate-inbox-credentials.dto';
-import { Public } from '@common/decorators/public.decorator';
-import { UpdateInboxUserStatus } from './dto/update-inbox-user-status.dto';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '@modules/user/entities/user.entity';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 
+/**
+ * Controller for managing Inbox.
+ *
+ * Exposes RESTful endpoints to perform CRUD operations, pagination,
+ * status toggling, and soft deletion for Inbox.
+ */
+@ApiBearerAuth()
 @Controller('inboxs')
 export class InboxController {
   constructor(private readonly service: InboxService) {}
@@ -35,14 +45,21 @@ export class InboxController {
     return this.service.findAll(limit, offset);
   }
 
+  @Get(':channel/general-status')
+  async getUserStatus(
+    @CurrentUser() currentUser: User, 
+    @Param('channel') channel: string
+  ): Promise<BaseResponseDto<{ userStatus: string, color?: string | null }>> {
+    return this.service.getUserStatus(currentUser, channel);
+  }
+
+  @Get('available-channels')
+  async getInboxAvailablesForUser(@CurrentUser() currentUser: User): Promise<BaseResponseDto<string[]>> {
+    return this.service.getInboxAvailablesForUser(currentUser);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: number): Promise<Inbox> {
-    return this.service.findOne(+id);
-  }
-  
-  @Public()
-  @Get('get-agente/:id')
-  findOneAgente(@Param('id') id: number): Promise<Inbox> {
     return this.service.findOne(+id);
   }
 
@@ -65,22 +82,19 @@ export class InboxController {
     }
   }
 
-  @Get('assignment/:idUser')
-  findByAssignmentId(@Param('idUser') idUser: number): Promise<InboxUser[]> {
-    return this.service.findByAssignmentId(+idUser);
+  @Get('assignment/:userId')
+  findByAssignmentId(@Param('userId') userId: number): Promise<InboxUser[]> {
+    return this.service.findByAssignmentId(+userId);
   }
 
-
-  @Post('assignment/supervisor/:idUser')
+  @Post('assignment/supervisor/:userId')
   assignmentSupervisor(
-    @Param('idUser') idUser: number,
+    @Param('userId') userId: number,
     @Body() dto: CreateInboxUserDto[],
   ): Promise<InboxUser[]> {
-    return this.service.assignmentSupervisor(idUser, dto);
+    return this.service.assignmentSupervisor(userId, dto);
   }
 
-  
-  
   @Patch(':id')
   update(@Param('id') id: number, @Body() dto: UpdateInboxDto): Promise<Inbox> {
     return this.service.update(+id, dto);
@@ -89,6 +103,19 @@ export class InboxController {
   @Put('toggleStatus/:id')
   toggleStatus(@Param('id') id: number): Promise<Inbox> {
     return this.service.toggleStatus(id);
+  }
+  
+  @Put('inbox-users/change-all-status')
+  changeAllUserStatus(
+    @CurrentUser() currentUser: User,
+    @Body() payload: {
+      channel: string,
+      isAvailable?: boolean | null,
+      channelStateId?: number | null
+    }): Promise<BaseResponseDto> {
+    console.log('💥 CONTROLADOR payload:', payload);
+    console.log('👤 currentUser:', currentUser);
+    return this.service.changeAllUserStatus(currentUser, payload);
   }
 
   @Delete(':id')
@@ -99,9 +126,5 @@ export class InboxController {
   @Post('credentials/invalidate')
   invalidateCredentials(@Body() payload: InvalidateInboxCredentialDto) {
     return this.service.invalidateCredentials(payload);
-  }
-  @Put('changeStatus')
-  async changeStatus(@Body() payload:UpdateInboxUserStatus){
-    return await this.service.changeAttentionAvaliable(payload.inboxId,payload.userId);
   }
 }

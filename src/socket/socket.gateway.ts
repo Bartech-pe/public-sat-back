@@ -8,18 +8,13 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { NotificationService } from '@modules/notification/notification.service';
-import { CreateNotificationDto } from '@modules/notification/dto/create-notification.dto';
 
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:4200'], // mejor explícito
     credentials: true,
   },
 })
 export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly notificationService: NotificationService) {}
-
   @WebSocketServer()
   server: Server;
 
@@ -29,10 +24,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('register_user')
   handleRegisterUser(
     @MessageBody() userId: number,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() client: Socket,
   ) {
     this.clients.set(userId, client.id);
-    console.log(`🟢 Usuario ${userId} registrado con socketId ${client.id}`);
+    console.log(`Usuario ${userId} registrado con socketId ${client.id}`);
   }
 
   @SubscribeMessage('send_message')
@@ -40,50 +35,16 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.emit('receive_message', message);
   }
 
-
-  
   @SubscribeMessage('send_alertas')
-  async handleAlertas(@MessageBody() request: { idUser: number; message: string }): Promise<void> {
-    try {
-      console.log("Recibida nueva notificación:", request);
-      
-      // Crear y guardar la notificación
-      const createNotificationDto: CreateNotificationDto = {
-        userId: request.idUser,
-        message: request.message
-      };
-      
-      // Guardar la notificación en la base de datos
-      const notification = await this.notificationService.create(createNotificationDto);
-      console.log('Notificación guardada:', notification);
-      
-      // Emitir la notificación al usuario específico
-      const socketId = this.clients.get(request.idUser);
-      if (socketId) {
-        this.server.to(socketId).emit('receive_alertas', {
-          ...notification,
-          isNew: true
-        });
-      }
-      
-      // También emitir a todos los clientes si es necesario
-      this.server.emit('receive_alertas', notification);
-      
-    } catch (error) {
-      console.error('Error al procesar la notificación:', error);
-      // Puedes manejar el error de la manera que prefieras
-      // Por ejemplo, emitiendo un mensaje de error al cliente
-      this.server.emit('notification_error', {
-        error: 'Error al procesar la notificación',
-        details: error.message
-      });
-    }
+  handleAlertas(@MessageBody() alerta: any): void {
+    console.log(alerta);
+    this.server.emit('receive_alertas', alerta);
   }
 
   // 2. Enviar mensaje a usuarios
   @SubscribeMessage('mensaje_chat')
   handleSendMessageToUsers(
-    @MessageBody() data: { to: number[]; title: string; message: string }
+    @MessageBody() data: { to: number[]; title: string; message: string },
   ) {
     for (const userId of data.to) {
       const socketId = this.clients.get(userId);
@@ -92,9 +53,9 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
           title: data.title,
           message: data.message,
         });
-        console.log(`📤 Alerta enviada a ${userId}`);
+        console.log(`Alerta enviada a ${userId}`);
       } else {
-        console.warn(`⚠️ Usuario ${userId} no está conectado`);
+        console.warn(`Usuario ${userId} no está conectado`);
       }
     }
   }
@@ -118,14 +79,14 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     for (const [userId, socketId] of this.clients.entries()) {
       if (socketId === client.id) {
         this.clients.delete(userId);
-        console.log(`🔴 Usuario ${userId} desconectado`);
+        console.log(`Usuario ${userId} desconectado`);
         break;
       }
     }
+    client.removeAllListeners();
   }
 
   handleConnection(client: Socket) {
-    console.log('🔌 Cliente conectado Socket:', client.id);
+    console.log('Cliente conectado Socket:', client.id);
   }
-
 }

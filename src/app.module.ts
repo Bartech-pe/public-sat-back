@@ -1,109 +1,108 @@
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-  RequestMethod,
-} from '@nestjs/common';
-import { DatabaseCrmModule } from './database/crm/database-crm.module';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { RoleModule } from './modules/role/role.module';
-import { UserModule } from './modules/user/user.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { TeamModule } from './modules/team/team.module';
-import { CampaingModule } from './modules/campaing/campaing.module';
-import { PredefinedResponseModule } from './modules/predefined-response/predefined-response.module';
-import { ScreenModule } from './modules/screen/screen.module';
-import { SkillModule } from './modules/skill/skill.module';
-import { ChatRoomModule } from './modules/chat-room/chat-room.module';
-import { InboxModule } from '@modules/inbox/inbox.module';
-import { ChannelModule } from '@modules/channel/channel.module';
-import { TagsModule } from './modules/tags/tags.module';
-import { ReminderModule } from './modules/reminder/reminder.module';
-import { CallModule } from '@modules/call/call.module';
-import { QuickResponseModule } from '@modules/quickResponse/quickResponse.module';
-import { CarterasModule } from '@modules/carteras/carteras.module';
-// import { DetalleCarterasModule } from '@modules/detalle-carteras/detalle-carteras.module';
-import { EstadoCampaniaModule } from './modules/estado-campania/estado-campania.module';
-import { EstadoAtencionModule } from './modules/estado-atencion/estado-atencion.module';
-import { EstadoCanalModule } from './modules/estado-canal/estado-canal.module';
-import { AsignarCarteraModule } from '@modules/asignar-cartera/asignar-cartera.module';
-import { TipoCampaniaModule } from '@modules/tipo-campania/tipo-campania.module';
-import { AreaCampaniaModule } from '@modules/area-campania/area-campania.module';
-import { GestionCampaniaModule } from '@modules/gestion-campania/gestion-campania.module';
-import { MensajeAutomaticoModule } from '@modules/mensaje-automatico/mensaje-automatico.module';
 import { SocketGateway } from './socket/socket.gateway';
-import { MultiChannelChatModule } from './modules/multi-channel-chat/multi-channel-chat.module';
-import { AreaModule } from './modules/area/area.module';
-import { OficinaModule } from './modules/oficina/oficina.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from '@common/guards/jwt.guard';
 import { RequestContextInterceptor } from '@common/interceptors/request-context.interceptor';
-import { CarteraDetalleModule } from './modules/cartera-detalle/cartera-detalle.module';
-import { AtencionCiudadanoModule } from './modules/atencion-ciudadano/atencion-ciudadano.module';
-import { VicidialApiModule } from './modules/vicidial-api/vicidial-api.module';
-import { CentralTelefonicaModule } from './modules/central-telefonica/central-telefonica.module';
-import { DatabaseCentralModule } from '@database/central/database-central.module';
-import { AppController } from './app.controller';
-import { OmnicanalidadModule } from './api-sat/omnicanalidad/omnicanalidad.module';
-import { SaldomaticoModule } from './api-sat/saldomatico/saldomatico.module';
-import { AuthSatModule } from './api-sat/auth-sat/auth-sat.module';
-import { FeriadoModule } from '@modules/horario/feriado.module';
-import { ScheduleModule } from '@nestjs/schedule';
-import { GmailModule } from '@modules/gmail/gmail.module';
+import { DatabaseModule } from '@database/database.module';
+import { AuthModule } from '@modules/auth/auth.module';
+import { RoleModule } from '@modules/role/role.module';
+import { UserModule } from '@modules/user/user.module';
+import { DepartmentModule } from '@modules/department/department.module';
+import { OfficeModule } from '@modules/office/office.module';
+import { VicidialModule } from './modules/vicidial/vicidial.module';
+import { ApiSatModule } from '@modules/api-sat/api-sat.module';
+import { TeamModule } from '@modules/team/team.module';
+import { CampaignModule } from '@modules/campaign/campaign.module';
+import { CampaignStateModule } from '@modules/campaign-state/campaign-state.module';
+import { CampaignTypeModule } from '@modules/campaign-type/campaign-type.module';
+import { ScreenModule } from '@modules/screen/screen.module';
+import { SkillModule } from '@modules/skill/skill.module';
+import { TagModule } from '@modules/tag/tag.module';
+import { PredefinedResponseModule } from '@modules/predefined-response/predefined-response.module';
+import { ChannelModule } from '@modules/channel/channel.module';
+import { ChannelStateModule } from '@modules/channel-state/channel-state.module';
+import { InboxModule } from '@modules/inbox/inbox.module';
+import { ChatRoomModule } from '@modules/chat-room/chat-room.module';
+import { ReminderModule } from '@modules/reminder/reminder.module';
+import { QuickResponseModule } from '@modules/quick-response/quick-response.module';
+import { PortfolioModule } from '@modules/portfolio/portfolio.module';
+import { PortfolioDetailModule } from '@modules/portfolio-detail/portfolio-detail.module';
+import { MultiChannelChatModule } from '@modules/multi-channel-chat/multi-channel-chat.module';
+import { AutomaticMessageModule } from '@modules/automatic-message/automatic-message.module';
+import { CitizenAssistanceModule } from '@modules/citizen-assistance/citizen-assistance.module';
+import { ScheduleModule } from '@modules/schedule/schedule.module';
+import { SmsModule } from '@modules/sms/sms.module';
+import { AssistanceStateModule } from '@modules/assistance-state/assistance-state.module';
+import { CallModule } from '@modules/call/call.module';
 import { NotificationModule } from '@modules/notification/notification.module';
-import { SocketModule } from './socket/socket.module';
-import { ScheduleAssignmentModule } from './modules/schedule-assignment/schedule-assignment.module';
-import { MonitorModule } from '@modules/monitor/monitor.module';
+import { EmailModule } from '@modules/email/email.module';
+import { ChannelScheduleModule } from '@modules/channel-schedule/channel-schedule.module';
 import { SurveyModule } from '@modules/survey/survey.module';
-
+import { CitizenModule } from '@modules/citizen/citizen.module';
+import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
+import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-assistance.module';
+import { TemplateEmailModule } from './modules/template-email/template-email.module';
+import { CampaignEmailModule } from './modules/campaign-email/campaign-email.module';
+import { CampaingEmailConfigModule } from './modules/campaing-email-config/campaing-email-config.module';
+import { MetabaseModule } from './modules/metabase/metabase.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { AppController } from './app.controller';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-    ScheduleModule.forRoot(),
-    DatabaseCentralModule,
-    DatabaseCrmModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'uploads'), 
+      serveRoot: '/uploads', 
+    }),
+    DatabaseModule,
     AuthModule,
     RoleModule,
     UserModule,
+    DepartmentModule,
+    OfficeModule,
     TeamModule,
-    CampaingModule,
-    PredefinedResponseModule,
-    ScreenModule,
-    ChannelModule,
-    InboxModule,
     SkillModule,
+    TagModule,
+    ScreenModule,
+    CampaignTypeModule,
+    CampaignStateModule,
+    CampaignModule,
+    ChannelStateModule,
+    ChannelModule,
+    ConsultTypeModule,
+    CitizenModule,
+    InboxModule,
     ChatRoomModule,
-    TagsModule,
-    ReminderModule,
-    CallModule,
+    PortfolioModule,
+    PortfolioDetailModule,
+    CitizenAssistanceModule,
+    AssistanceStateModule,
+    ChannelAssistanceModule,
+    PredefinedResponseModule,
     QuickResponseModule,
-    CarterasModule,
-    EstadoCampaniaModule,
-    EstadoAtencionModule,
-    AsignarCarteraModule,
-    TipoCampaniaModule,
-    AreaCampaniaModule,
-    GestionCampaniaModule,
-    MensajeAutomaticoModule,
-    EstadoCanalModule,
+    ReminderModule,
     MultiChannelChatModule,
-    AreaModule,
-    OficinaModule,
-    CarteraDetalleModule,
-    AtencionCiudadanoModule,
-    VicidialApiModule,
-    CentralTelefonicaModule,
-    OmnicanalidadModule,
-    SaldomaticoModule,
-    AuthSatModule,
-    FeriadoModule,
-    GmailModule,
+    AutomaticMessageModule,
+    ScheduleModule,
+    CallModule,
+    SmsModule,
+    EmailModule,
     NotificationModule,
-    SocketModule,
-    ScheduleAssignmentModule,
-    MonitorModule,
-    SurveyModule
+    ChannelScheduleModule,
+    SurveyModule, 
+
+    // Modulos externos
+    VicidialModule,
+    ApiSatModule,
+    TemplateEmailModule,
+    CampaignEmailModule,
+    CampaingEmailConfigModule,
+    MetabaseModule,
+    HealthModule,
   ],
   providers: [
     {

@@ -6,9 +6,9 @@ import { ChannelMessageAttachment } from '../entities/channel-message-attachment
 @Injectable()
 export class ChannelMessageAttachmentRepository extends GenericCrudRepository<ChannelMessageAttachment> {
   constructor(
-	@InjectModel(ChannelMessageAttachment)
-	model: typeof ChannelMessageAttachment,
+    @InjectModel(ChannelMessageAttachment)
+    model: typeof ChannelMessageAttachment,
   ) {
-	super(model);
+    super(model);
   }
 }

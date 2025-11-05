@@ -15,6 +15,6 @@ export class CreateChatRoomDto {
   name?: string;
 
   @ApiProperty({ description: 'id del usuario para iniciar un chat' })
-  @IsNumber({}, { message: v.isNumber('idUser') })
-  idUser: number;
+  @IsNumber({}, { message: v.isNumber('userId') })
+  userId: number;
 }

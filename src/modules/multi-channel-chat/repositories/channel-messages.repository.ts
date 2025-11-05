@@ -7,12 +7,13 @@ import { CountOptions } from 'sequelize';
 @Injectable()
 export class ChannelMessageRepository extends GenericCrudRepository<ChannelMessage> {
   constructor(
-	@InjectModel(ChannelMessage)
-	model: typeof ChannelMessage,
+    @InjectModel(ChannelMessage)
+    model: typeof ChannelMessage,
   ) {
-	super(model);
+    super(model);
   }
-   async count(options?: Omit<CountOptions<{}>, 'group'>) {
-            return await this.model.count(options);
-    }
+
+  async count(options?: Omit<CountOptions<{}>, 'group'>) {
+    return await this.model.count(options);
+  }
 }

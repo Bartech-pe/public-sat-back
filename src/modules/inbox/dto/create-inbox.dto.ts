@@ -12,14 +12,13 @@ import { Transform } from 'class-transformer';
 import { Inbox } from '../entities/inbox.entity';
 import { CreateInboxCredentialDto } from './create-inbox-credential.dto';
 
-export class CreateInboxDto extends CreateInboxCredentialDto{
-
+export class CreateInboxDto extends CreateInboxCredentialDto {
   @ApiProperty({ description: 'Nombre la bandeja de entrada' })
   @IsNotEmpty({ message: v.isNotEmpty('name') })
   @IsString({ message: v.isString('name') })
   @IsUnique(Inbox, 'name', { message: v.isUnique('name') })
   name: string;
-  
+
   @ApiPropertyOptional({
     description: 'Url del avatar de la bandeja de entrada',
   })
@@ -35,18 +34,14 @@ export class CreateInboxDto extends CreateInboxCredentialDto{
   widgetColor?: string;
 
   @ApiProperty({ description: 'Id del canal' })
-  @IsNumber({}, { message: v.isNumber('idChannel') })
-  idChannel: number;
+  @IsNumber({}, { message: v.isNumber('channelId') })
+  channelId: number;
 
   @ApiPropertyOptional({
     description: 'Número de teléfono de la bandeja de entrada',
   })
-
-
   @IsOptional()
   @IsBoolean({ message: v.isBoolean('status') })
   @Transform(({ value }) => value === 'true' || value === true)
   status?: boolean;
-
-  
 }

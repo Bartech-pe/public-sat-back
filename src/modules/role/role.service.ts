@@ -8,19 +8,14 @@ import { RoleRepository } from './repositories/role.repository';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
-import { CreateRoleScreenDto } from './dto/create-role-screen.dto';
-import { RoleScreen } from './entities/role-screen.entity';
-import { RoleScreenRepository } from './repositories/role-screen.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { Screen } from '@modules/screen/entities/screen.entity';
 import { User } from '@modules/user/entities/user.entity';
+import { Screen } from '@modules/screen/entities/screen.entity';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class RoleService {
-  constructor(
-    private readonly repository: RoleRepository,
-    private readonly roleScreenRepository: RoleScreenRepository,
-  ) {}
+  constructor(private readonly repository: RoleRepository) {}
 
   async findAll(
     user: User,
@@ -29,15 +24,12 @@ export class RoleService {
   ): Promise<PaginatedResponse<Role>> {
     try {
       const whereOpts =
-        user.idRole == 1
+        user.roleId == UserRole.Adm
           ? {
-              where: {
-                status: true,
-              },
+              where: {},
             }
           : {
               where: {
-                status: true,
                 id: 3,
               },
             };
@@ -60,11 +52,11 @@ export class RoleService {
       const exist = await this.repository.findOne({
         where: { id },
         include: [
-          {
-            model: Screen,
-            through: { attributes: [] },
-            required: false,
-          },
+          // {
+          //   model: Screen,
+          //   through: { attributes: [] },
+          //   required: false,
+          // },
         ],
       });
       if (!exist) {
@@ -98,31 +90,6 @@ export class RoleService {
         })),
       );
       return this.repository.bulkCreate(securedDtoList, {});
-    } catch (error) {
-      throw new InternalServerErrorException(
-        error,
-        'Error interno del servidor',
-      );
-    }
-  }
-
-  async assignment(
-    id: number,
-    dtoList: CreateRoleScreenDto[],
-  ): Promise<RoleScreen[]> {
-    try {
-      const securedDtoList = await Promise.all(
-        dtoList
-          .sort((a, b) => a.idScreen - b.idScreen)
-          .map(async (dto) => ({
-            ...dto,
-          })),
-      );
-      return this.roleScreenRepository.bulkCreate(securedDtoList, {
-        updateOnDuplicate: ['canRead', 'canCreate', 'canUpdate', 'canDelete'],
-        individualHooks: true,
-        ignoreDuplicates: true,
-      });
     } catch (error) {
       throw new InternalServerErrorException(
         error,
@@ -185,7 +152,7 @@ export class RoleService {
     }
   }
 
-  async getScreenByIdAndScreen(id: number, url: string) {
+  async getScreenByIdAndScreen(id: number, officeId: number, path: string) {
     const result = await this.repository.findOne({
       where: { id, status: true },
       include: [
@@ -203,30 +170,40 @@ export class RoleService {
     });
 
     const role: Role | undefined = result ? result.toJSON() : undefined;
-    const screenSelected: any = role?.screens?.find((s) => s.url === url);
+    const screenSelected: any = role?.screens?.find((s) => s.path === path);
     const allChildren = role?.screens?.filter(
-      (s) => s.idParent === screenSelected?.id,
+      (s) => s.parentId === screenSelected?.id,
     );
     const readableChildren = allChildren?.filter(
-      (c: any) => c.RoleScreen?.canRead,
+      (c: any) => c.RoleScreenOffice?.canRead,
     );
 
     return {
-      canAccess: !!screenSelected?.RoleScreen?.canRead,
+      canAccess: !!screenSelected?.RoleScreenOffice?.canRead,
       screen: screenSelected,
       child: readableChildren?.[0] ?? null,
     };
   }
 
-  async getScreensByRole(id: number): Promise<any[]> {
+  async getScreensByRoleAndOffice(
+    roleId: number,
+    officeId: number,
+  ): Promise<any[]> {
     const result = await this.repository.findOne({
-      where: { id, status: true },
+      where: { id: roleId, status: true },
       include: [
         {
           model: Screen,
           where: { status: true },
           through: {
-            attributes: ['canRead', 'canCreate', 'canUpdate', 'canDelete'],
+            attributes: [
+              'officeId',
+              'canRead',
+              'canCreate',
+              'canUpdate',
+              'canDelete',
+            ],
+            where: { officeId },
           },
           required: false,
         },
@@ -236,12 +213,13 @@ export class RoleService {
 
     const role: Role | undefined = result ? result.toJSON() : undefined;
     const screens = role?.screens ?? [];
+
     return screens
-      .filter((item: any) => !item.idParent && item?.RoleScreen?.canRead)
+      .filter((item: any) => !item.parentId && item?.RoleScreenOffice?.canRead)
       .map((item) => ({
         ...item,
         items: screens.filter(
-          (s: any) => s.idParent === item.id && s?.RoleScreen?.canRead,
+          (s: any) => s.parentId === item.id && s?.RoleScreenOffice?.canRead,
         ),
       }));
   }

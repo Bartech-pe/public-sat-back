@@ -1,30 +1,33 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { CreateChatRoomDto } from './dto/create-chat-room.dto';
 import { UpdateChatRoomDto } from './dto/update-chat-room.dto';
 import { ChatRoomRepository } from './repositories/chat-room.repository';
 import { UserChatRoomRepository } from './repositories/user-chat-room.repository';
-import { MessageRepository } from './repositories/message.repository';
+import { ChatRoomMessageRepository } from './repositories/chat-room-message.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { ChatRoom } from './entities/chat-room.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { UserRepository } from '@modules/user/repositories/user.repository';
-import { Message } from './entities/message.entity';
+import { ChatRoomMessage } from './entities/chat-room-message.entity';
 import { Op } from 'sequelize';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { MultiChannelChatService } from '@modules/multi-channel-chat/multi-channel-chat.service';
 
 @Injectable()
 export class ChatRoomService {
+  private readonly logger = new Logger(ChatRoomService.name);
+  
   constructor(
     private readonly roomRepository: ChatRoomRepository,
     private readonly userRoomRepository: UserChatRoomRepository,
-    private readonly messageRepository: MessageRepository,
+    private readonly messageRepository: ChatRoomMessageRepository,
     private readonly userRepository: UserRepository,
   ) {}
 
   async findAll(
     limit: number,
     offset: number,
-    idUser: number,
+    userId: number,
   ): Promise<PaginatedResponse<ChatRoom>> {
     try {
       return this.roomRepository.findAndCountAll({
@@ -32,7 +35,7 @@ export class ChatRoomService {
           {
             model: User,
             as: 'filteredUsers', // solo para filtrar por participación
-            where: { id: idUser },
+            where: { id: userId },
             attributes: [],
             through: { attributes: [] },
             required: true,
@@ -40,11 +43,11 @@ export class ChatRoomService {
           {
             model: User,
             as: 'users', // para obtener todos los miembros del room
-            // where: { id: { [Op.ne]: idUser } },
+            // where: { id: { [Op.ne]: userId } },
             through: { attributes: [] },
           },
           {
-            model: Message,
+            model: ChatRoomMessage,
             separate: true,
             limit: 1,
             order: [['createdAt', 'DESC']],
@@ -62,20 +65,27 @@ export class ChatRoomService {
     }
   }
 
-  async createMessage(idSender: number, idChatRoom: number, content: string) {
+  async createMessage(senderId: number, chatRoomId: number, content: string) {
     const message = await this.messageRepository.create({
-      idSender,
-      idChatRoom,
+      senderId,
+      chatRoomId,
       content,
     });
 
     return message;
   }
 
-  async getMessages(idChatRoom: number) {
+  async getMessages(chatRoomId: number,userId: number): Promise<ChatRoomMessage[]> {
+  
+    await ChatRoomMessage.update(
+      { isRead: true },
+      { where: { chatRoomId, senderId: { [Op.ne]: userId }, 
+        isRead: false,} }
+    );
+
     return this.messageRepository.findAll({
-      where: { idChatRoom },
-      include: [{ model: User }],
+      where: { chatRoomId },
+      include: [{ model: User, as: 'sender' }],
       order: [['createdAt', 'ASC']],
     });
   }
@@ -87,9 +97,9 @@ export class ChatRoomService {
   ) {
     const room = await this.roomRepository.create({ name });
 
-    const associations = [currentUserId, ...otherUserIds].map((idUser) => ({
-      idUser,
-      idChatRoom: room.get().id,
+    const associations = [currentUserId, ...otherUserIds].map((userId) => ({
+      userId,
+      chatRoomId: room.get().id,
     }));
 
     await this.userRoomRepository.bulkCreate(associations);
@@ -98,28 +108,35 @@ export class ChatRoomService {
   }
 
   async createRoomMultiple(
-      currentUserId: number,
-      otherUserIds: number[],
-      name?: string
-    ) {
-      const allUserIds = [currentUserId, ...otherUserIds];
-      const isGroup = allUserIds.length > 2; // 👈 Lo determinamos aquí
+    currentUserId: number,
+    otherUserIds: number[],
+    name?: string,
+  ) {
+    try {
 
+      const filteredOtherUserIds = otherUserIds.filter(
+        (id) => id !== currentUserId,
+      );
+      const allUserIds = [currentUserId, ...filteredOtherUserIds];
+      const isGroup = allUserIds.length > 2;  
+  
       const room = await this.roomRepository.create({
         name: isGroup ? name : undefined,
         isGroup,
       });
-
-      const associations = allUserIds.map((idUser) => ({
-        idUser,
-        idChatRoom: room.get().id,
+  
+      const associations = allUserIds.map((userId) => ({
+        userId,
+        chatRoomId: room.get().id,
       }));
-
+  
       await this.userRoomRepository.bulkCreate(associations);
-
+  
       return room;
+    } catch (error) {
+      this.logger.error(error.toString())
+    }
   }
-
 
   async getOrCreatePrivateRoom(
     otherUserId: number,
@@ -134,6 +151,7 @@ export class ChatRoomService {
       include: [
         {
           model: User,
+          as: 'users',
           where: { id: [userId1, userId2] },
           through: { attributes: [] },
         },
@@ -151,95 +169,125 @@ export class ChatRoomService {
     // Si no existe, crear una nueva
     const newRoom = await this.roomRepository.create({ name: name });
     await this.userRoomRepository.bulkCreate([
-      { idUser: userId1, idChatRoom: newRoom.id },
-      { idUser: userId2, idChatRoom: newRoom.id },
+      { userId: userId1, chatRoomId: newRoom.id },
+      { userId: userId2, chatRoomId: newRoom.id },
     ]);
 
     return newRoom;
   }
 
-  async createRoomMessage(dto: CreateMessageDto): Promise<Message> {
-      try {
-        return this.messageRepository.create(dto);
-      } catch (error) {
-        throw new InternalServerErrorException(
-          error,
-          'Error interno del servidor',
-        );
-      }
-  }
+  async createRoomMessage(dto: CreateMessageDto,userId: number): Promise<ChatRoomMessage> {
+    console.log("===================")
+    console.log(dto)
+    console.log(userId)
+    try {
+       
 
+        const count = await this.messageRepository.count({
+          where: {
+            chatRoomId: Number(dto.chatRoomId),
+            senderId: { [Op.ne]: Number(userId) },
+            isRead: false,
+          },
+        });
+
+        console.log(count);
+
+        if (count > 0) {
+
+          await ChatRoomMessage.update(
+              { isRead: true },
+              { where: { chatRoomId:dto.chatRoomId, senderId: { [Op.ne]: userId }, 
+                isRead: false,} }
+          );
+          
+          return await this.messageRepository.create({
+            ...dto,
+            isRead: true,
+          });
+        
+        }else{
+
+          return this.messageRepository.create(dto);
+        }
+
+   
+      
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
+  }
 
   //eliminar mensajes de la tabla message
 
   removeRoomMessage(id: number): Promise<void> {
-     try {
-       return this.messageRepository.delete(id);
-     } catch (error) {
-       throw new InternalServerErrorException(
-         error,
-         'Error interno del servidor',
-       );
-     }
+    try {
+      return this.messageRepository.delete(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
   }
- 
+
   restoreRoomMessage(id: number): Promise<void> {
-     try {
-       return this.messageRepository.restore(id);
-     } catch (error) {
-       throw new InternalServerErrorException(
-         error,
-         'Error interno del servidor',
-       );
-     }
+    try {
+      return this.messageRepository.restore(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
   }
 
   //eliminar mensajes de la tabla userchatrooms
 
   removeRoom(id: number): Promise<void> {
-     try {
-       return this.roomRepository.delete(id);
-     } catch (error) {
-       throw new InternalServerErrorException(
-         error,
-         'Error interno del servidor',
-       );
-     }
+    try {
+      return this.roomRepository.delete(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
   }
- 
+
   restoreRoom(id: number): Promise<void> {
-     try {
-       return this.roomRepository.restore(id);
-     } catch (error) {
-       throw new InternalServerErrorException(
-         error,
-         'Error interno del servidor',
-       );
-     }
+    try {
+      return this.roomRepository.restore(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
   }
 
   //eliminar mensajes de la tabla userchatrooms
 
-  removeUserGroup(id: number): Promise<void> {
-     try {
-       return this.userRoomRepository.delete(id);
-     } catch (error) {
-       throw new InternalServerErrorException(
-         error,
-         'Error interno del servidor',
-       );
-     }
+  async removeUserGroup(id: number): Promise<void> {
+    try {
+      this.roomRepository.delete(id);
+      return await this.userRoomRepository.deleteUserGroup(id);
+    } catch (error) {
+      this.logger.error(error.toString())
+    }
   }
- 
+
   restoreUserGroup(id: number): Promise<void> {
-     try {
-       return this.userRoomRepository.restore(id);
-     } catch (error) {
-       throw new InternalServerErrorException(
-         error,
-         'Error interno del servidor',
-       );
-     }
+    try {
+      return this.userRoomRepository.restore(id);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        error,
+        'Error interno del servidor',
+      );
+    }
   }
-  
 }

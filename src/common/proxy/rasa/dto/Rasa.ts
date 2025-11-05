@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class RasaLine {
-  recipient_id: string;
+  recipient_id: number;
   text?: string;
 }
 export class RasaResponse extends RasaLine {
@@ -24,7 +24,7 @@ export class RasaBase extends RasaLine {
   reply_markup?: any;
 }
 export class RasaDto {
-  senderId: string;
+  senderId: number;
   message: string;
 }
 export class SendMessageRasaDto {

@@ -1,479 +1,669 @@
 import { IncomingMessage } from '@common/interfaces/channel-connector/incoming/incoming.interface';
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger, forwardRef, Inject, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+  forwardRef,
+  Inject,
+  NotFoundException,
+} from '@nestjs/common';
 import { io, Socket } from 'socket.io-client';
 import { ChannelRoomRepository } from './repositories/channel-room.repository';
-import { CitizenRepository } from './repositories/citizen.repository';
 import { ChannelMessageRepository } from './repositories/channel-messages.repository';
-import { CreateCitizenDto } from './dto/create-citizen.dto';
-import { ChannelType, MessageType } from '@common/interfaces/channel-connector/messaging.interface';
-import { Citizen, CitizenAttributes } from './entities/citizen.entity';
+import {
+  ChannelType,
+  MessageType,
+} from '@common/interfaces/channel-connector/messaging.interface';
+import { ChannelCitizen } from './entities/channel-citizen.entity';
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
 import { InboxCredentialRepository } from '@modules/inbox/repositories/inbox-credential.repository';
-import { InboxCredential } from '@modules/inbox/entities/inbox-credentials';
 import { CreateChannelRoomDto } from './dto/create-channel-room.dto';
 import { ChannelMessage } from './entities/channel-message.entity';
 import { CreateChannelMessageDto } from './dto/channel-message/create-channel-message.dto';
 import { ChannelRoom } from './entities/channel-room.entity';
 import { OutgoingPayload } from '@common/interfaces/channel-connector/outgoing/outgoing.interface';
-import { ConfigService } from '@nestjs/config';
 import { MultiChannelChatGateway } from './multi-channel-chat.gateway';
-import { ChannelRoomNewMessageDto, MessageAttachment } from '@common/interfaces/multi-channel-chat/channel-room/channel-room-summary.dto';
+import {
+  ChannelRoomNewMessageDto,
+  MessageAttachment,
+} from '@common/interfaces/multi-channel-chat/channel-room/channel-room-summary.dto';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
-import { BufferedMessage, MessageBufferService } from './services/message-buffer.service';
+import {
+  BufferedMessage,
+  MessageBufferService,
+} from './services/message-buffer.service';
 import { BasicInfoService } from './services/basic-info.service';
-import { AssistanceRepository } from './repositories/assistance.repository';
-import { CreateAssistanceDto } from './dto/assistances/create-assistance.dto';
-import { AssistanceAttributes, AssistanceStatus } from './entities/assistance.entity';
-import { CitizenService } from './services/citizen.service';
+import { ChannelAttentionRepository } from './repositories/channel-attention.repository';
+import { CreateAssistanceDto } from './dto/channel-attentions/create-assistance.dto';
+import {
+  ChannelAttention,
+  ChannelAttentionStatus,
+} from './entities/channel-attention.entity';
+import { ChannelCitizenService } from './services/channel-citizen.service';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
 import { col, fn, Op } from 'sequelize';
 import { User } from '@modules/user/entities/user.entity';
 import { Role } from '@modules/role/entities/role.entity';
+import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity';
 import { ChannelMessageAttachmentRepository } from './repositories/channel-message-attachments.repository';
-import { CreateChannelMessageAttachmentDto } from './dto/channel-message-attachment/create-channel-message-attachment.dto';
-
+import { channelConnectorConfig, jwtConfig } from 'config/env';
 import { UserRepository } from '@modules/user/repositories/user.repository';
-// import { BasicInfoService } from './services/basic-info.service';
+import { UserRole } from '@common/constants/role.constant';
+import { JwtService } from '@nestjs/jwt';
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { response } from 'express';
 
-export interface IChannelChatInformation
-{
-	channelRoomId?: number | null;
-	assistanceId?: number | null;
-	userId?: number | null;
-	citizenId?: number | null;
-	registered?: boolean;
+export interface IChannelChatInformation {
+  channelRoomId?: number | null;
+  assistanceId?: number | null;
+  userId?: number | null;
+  citizenId?: number | null;
+  error?: string | null;
+  registered?: boolean;
 }
-
 
 @Injectable()
 export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
-	private socket: Socket;
-	private readonly logger = new Logger(MultiChannelChatService.name);
-	private channelConnectorUrl : string;
-	constructor(
-		@Inject(forwardRef(() => BasicInfoService))
-		private basicInfoService: BasicInfoService,
-		@Inject(forwardRef(() => MultiChannelChatGateway))
-		private multiChannelChatGateway: MultiChannelChatGateway,
-		@Inject(forwardRef(() => CitizenService))
-		private citizenService: CitizenService,
-		@Inject(forwardRef(() => MessageBufferService))
-		private messageBufferService: MessageBufferService,
-		private channelMessageAttachmentRepository: ChannelMessageAttachmentRepository,
-		private inboxUserRepository: InboxUserRepository,
-		private inboxCredentialRepository: InboxCredentialRepository,
-		private channelRoomRepository: ChannelRoomRepository,
-		private userRepository: UserRepository,
-		private channelMessageRepository: ChannelMessageRepository,
-		private assistanceRepository: AssistanceRepository,
-		private configService: ConfigService
-	){
-		this.channelConnectorUrl = configService.get('BASE_URL_CHANNEL_CONNECTOR') || "http://localhost:3002"
+  private socket: Socket;
+  private readonly logger = new Logger(MultiChannelChatService.name);
+  constructor(
+    @Inject(forwardRef(() => BasicInfoService))
+    private basicInfoService: BasicInfoService,
+    @Inject(forwardRef(() => MultiChannelChatGateway))
+    private multiChannelChatGateway: MultiChannelChatGateway,
+    @Inject(forwardRef(() => ChannelCitizenService))
+    private channelCitizenService: ChannelCitizenService,
+    @Inject(forwardRef(() => MessageBufferService))
+    private messageBufferService: MessageBufferService,
+    private channelMessageAttachmentRepository: ChannelMessageAttachmentRepository,
+    private inboxUserRepository: InboxUserRepository,
+    private inboxCredentialRepository: InboxCredentialRepository,
+    private channelRoomRepository: ChannelRoomRepository,
+    private userRepository: UserRepository,
+    private channelMessageRepository: ChannelMessageRepository,
+    private readonly jwtService: JwtService,
+    private ChannelAttentionRepository: ChannelAttentionRepository,
+  ) {}
 
-	}
+  onModuleInit() {
+    this.connect();
+  }
 
-	onModuleInit() {
-		this.connect();
-	}
+  onModuleDestroy() {
+    this.disconnect();
+  }
 
-	onModuleDestroy() {
-		this.disconnect();
-	}
+  private connect() {
+    ((this.socket = io(channelConnectorConfig.baseUrl, {
+      auth: {
+        token: channelConnectorConfig.verifyToken,
+      },
+    })),
+      {
+        transports: ['websocket'],
+      });
 
-	private connect() 
-	{
-		this.socket = io(this.channelConnectorUrl), {
-			transports: ['websocket'], 
-		};
+    this.socket.on('connect', () => {
+      this.logger.log(
+        `Conectado a Socket.IO en ${channelConnectorConfig.baseUrl}`,
+      );
+    });
 
-		this.socket.on('connect', () => {
-		this.logger.log('✅ Conectado a Socket.IO en http://localhost:3002');
-		});
+    this.socket.on('chat.init', async (token: string) => {
+      // this.toggleBotService()
+      try {
+        // , {
+        //   secret: jwtConfig.secretCitizen,
+        // }
+        const response = await this.jwtService.decode(token);
+        console.log(response)
+      } catch (error) {
+        this.logger.error(error);
+        return false;
+      }
+    })
 
-		this.socket.on('chat.status.typing.indicator', async (data: IChannelChatInformation) =>{
-			try {
-				this.socket.emit('chat.status.typing.indicator',data);
-			} catch (error) {
-				this.logger.error('Error', error);				
-			}
-		})
+    this.socket.on(
+      'chat.status.typing.indicator',
+      async (data: IChannelChatInformation) => {
+        try {
+          this.socket.emit('chat.status.typing.indicator', data);
+        } catch (error) {
+          this.logger.error('Error', error);
+        }
+      },
+    );
 
-		this.socket.on('message.incoming', async (data: IncomingMessage, callback: (payload: IChannelChatInformation)=>{}) => {
-			let result: IChannelChatInformation = { 
-				registered: false,
-				assistanceId: null,
-				citizenId: null,
-				channelRoomId: null,
-				userId: null
-			 };
-			try {
+    this.socket.on(
+      'message.incoming',
+      async (
+        data: IncomingMessage,
+        callback: (payload: IChannelChatInformation) => {},
+      ) => {
+        let result: IChannelChatInformation = {
+          registered: false,
+          error: '',
+          assistanceId: null,
+          citizenId: null,
+          channelRoomId: null,
+          userId: null,
+        };
+        try {
+          if (data.type !== MessageType.INCOMING) return null;
+          console.log(data)
+          if (data.payload.channel == ChannelType.CHATSAT) {
+            const isValidToken = await this.checkCitizenToken(data?.token);
+            if (!isValidToken) {
+              result.error = 'No autorizado.';
+              if (typeof callback === 'function') {
+                callback(result);
+              }
+              return;
+            }
+          }
 
-				if (data.type !== MessageType.INCOMING) return null;
-				const citizen = await this.citizenService.createCitizenFromMessage(data);
-				const channelRoom = await this.createChannelRoom(data, citizen?.id as number);
-				this.logger.debug(channelRoom);
-				const assistance = await this.createAssistance(channelRoom.dataValues.id, data.payload.channel == ChannelType.WHATSAPP);
-				const channelMessage = await this.createChannelMessage({
-					assistanceId: assistance.id,
-					channelRoomId: channelRoom.dataValues.id,
-					content: data.payload.message.body ?? "",
-					senderType: 'citizen',
-					status: 'unread',
-					timestamp: new Date(),
-					userId: channelRoom.dataValues.userId as number,
-					externalChannelRoomId: data.payload.chat_id as number,
-					externalMessageId: data.payload.message.id as string,
-				});
-				let attachments: MessageAttachment[] = [];
+          const citizen =
+            await this.channelCitizenService.createCitizenFromMessage(data);
+          const channelRoom = await this.createChannelRoom(
+            data,
+            citizen?.id as number,
+          );
+          const assistance = await this.createAssistance(
+            channelRoom.id,
+            data.payload.channel == ChannelType.WHATSAPP,
+          );
+          const channelMessage = await this.createChannelMessage({
+            assistanceId: assistance.id,
+            channelRoomId: channelRoom.id,
+            content: data.payload.message.body ?? '',
+            senderType: 'citizen',
+            status: 'unread',
+            timestamp: new Date(),
+            userId: assistance?.userId,
+            externalChannelRoomId: data.payload.chat_id as number,
+            externalMessageId: data.payload.message.id as string,
+          });
+          let attachments: MessageAttachment[] = [];
 
-				if(data.payload.attachments)
-				{
-					for (const element of data.payload.attachments) {
-						const size = this.base64FileSize(element.content ?? '');
-						const newAttachment = await this.channelMessageAttachmentRepository.create({
-							type: element.type,
-							content: element.content ?? '',
-							name: element.name,
-							channelMessageId: channelMessage.dataValues.id,
-							size: size,
-							extension: element.extension ?? ''
-						});
+          if (data.payload.attachments) {
+            for (const element of data.payload.attachments) {
+              const size = this.base64FileSize(element.content ?? '');
+              const newAttachment =
+                await this.channelMessageAttachmentRepository.create({
+                  type: element.type,
+                  content: element.content ?? '',
+                  name: element.name,
+                  channelMessageId: channelMessage.dataValues.id,
+                  size: size,
+                  extension: element.extension ?? '',
+                });
 
-						let attachment = newAttachment.toJSON();
-						attachments.push({
-							id: attachment.id,
-							type: attachment.type,
-							content: attachment.content,
-							name: attachment.name,
-							size: size,
-							extension: attachment.extension
-						});
-					}
-				}
-				let channelRoomParsed = channelRoom.toJSON();
-				let channelMessageParsed = channelMessage.toJSON();
-				
-				let countUnreadMessages = await this.channelMessageRepository.findAndCountAll(
-					{
-						where: {channelRoomId: channelRoomParsed.id, status: 'unread', senderType: 'citizen'}
-					}
-				)
-				if(!channelRoomParsed.userId) return 
-				
-				let channelUser = await this.userRepository.findById(channelRoomParsed.userId)
+              let attachment = newAttachment.toJSON();
+              attachments.push({
+                id: attachment.id,
+                type: attachment.type,
+                content: attachment.content,
+                name: attachment.name!,
+                size: size,
+                extension: attachment.extension,
+              });
+            }
+          }
+          let channelMessageParsed = channelMessage.toJSON();
+          let channelUser: User | null = null;
+          if (assistance?.userId) {
+            channelUser = await this.userRepository.findOne(
+              {where: {id: assistance.userId}},
+            );
+          }
 
-				let newMessage: ChannelRoomNewMessageDto = {
-					channelRoomId: channelRoomParsed.id,
-					assistanceId: assistance.id,
-					externalRoomId: channelRoomParsed.externalChannelRoomId,
-					channel: data.payload.channel,
-					advisor: {
-						id: channelUser.dataValues.id,
-						name: channelUser.dataValues.name
-					},
-					status: channelRoomParsed.status,
-					message: {
-						sender: {
-							id: citizen.id,
-							externalUserId: citizen.externalUserId || '',
-							fullName: citizen.fullName || '',
-							phone: citizen.phoneNumber,
-							avatar: citizen.avatarUrl || '',
-							alias: citizen.name,
-							fromCitizen: true,
-							isAgent: false,
-							documentNumber: citizen?.documentNumber,
-							documentType: citizen?.documentType 
-						},
-						attachments: attachments,
-						id: channelMessageParsed.id,
-						externalMessageId: channelMessageParsed.externalMessageId,
-						message: channelMessageParsed.content,
-						status: channelMessageParsed.status,
-						time: new Date(channelMessageParsed.timestamp).toLocaleTimeString('es-PE', {
-							hour: '2-digit',
-							minute: '2-digit',
-						}),
-						fromMe: false,
-					},	
-					unreadCount: countUnreadMessages.total as number,
-					botStatus: channelRoomParsed.botReplies ? 'active' : 'paused',
-				} 
-				this.multiChannelChatGateway.handleNewMessage(newMessage);
-				let inboxCredential: InboxCredential[] = await this.inboxCredentialRepository.findAll({
-					where: { inboxId: channelRoom.dataValues.inboxId },
-					order: [['createdAt', 'DESC']],
-					limit: 1,
-				});
-				let credentials = inboxCredential[0].toJSON() as InboxCredential;
-				const bufferedMessage: BufferedMessage = {
-					data,
-					assistance: assistance,
-					citizen: citizen as Citizen,
-					channelRoom: channelRoom.toJSON(),
-					user: channelUser,
-					credentials,
-					externalMessageId: channelMessageParsed.externalMessageId
-				};
+          let countUnreadMessages =
+            await this.channelMessageRepository.findAndCountAll({
+              where: {
+                channelRoomId: channelRoom.id,
+                status: 'unread',
+                senderType: 'citizen',
+              },
+            });
 
-				let needVerify = false;
-				if(!data.payload.message.body) return
+          let newMessage: ChannelRoomNewMessageDto = {
+            channelRoomId: channelRoom.id,
+            attention: {
+              id: assistance.id,
+              status: assistance.status,
+            },
+            externalRoomId: channelRoom.externalChannelRoomId,
+            channel: data.payload.channel,
+            advisor: {
+              id: channelUser?.id,
+              name: channelUser?.name
+            },
+            status: channelRoom.status,
+            message: {
+              sender: {
+                id: citizen.id,
+                externalUserId: citizen.externalUserId || '',
+                fullName: citizen.fullName || '',
+                phone: citizen.phoneNumber,
+                avatar: citizen.avatarUrl || '',
+                alias: citizen.name,
+                fromCitizen: true,
+                isAgent: false,
+                documentNumber: citizen?.documentNumber,
+                documentType: citizen?.documentType,
+              },
+              attachments: attachments,
+              id: channelMessageParsed.id,
+              externalMessageId: channelMessageParsed.externalMessageId,
+              message: channelMessageParsed.content,
+              status: channelMessageParsed.status,
+              time: channelMessageParsed.timestamp,
+              fromMe: false,
+            },
+            unreadCount: countUnreadMessages.total as number,
+            botStatus: channelRoom.botReplies ? 'active' : 'paused',
+          };
+          this.multiChannelChatGateway.handleNewMessage(newMessage);
+          let inboxCredential: InboxCredential[] =
+            await this.inboxCredentialRepository.findAll({
+              where: { inboxId: channelRoom.inboxId },
+              order: [['createdAt', 'DESC']],
+              limit: 1,
+            });
+          let credentials = inboxCredential[0].toJSON() as InboxCredential;
+          const bufferedMessage: BufferedMessage = {
+            data,
+            assistance: assistance,
+            citizen: citizen as ChannelCitizen,
+            channelRoom: channelRoom,
+            user: channelUser,
+            credentials,
+            externalMessageId: channelMessageParsed.externalMessageId,
+          };
 
-				if(data.payload.channel !== ChannelType.CHATSAT && assistance.status === AssistanceStatus.IDENTITY_VERIFICATION)
-				{
-					const { handled } = await this.basicInfoService.handleBasicInfoMessage(bufferedMessage);
-					needVerify = handled
-				}
-				if(data.payload.channel === ChannelType.CHATSAT || (!needVerify && assistance.status !== AssistanceStatus.IDENTITY_VERIFICATION)) 
-				{
-					await this.messageBufferService.addMessageToBuffer(bufferedMessage);
-				}
+          let needVerify = false;
+          if (!data.payload.message.body) return;
 
-				result = { 
-					registered: true,
-					assistanceId: assistance.id,
-					channelRoomId: channelRoom.dataValues.id,
-					citizenId: citizen.id,
-					userId: channelRoom.dataValues.userId
-				 };
-				if (typeof callback === 'function') {
-					this.logger.debug(result);
-					callback(result);
-				}
-			} catch (error) {
-				
-				if (typeof callback === 'function') {
-					callback(result);
-				}
-				this.logger.error('Mensaje no enviado', error);
-			}
-		});
+          if (
+            data.payload.channel !== ChannelType.CHATSAT &&
+            assistance.status === ChannelAttentionStatus.IDENTITY_VERIFICATION
+          ) {
+            const { handled } =
+              await this.basicInfoService.handleBasicInfoMessage(
+                bufferedMessage,
+              );
+            needVerify = handled;
+          }
+          if (
+            data.payload.channel == ChannelType.CHATSAT ||
+            (!needVerify &&
+              assistance.status !==
+                ChannelAttentionStatus.IDENTITY_VERIFICATION)
+          ) {
+            await this.messageBufferService.addMessageToBuffer(bufferedMessage);
+          }
 
-		this.socket.on('disconnect', () => {
-		this.logger.warn('🔌 Desconectado de Socket.IO');
-		});
+          result = {
+            registered: true,
+            assistanceId: assistance.id,
+            channelRoomId: channelRoom.id,
+            citizenId: citizen.id,
+            userId: channelRoom?.userId,
+          };
+          if (typeof callback === 'function') {
+            this.logger.debug(result);
+            callback(result);
+          }
+        } catch (error) {
+          if (typeof callback === 'function') {
+            callback(result);
+          }
+          this.logger.error('Mensaje no enviado', error);
+        }
+      },
+    );
 
-		this.socket.on('connect_error', (err) => {
-		// this.logger.error('❗ Error de conexión a Socket.IO:', err.message);
-		});
+    this.socket.on('disconnect', () => {
+      this.logger.warn('Desconectado de Socket.IO');
+    });
 
-	}
+    this.socket.on('connect_error', (err) => {
+      this.logger.error('Error de conexión a Socket.IO:', err.message);
+    });
+  }
 
+  public delay(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
-	public delay(ms: number) {
-		return new Promise(resolve => setTimeout(resolve, ms));
-	}
+  private async checkCitizenToken(token?: string): Promise<boolean> {
+    if (!token || !token.startsWith('Bearer ')) {
+      return false;
+    }
+    const cleanToken = token.split(' ')[1];
+    try {
+      const reponse = await this.jwtService.verifyAsync(cleanToken, {
+        secret: jwtConfig.secretCitizen,
+      });
 
-	
-	handleChatCompletedEvent(payload: IChannelChatInformation)
-	{
-		try {
-			this.socket.emit('chat.status.completed', payload)
-		} catch (error) {
-			this.logger.error("handleChatCompletedEventError: ", error)
-		}
-	} 
+      return !!reponse;
+    } catch (error) {
+      this.logger.error(error);
+      return false;
+    }
+  }
 
-	handleTypingIndicator(payload: IChannelChatInformation)
-	{
-		try {
-			this.socket.emit('chat.status.typing.indicator', payload)
-		} catch (error) {
-			this.logger.error("handleChatCompletedEventError: ", error)
-		}
-	} 
+  handleChatCompletedEvent(payload: IChannelChatInformation) {
+    try {
+      this.socket.emit('chat.status.completed', payload);
+    } catch (error) {
+      this.logger.error('handleChatCompletedEventError: ', error);
+    }
+  }
 
+  handleTypingIndicator(payload: IChannelChatInformation) {
+    try {
+      this.socket.emit('chat.status.typing.indicator', payload);
+    } catch (error) {
+      this.logger.error('handleChatCompletedEventError: ', error);
+    }
+  }
 
-	public sendMessageToExternal(payload: OutgoingPayload): Promise<any> {
-		return new Promise((resolve, reject) => {
-			try {
-			this.socket.emit("message.outgoing", payload, (response: any) => {
-				console.log("Respuesta de socket.emit:", response, "Mensaje:", payload.message);
-				resolve(response);
-			});
-			} catch (err) {
-				console.log(err)
-				reject(err);
-			}
-		});
-	}
+  public sendMessageToExternal(payload: OutgoingPayload): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try {
+        this.socket.emit('message.outgoing', payload, (response: any) => {
+          console.log(
+            'Respuesta de socket.emit:',
+            response,
+            'Mensaje:',
+            payload.message,
+          );
+          resolve(response);
+        });
+      } catch (err) {
+        console.log(err);
+        reject(err);
+      }
+    });
+  }
 
+  private disconnect() {
+    if (this.socket) {
+      this.socket.disconnect();
+    }
+  }
 
-	private disconnect() {
-		if (this.socket) {
-		this.socket.disconnect();
-		}
-	}
+  public async searchAdvisorAvailable(inboxId: number): Promise<number> {
+    const inboxUsers: InboxUser[] = await this.inboxUserRepository.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user',
+          required: true,
+          include: [
+            {
+              model: Role,
+              required: true,
+              where: {
+                id: { [Op.notIn]: [UserRole.Adm, UserRole.Sup] },
+              },
+            },
+          ],
+        },
+        {
+          model: ChannelState,
+          required: true,
+          where: { name: 'Disponible' },
+        },
+      ],
+      where: { inboxId: inboxId },
+    });
+    const agents = inboxUsers.map((x) => x.dataValues.userId);
 
-	
-	private async searchAdvisorAvailable(inboxId?: number): Promise<number> {
-		const inboxUsers: InboxUser[] = await this.inboxUserRepository.findAll({
-			include: [
-			{
-				model: User,
-				required: true,
-				include: [
-				{
-					model: Role,
-					required: true,
-					where: { name: { [Op.notIn]: ['administrador', 'supervisor'] } }
-				}
-				]
-			}
-			],
-			where: { idInbox: inboxId }
-		});
+    if (agents.length === 0) {
+      throw new Error('No hay agentes disponibles para asignar el channelRoom');
+    }
 
-		const agents = inboxUsers.map(x => x.dataValues.idUser);
+    const activeCounts = await this.ChannelAttentionRepository.findAll({
+      attributes: [
+        [col('channelRoom.user_id'), 'user_id'], // 👈 usa el alias correcto
+        [fn('COUNT', col('ChannelAttention.id')), 'activeCount'],
+      ],
+      where: { status: { [Op.not]: ChannelAttentionStatus.CLOSED } },
+      include: [
+        {
+          model: ChannelRoom,
+          as: 'channelRoom',
+          attributes: [],
+          required: true,
+          where: { userId: { [Op.in]: agents } },
+        },
+      ],
+      group: ['channelRoom.user_id'],
+      raw: true,
+      subQuery: false,
+    });
 
-		if (agents.length === 0) {
-			throw new Error("No hay agentes disponibles para asignar el channelRoom");
-		}
+    const roomCounts = new Map<number, number>(agents.map((id) => [id, 0]));
 
-		const activeCounts = await this.assistanceRepository.findAll({
-			attributes: [
-				[col('channelRoom.userId'), 'userId'],  // 👈 usa el alias correcto
-				[fn('COUNT', col('Assistance.id')), 'activeCount']
-			],
-			where: { status: { [Op.not]: AssistanceStatus.CLOSED } },
-			include: [
-				{
-				model: ChannelRoom,
-				as: 'channelRoom', // 👈 fuerza el alias
-				attributes: [],
-				required: true,
-				where: { userId: { [Op.in]: agents } }
-				}
-			],
-			group: ['channelRoom.userId'], // 👈 igual aquí
-			raw: true,
-			subQuery: false
-			});
+    for (const row of activeCounts) {
+      const userId = Number((row as any).userId);
+      const activeCount = Number((row as any).activeCount) || 0;
+      roomCounts.set(userId, activeCount);
+    }
 
+    let minCount = Infinity;
+    for (const c of roomCounts.values()) {
+      if (c < minCount) minCount = c;
+    }
+    const candidates = [...roomCounts.entries()]
+      .filter(([, c]) => c === minCount)
+      .map(([u]) => u);
+    if (candidates.length === 0) {
+      return agents[0];
+    }
 
-		const roomCounts = new Map<number, number>(agents.map(id => [id, 0]));
+    const selectedUserId =
+      candidates[Math.floor(Math.random() * candidates.length)];
+    return selectedUserId;
+  }
 
-		for (const row of activeCounts) {
-			const userId = Number((row as any).userId);
-			const activeCount = Number((row as any).activeCount) || 0;
-			roomCounts.set(userId, activeCount);
-		}
+  private async createChannelRoom(
+    newMessage: IncomingMessage,
+    channelCitizenId: number,
+  ): Promise<ChannelRoom> {
+    const message = newMessage.payload;
+    console.log(newMessage);
 
-		let minCount = Infinity;
-		for (const c of roomCounts.values()) {
-			if (c < minCount) minCount = c;
-		}
-		const candidates = [...roomCounts.entries()].filter(([, c]) => c === minCount).map(([u]) => u);
-		if (candidates.length === 0) {
-			return agents[0];
-		}
+    let inboxCredential: InboxCredential | null =
+      await this.inboxCredentialRepository.findOne({
+        include: [
+          {
+            model: Inbox,
+            required: true,
+            include: [
+              {
+                model: Channel,
+                required: true,
+                where: { name: newMessage.payload.channel },
+              },
+            ],
+          },
+        ],
+        ...(newMessage.payload.channel === ChannelType.CHATSAT
+          ? { where: { accessToken: newMessage.payload.token } }
+          : {
+              where: {
+                phoneNumber: newMessage?.payload?.receiver?.phone_number,
+              },
+            }),
+        order: [['createdAt', 'DESC']],
+        limit: 1,
+        throwIfNotFound: false,
+      });
 
-		const selectedUserId = candidates[Math.floor(Math.random() * candidates.length)];
-		return selectedUserId;
-	}
+    if (!inboxCredential) {
+      this.logger.error('No se encontraron las credenciales para este canal');
+      throw new NotFoundException(
+        'No se encontraron las credenciales para este canal',
+      );
+    }
 
+    let selectedUserId: number | null = null;
+    // if(![ChannelType.CHATSAT, ChannelType.WHATSAPP].includes(newMessage.payload.channel))
+    // {
+    //   selectedUserId = await this.searchAdvisorAvailable(
+    //     inboxCredential?.dataValues?.inboxId,
+    //   );
+    //   if (!selectedUserId) {
+    //     this.logger.error('No se pudo asignar un agente al channelRoom');
+    //     throw new NotFoundException("No se encontraron asesores disponibles.")
+    //   }
+    // }
+    let channelRoomExists: ChannelRoom[] =
+      await this.channelRoomRepository.findAll({
+        include: [
+          {
+            model: Inbox,
+            required: true,
+            include: [
+              {
+                model: Channel,
+                required: true,
+                where: { name: newMessage.payload.channel },
+              },
+            ],
+          },
+        ],
+        where: { channelCitizenId: channelCitizenId },
+        order: [['createdAt', 'DESC']],
+        limit: 1,
+      });
 
+    if (channelRoomExists.length) {
+      const channelRoom = channelRoomExists[0].toJSON();
+      const attentions = await this.ChannelAttentionRepository.findAll({
+        where: {
+          channelRoomId: channelRoom.id,
+          status:{
+            [Op.in]: [
+              ChannelAttentionStatus.IDENTITY_VERIFICATION,
+              ChannelAttentionStatus.IN_PROGRESS,
+              ChannelAttentionStatus.PRIORITY,
+            ]
+          },
+          endDate: null
+        },
+        order: [['createdAt', 'DESC']],
+        limit: 1
+      });
+      if(attentions.length > 0)
+      {
+          const attention = attentions[0].toJSON();
+          
+          const isPendingCorrect = channelRoom.status == 'pendiente' && 
+            [
+              ChannelAttentionStatus.IDENTITY_VERIFICATION,
+              ChannelAttentionStatus.IN_PROGRESS,
+            ].includes(attention.status)
+          const isPriorityCorrect = channelRoom.status == 'prioridad' && 
+            [
+              ChannelAttentionStatus.PRIORITY
+            ].includes(attention.status)
+          if(!isPendingCorrect || !isPriorityCorrect || channelRoom.status == 'completado')
+          {
+              const status = attention.status == ChannelAttentionStatus.PRIORITY ? 'prioridad': 'pendiente'
+              const [_, [updatedRoom]] = await this.channelRoomRepository.update(
+                channelRoom.id,
+                {
+                  status: status,
+                  userId: attention?.userId,
+                },
+              );
+              return updatedRoom.toJSON();
+          }
+          return channelRoom;
+      }else{
+          const [_, [updatedRoom]] = await this.channelRoomRepository.update(
+            channelRoom.id,
+            {
+              status: 'pendiente',
+              userId: null,
+            },
+          );
+          return updatedRoom.toJSON();
+      }
+    }
 
-	
-	private async createChannelRoom(newMessage: IncomingMessage, citizenId: number): Promise<ChannelRoom>
-	{
-		const message = newMessage.payload;
+    const channelRoomDto: CreateChannelRoomDto = {
+      channelCitizenId: channelCitizenId,
+      botReplies: true,
+      status: 'pendiente',
+      externalChannelRoomId: message.chat_id.toString(),
+      inboxId: inboxCredential?.dataValues?.inboxId!,
+    };
 
-		let inboxCredential: InboxCredential | null = await this.inboxCredentialRepository.findOne({
-			include: [{model: Inbox, required: true, include: [{model: Channel, required: true, where:{name: newMessage.payload.channel}}]}],
-			...(newMessage.payload.channel === ChannelType.CHATSAT  ? { where: { accessToken: newMessage.payload.token } } : {where: { phoneNumber: newMessage?.payload?.receiver?.phone_number },}),
-			order: [['createdAt', 'DESC']],
-			limit: 1,
-			throwIfNotFound: false
-		});
+    return (await this.channelRoomRepository.create(channelRoomDto)).toJSON();
+  }
 
-		if(!inboxCredential)
-		{
-			this.logger.error('No se encontraron las credenciales para este canal')
-		}
-		let selectedUserId: number | undefined = await this.searchAdvisorAvailable(inboxCredential?.dataValues?.inboxId);
+  public async createChannelMessage(
+    payload: CreateChannelMessageDto,
+  ): Promise<ChannelMessage> {
+    return await this.channelMessageRepository.create(payload);
+  }
 
-		if (!selectedUserId) {
-			this.logger.error("No se pudo asignar un agente al channelRoom");
-		}
+  private async createAssistance(
+    channelRoomId: number,
+    needVerify: boolean,
+  ): Promise<ChannelAttention> {
+    const assistanceCreated = await this.ChannelAttentionRepository.findOne({
+      where: {
+        channelRoomId: channelRoomId,
+        endDate: null,
+        status: { [Op.not]: ChannelAttentionStatus.CLOSED },
+      },
+      order: [['createdAt', 'DESC']],
+      limit: 1,
+    });
+    if (!assistanceCreated) {
+      let assistTicket: CreateAssistanceDto = {
+        channelRoomId: channelRoomId,
+        startDate: new Date(),
+        status: needVerify
+          ? ChannelAttentionStatus.IDENTITY_VERIFICATION
+          : ChannelAttentionStatus.IN_PROGRESS,
+      };
 
-		let channelRoomExists: ChannelRoom[] = await this.channelRoomRepository.findAll({
-			include: [{model: Inbox, required: true, include: [{ model: Channel, required: true, where: {name: newMessage.payload.channel}}]}],
-			where: { citizenId: citizenId },
-			order: [['createdAt', 'DESC']],
-			limit: 1,
-		});
-		
-		if (channelRoomExists.length) {
-			if (channelRoomExists[0].dataValues.status == 'completado') {
-				const [, [updatedRoom]] = await this.channelRoomRepository.update(
-				channelRoomExists[0].dataValues.id,
-				{
-					status: 'pendiente',
-					userId: selectedUserId,
-				},
-				);
-				return updatedRoom;
-			}
-			return channelRoomExists[0];
-		}
+      return (
+        await this.ChannelAttentionRepository.create(assistTicket)
+      ).toJSON();
+    }
+    return assistanceCreated.toJSON();
+  }
 
-
-		const channelRoomDto: CreateChannelRoomDto = {
-			userId: selectedUserId,
-			citizenId: citizenId,
-			botReplies: true,
-			status: 'pendiente',
-			externalChannelRoomId: message.chat_id.toString(),
-			inboxId: inboxCredential?.dataValues?.inboxId!,
-		};
-
-		return this.channelRoomRepository.create(channelRoomDto);
-	}
-
-	public async createChannelMessage(
-		payload: CreateChannelMessageDto
-	): Promise<ChannelMessage> {
-		return await this.channelMessageRepository.create(payload);
-	}
-
-	private async createAssistance(
-		channelRoomId: number,
-		needVerify: boolean
-	): Promise<AssistanceAttributes> {
-		const assistanceCreated = await this.assistanceRepository.findOne({
-			where: {channelRoomId: channelRoomId, endDate: null, status: {[Op.not]: AssistanceStatus.CLOSED}},
-			order: [['createdAt', 'DESC']],
-			limit: 1
-		})
-		if(!assistanceCreated){
-			let assistTicket: CreateAssistanceDto = 
-			{
-				channelRoomId: channelRoomId,
-				startDate: new Date(),
-				status: needVerify ? AssistanceStatus.IDENTITY_VERIFICATION: AssistanceStatus.IN_PROGRESS 
-			};
-	
-			return (await this.assistanceRepository.create(assistTicket)).toJSON();
-		}
-		return assistanceCreated.toJSON();
-	}
-
-  
   broadcastMessage(event: string, data: any) {
-	if (this.socket && this.socket.connected) {
-	  this.socket.emit(event, data);
-	} else {
-	  this.logger.warn('⚠️ Socket no conectado. No se puede emitir mensaje.');
-	}
+    if (this.socket && this.socket.connected) {
+      this.socket.emit(event, data);
+    } else {
+      this.logger.warn('Socket no conectado. No se puede emitir mensaje.');
+    }
   }
 
   base64FileSize(base64String: string): number {
-	if(!base64String) return 0;
-	const cleaned = base64String.split(';base64,').pop() || base64String;
-	const sizeInBytes = (cleaned.length * 3) / 4 
-		- (cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0);
-	return sizeInBytes;
-	}
+    if (!base64String) return 0;
+    const cleaned = base64String.split(';base64,').pop() || base64String;
+    const sizeInBytes =
+      (cleaned.length * 3) / 4 -
+      (cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0);
+    return sizeInBytes;
+  }
+
+  async getChannelRoomCurrentStatus(
+    channelRoomId: number,
+  ): Promise<ChannelRoom> {
+    return (await this.channelRoomRepository.findById(channelRoomId)).toJSON();
+  }
 }

@@ -15,15 +15,33 @@ import { UpdatePredefinedResponseDto } from './dto/update-predefined-response.dt
 import { PredefinedResponse } from './entities/predefined-response.entity';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+
 @Controller('predefined-response')
 export class PredefinedResponseController {
   constructor(private readonly service: PredefinedResponseService) {}
 
   @Get()
-  findAll(@Query() query: PaginationQueryDto): Promise<PaginatedResponse<PredefinedResponse>> {
+  findAll(
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<PredefinedResponse>> {
     const limit = query.limit!;
     const offset = query.offset!;
     return this.service.findAll(limit, offset);
+  }
+
+  @Get('allMail')
+  allPredefinedResponseMail(): Promise<PredefinedResponse[]> {
+    return this.service.allPredefinedResponseMail();
+  }
+
+  @Get('allChatSat')
+  allPredefinedResponseChatSat(): Promise<PredefinedResponse[]> {
+    return this.service.allPredefinedResponseChatSat();
+  }
+ 
+  @Get('allWhatsapp')
+  allPredefinedResponseWhatsapp(): Promise<PredefinedResponse[]> {
+    return this.service.allPredefinedResponseWhatsapp();
   }
 
   @Get(':id')

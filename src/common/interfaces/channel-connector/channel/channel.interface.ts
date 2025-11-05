@@ -7,7 +7,7 @@ export interface SessionStatusMessage {
 
 export interface SessionStatusPayload {
   channel: ChannelType;
-  sessionId: string;
+  sessionId: number;
   status: ChannelStatus;
   timestamp: string; 
 }

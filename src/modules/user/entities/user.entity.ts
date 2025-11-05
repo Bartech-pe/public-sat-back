@@ -2,6 +2,7 @@ import {
   BelongsTo,
   BelongsToMany,
   Column,
+  CreatedAt,
   DataType,
   DefaultScope,
   DeletedAt,
@@ -11,39 +12,23 @@ import {
   Model,
   Scopes,
   Table,
+  UpdatedAt,
 } from 'sequelize-typescript';
-import { UserRole } from '@common/constants/role.constant';
-import { Optional } from 'sequelize';
 import { Role } from '@modules/role/entities/role.entity';
+import { Office } from '@modules/office/entities/office.entity';
+import { VicidialUser } from './vicidial-user.entity';
 import { Team } from '@modules/team/entities/team.entity';
 import { TeamUser } from '@modules/team/entities/team-user.entity';
 import { Skill } from '@modules/skill/entities/skill.entity';
 import { SkillUser } from '@modules/skill/entities/skill-user.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
-import { Oficina } from '@modules/oficina/entities/oficina.entity';
-import { UserVicidial } from './user-vicidial.entity';
-
-export interface UserAttributes {
-  id: number;
-  name: string;
-  displayName?: string;
-  email: string;
-  password: string;
-  avatarUrl?: string;
-  role: UserRole;
-  verified?: boolean;
-  status?: boolean;
-  deletedAt?: Date;
-}
-
-export type UserCreationAttributes = Optional<
-  UserAttributes,
-  'id' | 'displayName' | 'avatarUrl' | 'verified' | 'status' | 'deletedAt'
->;
+import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { CallHistory } from '@modules/call/entities/call-history.entity';
+import { EmailAttention } from '@modules/email/entities/email-attention.entity';
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['password', 'deletedAt'] }, // Excluir campo de eliminación lógica y password por defecto
+  attributes: { exclude: ['password', 'deletedAt', 'deletedBy'] }, // Excluir password y campo de eliminación lógica
 }))
 @Scopes(() => ({
   withPassword: {
@@ -54,13 +39,15 @@ export type UserCreationAttributes = Optional<
   tableName: 'users',
   timestamps: true,
   paranoid: true,
+  underscored: true,
 })
-export class User extends Model<UserAttributes, UserCreationAttributes> {
+export class User extends Model {
   @Column({
     field: 'id',
-    type: DataType.INTEGER,
+    type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
+    comment: 'Identificador del usuario',
   })
   declare id: number;
 
@@ -68,12 +55,12 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
     field: 'name',
     type: DataType.STRING,
     allowNull: false,
-    comment: 'Nombre completo',
+    comment: 'Nombre completo del usuario',
   })
   name: string;
 
   @Column({
-    field: 'displayName',
+    field: 'display_name',
     type: DataType.STRING,
     allowNull: true,
     comment: 'Nombre a mostrar en las conversaciones',
@@ -97,8 +84,8 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   password: string;
 
   @Column({
-    field: 'avatarUrl',
-    type: DataType.STRING,
+    field: 'avatar_url',
+    type: DataType.TEXT('long'),
     allowNull: true,
     comment: 'Imagen para visualizar en el perfil',
   })
@@ -106,38 +93,38 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
 
   @ForeignKey(() => Role)
   @Column({
-    field: 'idRole',
+    field: 'role_id',
     type: DataType.INTEGER,
     allowNull: false,
     comment: 'id Rol asignado al usuario',
   })
-  idRole: number;
+  roleId: number;
 
   @BelongsTo(() => Role)
   role: Role;
 
-  @ForeignKey(() => Oficina)
+  @ForeignKey(() => Office)
   @Column({
-    field: 'idOficina',
+    field: 'office_id',
     type: DataType.INTEGER,
     allowNull: true,
-    comment: 'id Oficina asignada al usuario',
+    comment: 'id Office asignada al usuario',
   })
-  idOficina: number;
+  officeId: number;
 
-  @BelongsTo(() => Oficina)
-  oficina: Oficina;
+  @BelongsTo(() => Office)
+  office: Office;
 
-  @HasOne(() => UserVicidial)
-  vicidial: UserVicidial;
+  @HasOne(() => VicidialUser)
+  vicidial: VicidialUser;
 
   @Column({
-    field: 'verified',
+    field: 'verified_email',
     type: DataType.BOOLEAN,
     defaultValue: false,
     comment: 'Correo electrónico verificado',
   })
-  verified: boolean;
+  verifiedEmail: boolean;
 
   @BelongsToMany(() => Team, () => TeamUser)
   teams: Team[];
@@ -145,9 +132,17 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   @BelongsToMany(() => Skill, () => SkillUser)
   skills: Skill[];
 
-
   @BelongsToMany(() => Inbox, () => InboxUser)
   inboxes: Inbox[];
+
+  @BelongsToMany(() => ChannelState, () => InboxUser)
+  channelStates: ChannelState[];
+
+  @HasMany(() => CallHistory)
+  callHistory: CallHistory[];
+
+  @HasMany(() => EmailAttention)
+  emailAttentions: EmailAttention[];
 
   @Column({
     field: 'status',
@@ -157,6 +152,36 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   })
   status: boolean;
 
+  @ForeignKey(() => User)
+  @Column({ field: 'created_by', allowNull: true })
+  declare createdBy: number;
+
+  @BelongsTo(() => User, 'createdBy')
+  declare createdByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'updated_by', allowNull: true })
+  declare updatedBy: number;
+
+  @BelongsTo(() => User, 'updatedBy')
+  declare updatedByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'deleted_by', allowNull: true })
+  declare deletedBy: number;
+
+  @BelongsTo(() => User, 'deletedBy')
+  declare deletedByUser?: User;
+
+  @CreatedAt
+  @Column({ field: 'created_at', allowNull: true })
+  declare createdAt: Date;
+
+  @UpdatedAt
+  @Column({ field: 'updated_at', allowNull: true })
+  declare updatedAt: Date;
+
   @DeletedAt
+  @Column({ field: 'deleted_at', allowNull: true })
   declare deletedAt: Date;
 }

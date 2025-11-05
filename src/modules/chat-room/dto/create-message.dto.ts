@@ -37,8 +37,8 @@ export class CreateMessageDto {
     example: 1,
   })
   @Transform(({ value }) => parseInt(value, 10))
-  @IsNumber({}, { message: v.isNumber('idChatRoom') })
-  idChatRoom: number;
+  @IsNumber({}, { message: v.isNumber('chatRoomId') })
+  chatRoomId: number;
 
   @ApiProperty({
     description: 'Indica si el mensaje ha sido leído',
@@ -62,12 +62,4 @@ export class CreateMessageDto {
   @IsOptional()
   @IsString({ message: v.isString('resourceUrl') })
   resourceUrl?: string;
-
-  @ApiPropertyOptional({
-    description: 'Fecha de creación del mensaje (en formato ISO)',
-    example: '2025-07-11T15:30:00Z',
-  })
-  @IsOptional()
-  @IsString({ message: v.isString('createdAt') }) // también podrías usar IsDateString
-  createdAt?: string;
 }

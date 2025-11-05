@@ -17,18 +17,23 @@ import { Team } from './entities/team.entity';
 import { CreateTeamUserDto } from './dto/create-team-user.dto';
 import { TeamUser } from './entities/team-user.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { User } from '@modules/user/entities/user.entity';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('teams')
 export class TeamController {
   constructor(private readonly service: TeamService) {}
 
+  @ApiBearerAuth()
   @Get()
   findAll(
+    @CurrentUser() user: User,
     @Query() query: PaginationQueryDto,
   ): Promise<PaginatedResponse<Team>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(limit, offset);
+    return this.service.findAll(user, limit, offset, query.q);
   }
 
   @Get(':id')

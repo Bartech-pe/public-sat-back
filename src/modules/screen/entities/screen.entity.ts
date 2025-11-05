@@ -2,6 +2,7 @@ import {
   BelongsTo,
   BelongsToMany,
   Column,
+  CreatedAt,
   DataType,
   DefaultScope,
   DeletedAt,
@@ -10,12 +11,15 @@ import {
   Model,
   Scopes,
   Table,
+  UpdatedAt,
 } from 'sequelize-typescript';
-import { RoleScreen } from '@modules/role/entities/role-screen.entity';
 import { Role } from '@modules/role/entities/role.entity';
+import { User } from '@modules/user/entities/user.entity';
+import { RoleScreenOffice } from '@modules/office/entities/role-screen-office.entity';
+import { Office } from '@modules/office/entities/office.entity';
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt'] }, // Excluir campo de eliminación lógica y password por defecto
+  attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
 }))
 @Scopes(() => ({}))
 @Table({
@@ -26,9 +30,10 @@ import { Role } from '@modules/role/entities/role.entity';
 export class Screen extends Model {
   @Column({
     field: 'id',
-    type: DataType.INTEGER,
+    type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
+    comment: 'Identificador de la pantalla',
   })
   declare id: number;
 
@@ -49,12 +54,12 @@ export class Screen extends Model {
   description: string;
 
   @Column({
-    field: 'url',
+    field: 'path',
     type: DataType.STRING,
     allowNull: false,
     comment: 'Url de la pantalla',
   })
-  url: string;
+  path: string;
 
   @Column({
     field: 'icon',
@@ -66,18 +71,25 @@ export class Screen extends Model {
 
   @ForeignKey(() => Screen)
   @Column({
-    field: 'idParent',
+    field: 'parent_id',
     type: DataType.INTEGER,
     allowNull: true,
     comment: 'Id de la pantalla padre',
   })
-  idParent: number;
+  parentId: number | null;
 
-  @BelongsTo(() => Screen, { foreignKey: 'idParent', onDelete: 'SET NULL' })
+  @BelongsTo(() => Screen, { foreignKey: 'parentId', onDelete: 'SET NULL' })
   parent: Screen;
 
-  @BelongsToMany(() => Role, () => RoleScreen)
+  // Relación hijos
+  @HasMany(() => Screen, { foreignKey: 'parentId' })
+  children: Screen[];
+
+  @BelongsToMany(() => Role, () => RoleScreenOffice)
   roles: Role[];
+
+  @BelongsToMany(() => Office, () => RoleScreenOffice)
+  offices: Office[];
 
   @Column({
     field: 'status',
@@ -87,6 +99,36 @@ export class Screen extends Model {
   })
   status: boolean;
 
+  @ForeignKey(() => User)
+  @Column({ field: 'created_by', allowNull: true })
+  declare createdBy: number;
+
+  @BelongsTo(() => User, 'createdBy')
+  declare createdByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'updated_by', allowNull: true })
+  declare updatedBy: number;
+
+  @BelongsTo(() => User, 'updatedBy')
+  declare updatedByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'deleted_by', allowNull: true })
+  declare deletedBy: number;
+
+  @BelongsTo(() => User, 'deletedBy')
+  declare deletedByUser?: User;
+
+  @CreatedAt
+  @Column({ field: 'created_at', allowNull: true })
+  declare createdAt: Date;
+
+  @UpdatedAt
+  @Column({ field: 'updated_at', allowNull: true })
+  declare updatedAt: Date;
+
   @DeletedAt
+  @Column({ field: 'deleted_at', allowNull: true })
   declare deletedAt: Date;
 }

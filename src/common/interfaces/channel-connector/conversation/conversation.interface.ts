@@ -1,4 +1,8 @@
-import { ChannelType, MessageStatus, MessageType } from "../messaging.interface";
+import {
+  ChannelType,
+  MessageStatus,
+  MessageType,
+} from '../messaging.interface';
 
 export interface ConversationStatusMessage {
   type: MessageType.CONVERSATION_STATUS;

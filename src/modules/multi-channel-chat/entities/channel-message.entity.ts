@@ -7,46 +7,27 @@ import {
   BelongsTo,
   Model,
   Table,
+  CreatedAt,
+  UpdatedAt,
   HasMany,
 } from 'sequelize-typescript';
 import { Optional } from 'sequelize';
 import { ChannelRoom } from './channel-room.entity';
 import { MessageStatus } from '@common/interfaces/multi-channel-chat/channel-message/channel-chat-message.dto';
-import { Assistance } from './assistance.entity';
+import { ChannelAttention } from './channel-attention.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { ChannelMessageAttachment } from './channel-message-attachments.entity';
 
-export interface ChannelMessageAttributes {
-  id: number;
-  content: string;
-  status: MessageStatus;
-  channelRoomId: number;
-  userId: number;
-  externalMessageId: string;
-  senderType: 'agent' | 'citizen' | 'bot';
-  timestamp: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date;
-}
-
-export type ChannelMessageCreationAttributes = Optional<
-  ChannelMessageAttributes,
-  'id' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
->;
-
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt'] },
+  attributes: { exclude: ['deleted_at', 'deleted_by'] }, // Excluir campo de eliminación lógica
 }))
 @Table({
-  tableName: 'ChannelMessages',
+  tableName: 'channel_messages',
   timestamps: true,
   paranoid: true,
-  indexes: [
-    { fields: ['channelRoomId'] }
-  ],
+  indexes: [{ fields: ['channelRoomId'] }],
 })
-export class ChannelMessage extends Model<ChannelMessageAttributes, ChannelMessageCreationAttributes> {
+export class ChannelMessage extends Model {
   @Column({
     field: 'id',
     type: DataType.INTEGER,
@@ -57,15 +38,15 @@ export class ChannelMessage extends Model<ChannelMessageAttributes, ChannelMessa
 
   @ForeignKey(() => ChannelRoom)
   @Column({
-    field: 'channelRoomId',
+    field: 'channel_room_id',
     type: DataType.INTEGER,
     allowNull: false,
   })
   channelRoomId: number;
 
-  @ForeignKey(() => Assistance)
+  @ForeignKey(() => ChannelAttention)
   @Column({
-    field: 'assistanceId',
+    field: 'channel_attention_id',
     type: DataType.INTEGER,
     allowNull: false,
   })
@@ -73,11 +54,11 @@ export class ChannelMessage extends Model<ChannelMessageAttributes, ChannelMessa
 
   @ForeignKey(() => User)
   @Column({
-    field: 'userId',
+    field: 'user_id',
     type: DataType.INTEGER,
-    allowNull: false,
+    allowNull: true,
   })
-  userId: number;
+  userId?: number | null;
 
   @Column({
     field: 'content',
@@ -88,7 +69,7 @@ export class ChannelMessage extends Model<ChannelMessageAttributes, ChannelMessa
   content: string;
 
   @Column({
-    field: 'externalMessageId',
+    field: 'external_message_id',
     type: DataType.STRING,
     allowNull: true,
     comment: 'ChannelMessage content Id',
@@ -105,7 +86,7 @@ export class ChannelMessage extends Model<ChannelMessageAttributes, ChannelMessa
   status: MessageStatus;
 
   @Column({
-    field: 'senderType',
+    field: 'sender_type',
     type: DataType.ENUM('agent', 'citizen', 'bot'),
     allowNull: false,
     comment: 'Type of sender',
@@ -120,32 +101,48 @@ export class ChannelMessage extends Model<ChannelMessageAttributes, ChannelMessa
   })
   timestamp: Date;
 
-  @Column({
-    field: 'createdAt',
-    type: DataType.DATE,
-    defaultValue: DataType.NOW,
-  })
-  declare createdAt: Date;
-
-  @Column({
-    field: 'updatedAt',
-    type: DataType.DATE,
-  })
-  declare updatedAt: Date;
-
-  @DeletedAt
-  declare deletedAt?: Date;
-
   @BelongsTo(() => ChannelRoom)
   channelRoom: ChannelRoom;
+
+  @BelongsTo(() => User)
+  user: User;
+
+  @BelongsTo(() => ChannelAttention)
+  attention: ChannelAttention;
 
   @HasMany(() => ChannelMessageAttachment)
   attachments: ChannelMessageAttachment[];
 
-  @BelongsTo(() => User)
-  user: User;
-  
-  @BelongsTo(() => Assistance)
-  assistances: Assistance;
+  @ForeignKey(() => User)
+  @Column({ field: 'created_by', allowNull: true })
+  declare createdBy: number;
 
+  @BelongsTo(() => User, 'createdBy')
+  declare createdByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'updated_by', allowNull: true })
+  declare updatedBy: number;
+
+  @BelongsTo(() => User, 'updatedBy')
+  declare updatedByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'deleted_by', allowNull: true })
+  declare deletedBy: number;
+
+  @BelongsTo(() => User, 'deletedBy')
+  declare deletedByUser?: User;
+
+  @CreatedAt
+  @Column({ field: 'created_at', allowNull: true })
+  declare createdAt: Date;
+
+  @UpdatedAt
+  @Column({ field: 'updated_at', allowNull: true })
+  declare updatedAt: Date;
+
+  @DeletedAt
+  @Column({ field: 'deleted_at', allowNull: true })
+  declare deletedAt: Date;
 }

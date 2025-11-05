@@ -6,11 +6,11 @@ export class CreateSkillUserDto {
   @IsNumber({}, { message: v.isNumber('id') })
   id?: number;
 
-  @IsNumber({}, { message: v.isNumber('idUser') })
-  idUser: number;
+  @IsNumber({}, { message: v.isNumber('userId') })
+  userId: number;
 
-  @IsNumber({}, { message: v.isNumber('idSkill') })
-  idSkill: number;
+  @IsNumber({}, { message: v.isNumber('skillId') })
+  skillId: number;
 
   @IsNumber({}, { message: v.isNumber('score') })
   score: number;

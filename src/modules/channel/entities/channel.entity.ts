@@ -1,47 +1,37 @@
 import {
+  BelongsTo,
   Column,
+  CreatedAt,
   DataType,
   DefaultScope,
   DeletedAt,
+  ForeignKey,
   HasMany,
   Model,
   Scopes,
   Table,
+  UpdatedAt,
 } from 'sequelize-typescript';
-import { Optional } from 'sequelize';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
-
-export interface ChannelAttributes {
-  id: number;
-  name: string;
-  description?: string;
-  logo: string;
-  status?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date;
-}
-
-export type ChannelCreationAttributes = Optional<
-  ChannelAttributes,
-  'id' | 'description' | 'status' | 'createdAt' | 'updatedAt' | 'deletedAt'
->;
+import { User } from '@modules/user/entities/user.entity';
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt'] },
+  attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
 }))
 @Scopes(() => ({}))
 @Table({
   tableName: 'channels',
   timestamps: true,
   paranoid: true,
+  underscored: true,
 })
-export class Channel extends Model<ChannelAttributes, ChannelCreationAttributes> {
+export class Channel extends Model {
   @Column({
     field: 'id',
-    type: DataType.INTEGER,
+    type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
+    comment: 'Identificador del canal',
   })
   declare id: number;
 
@@ -69,6 +59,9 @@ export class Channel extends Model<ChannelAttributes, ChannelCreationAttributes>
   })
   logo: string;
 
+  @HasMany(() => Inbox, { foreignKey: 'channelId' })
+  inboxes: Inbox[];
+
   @Column({
     field: 'status',
     type: DataType.BOOLEAN,
@@ -77,22 +70,36 @@ export class Channel extends Model<ChannelAttributes, ChannelCreationAttributes>
   })
   status?: boolean;
 
-  @HasMany(() => Inbox, { foreignKey: 'idChannel' })
-  inboxes: Inbox[];
+  @ForeignKey(() => User)
+  @Column({ field: 'created_by', allowNull: true })
+  declare createdBy: number;
 
-  @Column({
-    field: 'createdAt',
-    type: DataType.DATE,
-    defaultValue: DataType.NOW,
-  })
+  @BelongsTo(() => User, 'createdBy')
+  declare createdByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'updated_by', allowNull: true })
+  declare updatedBy: number;
+
+  @BelongsTo(() => User, 'updatedBy')
+  declare updatedByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'deleted_by', allowNull: true })
+  declare deletedBy: number;
+
+  @BelongsTo(() => User, 'deletedBy')
+  declare deletedByUser?: User;
+
+  @CreatedAt
+  @Column({ field: 'created_at', allowNull: true })
   declare createdAt: Date;
 
-  @Column({
-    field: 'updatedAt',
-    type: DataType.DATE,
-  })
+  @UpdatedAt
+  @Column({ field: 'updated_at', allowNull: true })
   declare updatedAt: Date;
 
   @DeletedAt
-  declare deletedAt?: Date;
+  @Column({ field: 'deleted_at', allowNull: true })
+  declare deletedAt: Date;
 }

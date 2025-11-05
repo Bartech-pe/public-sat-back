@@ -24,10 +24,9 @@ import {
   paranoid: true,
 })
 export class Notification extends Model {
-
   @Column({
     field: 'id',
-    type: DataType.INTEGER,
+    type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
   })
@@ -35,7 +34,7 @@ export class Notification extends Model {
 
   @ForeignKey(() => User)
   @Column({
-    field: 'userId',
+    field: 'user_id',
     type: DataType.INTEGER,
     allowNull: false,
     comment: 'ID del usuario que recibe la notificación',
@@ -46,7 +45,7 @@ export class Notification extends Model {
   user?: User;
 
   @Column({
-    field: 'message',  
+    field: 'message',
     type: DataType.TEXT,
     allowNull: false,
     comment: 'Mensaje de la notificación',
@@ -54,26 +53,51 @@ export class Notification extends Model {
   message: string;
 
   @Column({
-    field: 'isRead',
+    field: 'is_read',
     type: DataType.BOOLEAN,
     defaultValue: false,
     comment: 'Indica si la notificación ha sido leída',
   })
   isRead: boolean;
 
+  @Column({
+    field: 'status',
+    type: DataType.BOOLEAN,
+    defaultValue: true,
+    comment: 'Campo para habilitar o inhabilitar un registro',
+  })
+  status: boolean;
+
   @ForeignKey(() => User)
-  @Column({ field: 'createdBy', allowNull: true })
+  @Column({ field: 'created_by', allowNull: true })
   declare createdBy: number;
 
   @BelongsTo(() => User, 'createdBy')
   declare createdByUser?: User;
 
+  @ForeignKey(() => User)
+  @Column({ field: 'updated_by', allowNull: true })
+  declare updatedBy: number;
+
+  @BelongsTo(() => User, 'updatedBy')
+  declare updatedByUser?: User;
+
+  @ForeignKey(() => User)
+  @Column({ field: 'deleted_by', allowNull: true })
+  declare deletedBy: number;
+
+  @BelongsTo(() => User, 'deletedBy')
+  declare deletedByUser?: User;
+
   @CreatedAt
+  @Column({ field: 'created_at', allowNull: true })
   declare createdAt: Date;
 
   @UpdatedAt
+  @Column({ field: 'updated_at', allowNull: true })
   declare updatedAt: Date;
 
   @DeletedAt
+  @Column({ field: 'deleted_at', allowNull: true })
   declare deletedAt: Date;
 }

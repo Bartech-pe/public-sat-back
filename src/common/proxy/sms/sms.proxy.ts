@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import axios, { AxiosResponse } from 'axios';
 import {
   SMSFilterDto,
@@ -8,13 +7,14 @@ import {
   SMSSendResponseDto,
 } from './dto/SMSSendDto';
 import { ApiResponseProxyDTO } from '../ApiResponseProxyDTO';
+import { satConfig } from 'config/env';
 
 @Injectable()
 export class SMSProxy {
-  constructor(private readonly configService: ConfigService) {}
+  constructor() {}
   async SMSMasive(body: SMSSendDto) {
     const client = axios.create({
-      baseURL: this.configService.get<string>('SMS_MAS_URL') ?? '',
+      baseURL: satConfig.smsMasUrl,
       timeout: 10000,
       headers: {
         Accept: 'application/json',
@@ -40,7 +40,7 @@ export class SMSProxy {
   }
   async SMSSolo(body: SMSFilterDto) {
     const client = axios.create({
-      baseURL: this.configService.get<string>('SMS_INV_URL') ?? '',
+      baseURL: satConfig.smsInvUrl,
       timeout: 10000,
       headers: {
         Accept: 'application/json',

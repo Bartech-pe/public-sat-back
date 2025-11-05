@@ -19,7 +19,7 @@ export class CreateInboxCredentialDto {
   @IsOptional()
   @IsString({ message: v.isString('businessId') })
   businessId?: string;
-  
+
   @IsOptional()
   @IsString({ message: v.isString('phoneNumber') })
   phoneNumber?: string;
@@ -31,7 +31,7 @@ export class CreateInboxCredentialDto {
   @IsOptional()
   @IsString({ message: v.isString('accessToken') })
   accessToken?: string;
-  
+
   @IsOptional()
   @IsDate({ message: 'expiresAt debe ser una fecha válida' })
   expiresAt?: Date;

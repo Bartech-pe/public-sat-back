@@ -24,8 +24,8 @@ export class SurveyController {
 
       @Get()
       findAll(
-        @CurrentUser() user: User,
-        @Query() query: PaginationQueryDto,
+      @CurrentUser() user: User,
+      @Query() query: PaginationQueryDto,
       ): Promise<PaginatedResponse<Survey>> {
         const limit = query.limit!;
         const offset = query.offset!;
