@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { VicidialUser } from '../entities/vicidial-user.entity';
@@ -17,6 +18,8 @@ import { VicidialCampaingRepository } from '../repositories/vicidial-campaing.re
 import { VicidialUserRepository } from '../repositories/vicidial-user.repository';
 @Injectable()
 export class VicidialUserService {
+
+   private readonly logger = new Logger(VicidialUserService.name);
   constructor(
     @Inject(CENTRAL_DB) private readonly db: Sequelize | null,
     private readonly campaignModel: VicidialCampaingRepository,
@@ -252,12 +255,11 @@ export class VicidialUserService {
 
   async scheduleCampaignControl() {
     // se ejecuta cada 5 minutos
-    cron.schedule('*/1 * * * *', async () => {
+    cron.schedule('*/5 * * * *', async () => {
       if (!this.db) {
-        throw new InternalServerErrorException(
-          'No se pudo otener la conexión con la base de datos de la central telefónica.',
-        );
-      }
+          this.logger.error('No se pudo obtener la conexión con la base de datos de la central telefónica.');
+          return;
+      }  
       const now = new Date();
       const day = now.getDay(); // 0=Domingo, 1=Lunes,...,6=Sábado
       const hour = now.getHours();

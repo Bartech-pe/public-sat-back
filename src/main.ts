@@ -56,8 +56,9 @@ async function bootstrap() {
   app.use(
     helmet({
       contentSecurityPolicy: {
-        useDefaults: false,
+        useDefaults: true,
         directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
           'default-src': ["'self'"],
           'script-src': [
             "'self'",
@@ -103,6 +104,7 @@ async function bootstrap() {
           'object-src': ["'none'"],
           'frame-ancestors': ["'none'"],
           'base-uri': ["'self'"],
+          'form-action': ["'self'"],
           'upgrade-insecure-requests': [],
           'media-src': [
             "'self'",
@@ -116,8 +118,7 @@ async function bootstrap() {
       },
       crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      frameguard: { action: 'deny' },
-      referrerPolicy: { policy: 'no-referrer' },
+      crossOriginOpenerPolicy: false,
     }),
   );
 
