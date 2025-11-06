@@ -62,7 +62,6 @@ async function bootstrap() {
           'default-src': ["'self'"],
           'script-src': [
             "'self'",
-            "'unsafe-hashes'",
             'https://cdn.jsdelivr.net',
             'https://unpkg.com',
           ],
@@ -76,7 +75,18 @@ async function bootstrap() {
             'https://unpkg.com',
             'https://accounts.google.com',
           ],
-          'img-src': ["'self'", 'data:', 'blob:', 'cid:', 'https:'],
+          'img-src': [
+            "'self'",
+            'data:',
+            'blob:',
+            'cid:',
+            'https://i.pravatar.cc',
+            'https://www.sat.gob.pe',
+            'https://cdn.jsdelivr.net',
+            'https://unpkg.com',
+            'https://api.iconify.design',
+            'https://api.simplesvg.com',
+          ],
           'font-src': [
             "'self'",
             'data:',
