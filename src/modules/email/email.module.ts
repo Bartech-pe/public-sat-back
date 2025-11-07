@@ -15,8 +15,8 @@ import { EmailAttachmentRepository } from './repositories/email-attachment.repos
 import { EmailCredentialService } from './services/email-credential.service';
 import { InboxModule } from '@modules/inbox/inbox.module';
 import { ChannelModule } from '@modules/channel/channel.module';
-import { AssistanceStateModule } from '@modules/assistance-state/assistance-state.module';
-import { ChannelStateModule } from '@modules/channel-state/channel-state.module';
+import { AssistanceStateModule } from '@modules/custom-states/assistance-state/assistance-state.module';
+import { ChannelStateModule } from '@modules/custom-states/channel-state/channel-state.module';
 import { EmailCenterController } from './controllers/email-center.controller';
 import { EmailFeatureController } from './controllers/email-feature.controller';
 import { EmailConfigurationController } from './controllers/email-configuration.controller';

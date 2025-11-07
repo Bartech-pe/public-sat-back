@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { VicidialApiModule } from './vicidial-api/vicidial-api.module';
 import { CentralTelefonicaModule } from './central-telefonica/central-telefonica.module';
 import { CallModule } from '@modules/call/call.module';
-import { MonitorModule } from './monitor/monitor.module';
 import { VicidialCredentialsController } from './controllers/vicidial-credentials.controller';
 import { VicidialCredentialService } from './services/vicidial-credentials.service';
 import { InboxModule } from '@modules/inbox/inbox.module';
@@ -19,7 +18,6 @@ import { VicidialCredential } from './entities/vicidial-credentials.entity';
     VicidialApiModule,
     CentralTelefonicaModule,
     CallModule,
-    MonitorModule,
   ],
 })
 export class VicidialModule {}

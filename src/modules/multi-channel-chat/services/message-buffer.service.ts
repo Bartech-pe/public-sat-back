@@ -98,7 +98,7 @@ export class MessageBufferService implements OnModuleInit, OnModuleDestroy {
     try {
       const senderId = (message?.citizen?.phoneNumber ?? '').toString();
       const botMustAnswer =
-        [ChannelType.WHATSAPP, ChannelType.CHATSAT].includes(
+        [ChannelType.WHATSAPP, ChannelType.CHATSAT, ChannelType.TELEGRAM].includes(
           message.data.payload.channel,
         ) && message.channelRoom.botReplies;
 

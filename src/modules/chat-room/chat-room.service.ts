@@ -177,12 +177,10 @@ export class ChatRoomService {
   }
 
   async createRoomMessage(dto: CreateMessageDto,userId: number): Promise<ChatRoomMessage> {
-    console.log("===================")
-    console.log(dto)
-    console.log(userId)
+
     try {
        
-
+ 
         const count = await this.messageRepository.count({
           where: {
             chatRoomId: Number(dto.chatRoomId),
@@ -190,29 +188,23 @@ export class ChatRoomService {
             isRead: false,
           },
         });
-
-        console.log(count);
-
+        
         if (count > 0) {
-
           await ChatRoomMessage.update(
               { isRead: true },
               { where: { chatRoomId:dto.chatRoomId, senderId: { [Op.ne]: userId }, 
                 isRead: false,} }
           );
-          
+           
           return await this.messageRepository.create({
             ...dto,
             isRead: true,
           });
         
         }else{
-
           return this.messageRepository.create(dto);
         }
 
-   
-      
     } catch (error) {
       throw new InternalServerErrorException(
         error,

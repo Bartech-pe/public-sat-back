@@ -7,7 +7,7 @@ import {
   BelongsTo,
 } from 'sequelize-typescript';
 import { VicidialUser } from './vicidial-user.entity';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 
 @Table({ tableName: 'vicidial_user_history', timestamps: false })
 export class VicidialUserHistory extends Model {

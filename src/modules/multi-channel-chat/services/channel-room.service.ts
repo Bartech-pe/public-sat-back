@@ -42,7 +42,6 @@ import {
 import { ToogleBotServicesDto } from '../dto/channel-room/toggle-bot-services.dto';
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
 import { AdvisorsResponseDto } from '../dto/channel-advisors/get-advisors.dto';
-import { Response } from 'express';
 import { GetChannelSummaryDto } from '../dto/channel-summary/get-channel-summary.dto';
 import { Op } from 'sequelize';
 import { changeChannelRoomStatusDto } from '../dto/channel-room/change-channel-room-status.dto';
@@ -62,7 +61,7 @@ import { ChannelMessageAttachmentRepository } from '../repositories/channel-mess
 import { Attachment } from '@common/interfaces/channel-connector/incoming/incoming.interface';
 import { ChannelCitizenRepository } from '../repositories/channel-citizen.repository';
 import { UserRole } from '@common/constants/role.constant';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 import { CreateChannelQueryHistoryDto } from '../dto/channel-query-history/create-channel-query-history.dto';
 import { ChannelQueryHistoryRepository } from '../repositories/channel-room.repository copy';
 import { ConsultTypeRepository } from '@modules/consult-type/repositories/consult-type.repository';
@@ -477,7 +476,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
             isAgent: messageParsed.senderType == 'agent',
           },
           status: messageParsed.status,
-          timestamp: messageParsed.timestamp
+          timestamp: messageParsed.timestamp,
         } as ChannelRoomMessage;
       })
       .reverse();

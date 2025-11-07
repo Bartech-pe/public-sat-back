@@ -23,7 +23,7 @@ export class VicidialUserService {
     private readonly campaignModel: VicidialCampaingRepository,
     private readonly userModel: VicidialUserRepository,
   ) {
-    this.scheduleCampaignControl();
+    this.scheduleCampaign();
   }
 
   private get db(): Sequelize | null {
@@ -35,12 +35,22 @@ export class VicidialUserService {
   }
 
   getCampaignAll(): Promise<VicidialCampaign[]> {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     return this.campaignModel
       .getModel()!
       .findAll({ where: { dial_method: 'RATIO' } });
   }
 
   async getByIdCampain(campaignId: string) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
     const campaign = await this.campaignModel.getModel()!.findOne({
       where: { campaign_id: campaignId },
     });
@@ -59,6 +69,11 @@ export class VicidialUserService {
     data: VicidialCampaign;
   }> {
     const { campaign_id, campaign_name } = body;
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    } 
 
     const existing = await this.campaignModel.getModel()!.findOne({
       where: { campaign_id },
@@ -89,6 +104,11 @@ export class VicidialUserService {
     { status: 'updated'; data: VicidialCampaign } | { status: 'not_found' }
   > {
     try {
+      if (!this.db) {
+        throw new InternalServerErrorException(
+          'No se pudo otener la conexión con la base de datos de la central telefónica.',
+        );
+      }
       const exist = await this.campaignModel.getModel()!.findOne({
         where: { campaign_id },
       });
@@ -117,6 +137,11 @@ export class VicidialUserService {
     { status: 'deleted'; data: VicidialCampaign } | { status: 'not_found' }
   > {
     try {
+      if (!this.db) {
+        throw new InternalServerErrorException(
+          'No se pudo otener la conexión con la base de datos de la central telefónica.',
+        );
+      }
       const campaign = await this.campaignModel.getModel()!.findOne({
         where: { campaign_id },
       });
@@ -255,7 +280,7 @@ export class VicidialUserService {
     }
   }
 
-  async scheduleCampaignControl() {
+  async scheduleCampaign() {
     // se ejecuta cada 5 minutos
     cron.schedule('*/5 * * * *', async () => {
       if (!this.db) {

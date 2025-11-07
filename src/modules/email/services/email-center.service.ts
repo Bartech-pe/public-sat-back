@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EmailAttentionRepository } from '../repositories/email-attention.repository';
-import { AssistanceStateService } from '@modules/assistance-state/assistance-state.service';
+import { AssistanceStateService } from '@modules/custom-states/assistance-state/assistance-state.service';
 import { ReplyCenterMail } from '../dto/reply-center-mail.dto';
 import { EmailAttention } from '../entities/email-attention.entity';
 import { MailFilter } from '../dto/mail-filter.dto';
@@ -19,7 +19,7 @@ import { ReplyEmail } from '../dto/email-channel/reply-email.dto';
 import { ForwardTo } from '../dto/email-channel/forward-to.dto';
 import { ForwardCenterMail } from '../dto/forward-center-mail.dto';
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
-import { ChannelStateRepository } from '@modules/channel-state/repositories/channel-state.repository';
+import { ChannelStateRepository } from '@modules/custom-states/channel-state/repositories/channel-state.repository';
 import { CenterEmail } from '../dto/center-email.dto';
 import {
   AttachementBody,
@@ -34,7 +34,7 @@ import { InboxRepository } from '@modules/inbox/repositories/inbox.repository';
 import { User } from '@modules/user/entities/user.entity';
 import { EmailThread } from '../entities/email-thread.entity';
 import { UserRole } from '@common/constants/role.constant';
-import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
+import { AssistanceState } from '@modules/custom-states/assistance-state/entities/assistance-state.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { EmailGateway } from '../email.gateway';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';

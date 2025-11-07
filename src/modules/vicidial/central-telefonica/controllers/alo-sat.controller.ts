@@ -15,7 +15,7 @@ import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
 import { PauseAgentDto } from '../dto/pause-agent.dto';
 import { CampaignSearchDto, LoginAgentDto } from '../dto/login-agent.dto';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 import {
   ChannelPhoneState,
   VicidialAgentStatus,

@@ -14,7 +14,7 @@ export class CentralTelefonicaController {
     return this.service.findAll();
   }
 
-  @Get('campanias/getbyid/:id')
+  @Get('campanign/getbyid/:id')
   getById(@Param('id') campaign_id: string) {
     return this.service.getByIdCampain(campaign_id);
   }

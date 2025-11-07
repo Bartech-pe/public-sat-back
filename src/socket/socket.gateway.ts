@@ -19,7 +19,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private clients: Map<number, string> = new Map(); // userId → socketId
-
+  private connectedUsers = new Map<number, string>();
   // 1. Guardamos el socket.id cuando el frontend se conecta y se registra
   @SubscribeMessage('register_user')
   handleRegisterUser(
@@ -27,6 +27,7 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
   ) {
     this.clients.set(userId, client.id);
+     this.connectedUsers.set(userId, client.id);
     console.log(`Usuario ${userId} registrado con socketId ${client.id}`);
   }
 
@@ -39,6 +40,18 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleAlertas(@MessageBody() alerta: any): void {
     console.log(alerta);
     this.server.emit('receive_alertas', alerta);
+  }
+
+  @SubscribeMessage('send_message_notification')
+  handleMessageNotification(@MessageBody() message: { toUserId: number; text: string }): void {
+    const socketId = this.connectedUsers.get(message.toUserId);
+    if (socketId) {
+      console.log("====================================")
+      console.log(socketId)
+      this.server.to(socketId).emit('receive_message_notification', message);
+    } else {
+      console.log(`⚠️ Usuario ${message.toUserId} no está conectado`);
+    }
   }
 
   // 2. Enviar mensaje a usuarios

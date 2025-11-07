@@ -20,12 +20,15 @@ export class NotificationService {
     offset: number,
   ): Promise<PaginatedResponse<Notification>> {
     try {
-      console.log("======================",user)
+     
       const whereOpts = {
         where: {
           userId: user.id,
+          isRead: false
         },
       };
+
+      console.log(whereOpts)
       
       return this.repository.findAndCountAll({
         ...whereOpts,
@@ -106,19 +109,31 @@ export class NotificationService {
     }
   }
 
-//   async markAllAsRead(userId: number): Promise<void> {
-//     try {
-//       await this.repository.updateAll(
-//         { isRead: true },
-//         { where: { userId, isRead: false } },
-//       );
-//     } catch (error) {
-//       console.error('Error in markAllAsRead:', error);
-//       throw new InternalServerErrorException(
-//         'Error al marcar todas las notificaciones como leídas',
-//       );
-//     }
-//   }
+  async markAllAsRead(userId: number): Promise<Notification[]> {
+    try {
+    
+      const notifications = await this.repository.findAll({
+        where: {  userId, isRead: false},
+      });
+
+        if (!notifications.length) {
+        throw new NotFoundException('No se encontraron notificaciones no leídas');
+      }
+
+      // 🔹 Actualizar cada notificación
+      for (const notification of notifications) {
+        await notification.update({ isRead: true });
+      } 
+
+      return notifications;
+
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(
+        'Error al marcar la notificación como leída',
+      );
+    }
+  }
 
   async remove(id: number): Promise<void> {
     try {

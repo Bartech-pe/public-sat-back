@@ -1,4 +1,4 @@
-import { Campaign } from '@modules/campaign/entities/campaign.entity';
+import { EmailCampaign } from '@modules/campaigns/email-campaign/entities/email-campaign.entity';
 import { User } from '@modules/user/entities/user.entity';
 import {
   BelongsTo,
@@ -49,12 +49,12 @@ export class Schedule extends Model {
   })
   isHoliday: boolean;
 
-  @ForeignKey(() => Campaign)
+  @ForeignKey(() => EmailCampaign)
   @Column({ field: 'campaign_id', type: DataType.INTEGER, allowNull: true })
   campaignId: number;
 
-  @BelongsTo(() => Campaign)
-  campaign: Campaign;
+  @BelongsTo(() => EmailCampaign)
+  campaign: EmailCampaign;
 
   @Column({
     field: 'status',

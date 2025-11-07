@@ -13,10 +13,7 @@ import { VicidialApiService } from '@modules/vicidial/vicidial-api/vicidial-api.
 import { vicidialConfig } from 'config/env';
 import { stripPeruCode } from '@common/helpers/phone.helper';
 import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
-import {
-  CENTRAL_DB,
-  DatabaseCentralService,
-} from '@database/central/database-central.service';
+import { DatabaseCentralService } from '@database/central/database-central.service';
 
 interface TransactionExtended extends Transaction {
   finished?: 'commit' | 'rollback';

@@ -15,7 +15,7 @@ import {
   AfterCreate,
 } from 'sequelize-typescript';
 import { User } from './user.entity';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 import { VicidialUserHistory } from './vicidial-user-history.model';
 import { Op } from 'sequelize';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';

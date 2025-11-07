@@ -5,7 +5,7 @@ import { MailType } from './enum/mail-type.enum';
 import { EmailThreadRepository } from './repositories/email-thread.repository';
 import { EmailThread } from './entities/email-thread.entity';
 import { User } from '@modules/user/entities/user.entity';
-import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
+import { AssistanceState } from '@modules/custom-states/assistance-state/entities/assistance-state.entity';
 
 export const EmailTicketList = async (
   whereThread: any,

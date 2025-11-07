@@ -52,8 +52,7 @@ import { channelConnectorConfig, jwtConfig } from 'config/env';
 import { UserRepository } from '@modules/user/repositories/user.repository';
 import { UserRole } from '@common/constants/role.constant';
 import { JwtService } from '@nestjs/jwt';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
-import { response } from 'express';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 
 export interface IChannelChatInformation {
   channelRoomId?: number | null;
@@ -118,12 +117,12 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
         //   secret: jwtConfig.secretCitizen,
         // }
         const response = await this.jwtService.decode(token);
-        console.log(response)
+        console.log(response);
       } catch (error) {
         this.logger.error(error);
         return false;
       }
-    })
+    });
 
     this.socket.on(
       'chat.status.typing.indicator',
@@ -152,7 +151,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
         };
         try {
           if (data.type !== MessageType.INCOMING) return null;
-          console.log(data)
+          console.log(data);
           if (data.payload.channel == ChannelType.CHATSAT) {
             const isValidToken = await this.checkCitizenToken(data?.token);
             if (!isValidToken) {
@@ -214,9 +213,9 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
           let channelMessageParsed = channelMessage.toJSON();
           let channelUser: User | null = null;
           if (assistance?.userId) {
-            channelUser = await this.userRepository.findOne(
-              {where: {id: assistance.userId}},
-            );
+            channelUser = await this.userRepository.findOne({
+              where: { id: assistance.userId },
+            });
           }
 
           let countUnreadMessages =
@@ -238,7 +237,7 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
             channel: data.payload.channel,
             advisor: {
               id: channelUser?.id,
-              name: channelUser?.name
+              name: channelUser?.name,
             },
             status: channelRoom.status,
             message: {
@@ -548,53 +547,58 @@ export class MultiChannelChatService implements OnModuleInit, OnModuleDestroy {
       const attentions = await this.ChannelAttentionRepository.findAll({
         where: {
           channelRoomId: channelRoom.id,
-          status:{
+          status: {
             [Op.in]: [
               ChannelAttentionStatus.IDENTITY_VERIFICATION,
               ChannelAttentionStatus.IN_PROGRESS,
               ChannelAttentionStatus.PRIORITY,
-            ]
+            ],
           },
-          endDate: null
+          endDate: null,
         },
         order: [['createdAt', 'DESC']],
-        limit: 1
+        limit: 1,
       });
-      if(attentions.length > 0)
-      {
-          const attention = attentions[0].toJSON();
-          
-          const isPendingCorrect = channelRoom.status == 'pendiente' && 
-            [
-              ChannelAttentionStatus.IDENTITY_VERIFICATION,
-              ChannelAttentionStatus.IN_PROGRESS,
-            ].includes(attention.status)
-          const isPriorityCorrect = channelRoom.status == 'prioridad' && 
-            [
-              ChannelAttentionStatus.PRIORITY
-            ].includes(attention.status)
-          if(!isPendingCorrect || !isPriorityCorrect || channelRoom.status == 'completado')
-          {
-              const status = attention.status == ChannelAttentionStatus.PRIORITY ? 'prioridad': 'pendiente'
-              const [_, [updatedRoom]] = await this.channelRoomRepository.update(
-                channelRoom.id,
-                {
-                  status: status,
-                  userId: attention?.userId,
-                },
-              );
-              return updatedRoom.toJSON();
-          }
-          return channelRoom;
-      }else{
+      if (attentions.length > 0) {
+        const attention = attentions[0].toJSON();
+
+        const isPendingCorrect =
+          channelRoom.status == 'pendiente' &&
+          [
+            ChannelAttentionStatus.IDENTITY_VERIFICATION,
+            ChannelAttentionStatus.IN_PROGRESS,
+          ].includes(attention.status);
+        const isPriorityCorrect =
+          channelRoom.status == 'prioridad' &&
+          [ChannelAttentionStatus.PRIORITY].includes(attention.status);
+        if (
+          !isPendingCorrect ||
+          !isPriorityCorrect ||
+          channelRoom.status == 'completado'
+        ) {
+          const status =
+            attention.status == ChannelAttentionStatus.PRIORITY
+              ? 'prioridad'
+              : 'pendiente';
           const [_, [updatedRoom]] = await this.channelRoomRepository.update(
             channelRoom.id,
             {
-              status: 'pendiente',
-              userId: null,
+              status: status,
+              userId: attention?.userId,
             },
           );
           return updatedRoom.toJSON();
+        }
+        return channelRoom;
+      } else {
+        const [_, [updatedRoom]] = await this.channelRoomRepository.update(
+          channelRoom.id,
+          {
+            status: 'pendiente',
+            userId: null,
+          },
+        );
+        return updatedRoom.toJSON();
       }
     }
 

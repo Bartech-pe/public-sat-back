@@ -12,14 +12,14 @@ import { EmailAttentionRepository } from '../repositories/email-attention.reposi
 import { EmailSent } from '../dto/center-email.dto';
 import { MailType } from '../enum/mail-type.enum';
 import { EmailStateRepository } from '../repositories/email-state.repository';
-import { AssistanceStateService } from '@modules/assistance-state/assistance-state.service';
+import { AssistanceStateService } from '@modules/custom-states/assistance-state/assistance-state.service';
 import { User } from '@modules/user/entities/user.entity';
 
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
 import { EmailAttachment } from '../entities/email-attachment.entity';
 import { EmailThreadRepository } from '../repositories/email-thread.repository';
 import { InboxRepository } from '@modules/inbox/repositories/inbox.repository';
-import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
+import { AssistanceState } from '@modules/custom-states/assistance-state/entities/assistance-state.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { EmailGateway } from '../email.gateway';
 import { EmailAttention } from '../entities/email-attention.entity';

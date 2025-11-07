@@ -11,7 +11,7 @@ import {
 } from 'sequelize-typescript';
 import { User } from '@modules/user/entities/user.entity';
 import { Inbox } from './inbox.entity';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 
 @Table({
   tableName: 'inbox_users',

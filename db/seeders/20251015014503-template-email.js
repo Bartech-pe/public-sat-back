@@ -3,7 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.bulkInsert('template_emails', [
+    await queryInterface.bulkInsert('email_templates', [
       {
         id: 1,
         name: 'Nueva plantilla promocion',
@@ -197,6 +197,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('template_emails', null, {});
+    await queryInterface.bulkDelete('email_templates', null, {});
   },
 };

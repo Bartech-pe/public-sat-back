@@ -75,13 +75,13 @@ module.exports = {
      * Constraints (FKs)
      * ------------------------- */
 
-    // campaign_id → campaigns.id
+    // campaign_id → audio_campaigns.id
     await queryInterface.addConstraint('schedules', {
       fields: ['campaign_id'],
       type: 'foreign key',
       name: 'fk_schedules_campaign_id',
       references: {
-        table: 'campaigns',
+        table: 'audio_campaigns',
         field: 'id',
       },
       onUpdate: 'CASCADE',

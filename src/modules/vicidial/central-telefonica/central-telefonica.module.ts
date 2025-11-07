@@ -1,8 +1,8 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { CentralTelefonicaController } from './controllers/central-telefonica.controller';
 import { VicidialUserService } from './services/vicidial-user.service';
-import { AudioController } from './audio.controller';
-import { AudioService } from './services/audio.service';
+import { AudioController } from './controllers/audio-store.controller';
+import { AudioStoreService } from './services/audio-store.service';
 import { AloSatController } from './controllers/alo-sat.controller';
 import { AloSatService } from './services/alo-sat.service';
 import { UserModule } from '@modules/user/user.module';
@@ -17,7 +17,6 @@ import { AmiModule } from '../ami/ami.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AudioQueueProcessor } from './audioQueueProcessor';
 import { HttpModule } from '@nestjs/axios';
-import { CampaignModule } from '@modules/campaign/campaign.module';
 import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-assistance.module';
 import { DatabaseCentralModule } from '@database/central/database-central.module';
 import { VicidialUserRepository } from './repositories/vicidial-user.repository';
@@ -26,11 +25,12 @@ import { VicidialListsRepository } from './repositories/vicidial-lists.repositor
 import { VicidialLeadRepository } from './repositories/vicidial-lead.repository';
 import { VicidialCallTimesHolidaysRepository } from './repositories/vicidial-call-times-holidays.repository';
 import { VicidialCallTimesRepository } from './repositories/vicidial-call-times.repository';
+import { AudioCampaignModule } from '@modules/campaigns/audio-campaign/audio-campaign.module';
 
 @Module({
   imports: [
     HttpModule,
-    CampaignModule,
+    AudioCampaignModule,
     UserModule,
     VicidialApiModule,
     forwardRef(() => CallModule),
@@ -51,7 +51,7 @@ import { VicidialCallTimesRepository } from './repositories/vicidial-call-times.
   providers: [
     AudioQueueProcessor,
     VicidialUserService,
-    AudioService,
+    AudioStoreService,
     AloSatService,
     VicidialCallTimesHolidaysService,
     VicidialCallTimesService,

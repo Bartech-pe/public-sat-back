@@ -9,8 +9,8 @@ import { CreateScheduleDto } from '../dto/schedule/create-schedule.dto';
 import { UpdateScheduleDto } from '../dto/schedule/update-schedule.dto';
 import { Op } from 'sequelize';
 import { Weekday } from '../enum/weekday.enum';
-import { Campaign } from '@modules/campaign/entities/campaign.entity';
 import { VicidialCampaingRepository } from '@modules/vicidial/central-telefonica/repositories/vicidial-campaing.repository';
+import { EmailCampaign } from '@modules/campaigns/email-campaign/entities/email-campaign.entity';
 
 @Injectable()
 export class ScheduleService {
@@ -58,7 +58,7 @@ export class ScheduleService {
     const times = await this.repository.findAll({
       include: [
         {
-          model: Campaign,
+          model: EmailCampaign,
           as: 'gestion_campania',
         },
       ],

@@ -1,23 +1,18 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { AudioService } from './services/audio.service';
+import { AudioStoreService } from './services/audio-store.service';
 
 @Processor('register-details-audio')
 export class AudioQueueProcessor extends WorkerHost {
-  constructor(private readonly audioService: AudioService) {
+  constructor(private readonly audioService: AudioStoreService) {
     super();
   }
 
   async process(job: Job<any>) {
-
-    const { list_id, detalles,list,type } = job.data;
+    const { list_id, detalles, list, type } = job.data;
 
     try {
-      await this.audioService.savePortfolioDetails(list_id, detalles,type);
-    } catch (error) {
-
-    }
+      await this.audioService.savePortfolioDetails(list_id, detalles, type);
+    } catch (error) {}
   }
-
-
 }

@@ -52,27 +52,24 @@ export class NotificationController {
     return this.service.findOne(+id);
   }
 
-//   @Post()
-//   create(
-//     @CurrentUser() user: User,
-//     @Body() dto: CreateNotificationDto,
-//   ): Promise<Notification> {
-//     // Set the current user as the creator
-//     return this.service.create({
-//       ...dto,
-//       createdBy: user.id,
-//     });
-//   }
+  @Post()
+  create(
+    @CurrentUser() user: User,
+    @Body() dto: CreateNotificationDto,
+  ): Promise<Notification> {
+    // Set the current user as the creator
+    return this.service.create(dto);
+  }
 
   @Patch('mark-as-read/:id')
   markAsRead(@Param('id') id: number): Promise<Notification> {
     return this.service.markAsRead(+id);
   }
 
-//   @Post('mark-all-as-read')
-//   markAllAsRead(@CurrentUser() user: User): Promise<void> {
-//     return this.service.markAllAsRead(user.id);
-//   }
+  @Post('mark-all-as-read')
+  markAllAsRead(@CurrentUser() user: User): Promise<Notification[]> {
+    return this.service.markAllAsRead(user.id);
+  } 
 
   @Patch(':id')
   update(

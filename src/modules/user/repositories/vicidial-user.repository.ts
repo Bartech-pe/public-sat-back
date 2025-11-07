@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { GenericCrudRepository } from '@common/repositories/generic-crud.repository';
 import { VicidialUser } from '../entities/vicidial-user.entity';
 import { User } from '../entities/user.entity';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 import { CallHistory } from '@modules/call/entities/call-history.entity';
 import { Op } from 'sequelize';
 

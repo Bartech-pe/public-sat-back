@@ -55,7 +55,6 @@ const envSchema = Joi.object({
   SMS_MAS_URL: Joi.string().required(),
   SMS_INV_URL: Joi.string().required(),
   RASA_URL: Joi.string().required(),
-  SMS_SAT_URL: Joi.string().required(),
   // # CENTRAL DB Config
   CENTRAL_DB_DIALECT: Joi.string().required(),
   CENTRAL_DB_HOST: Joi.string().required(),
@@ -70,6 +69,7 @@ const envSchema = Joi.object({
   AUTH_CLIENT_SECRET: Joi.string().required(),
   AUTH_REALM: Joi.string().required(),
   AUTH_GRANT_TYPE: Joi.string().required(),
+  URL_API_SAT: Joi.string().required(),
 
   // # METABASE
   METABASE_SITE_URL: Joi.string().required(),
@@ -152,7 +152,6 @@ export const satConfig = {
   smsMasUrl: ev.SMS_MAS_URL,
   smsInvUrl: ev.SMS_INV_URL,
   rasaUrl: ev.RASA_URL,
-  smsUrl: ev.SMS_SAT_URL,
 };
 
 export const centralDBConfig = {
@@ -171,7 +170,7 @@ export const apiSatConfig = {
   authClientSecret: ev.AUTH_CLIENT_SECRET,
   authRealm: ev.AUTH_REALM,
   authGrantType: ev.AUTH_GRANT_TYPE,
-  emailUrl: ev.URL_API_SAT,
+  mensajeria: ev.URL_API_SAT,
 };
 
 export const metabaseConfig = {

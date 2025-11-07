@@ -12,7 +12,7 @@ import {
   UpdatedAt,
 } from 'sequelize-typescript';
 import { User } from '@modules/user/entities/user.entity';
-import { AssistanceState } from '@modules/assistance-state/entities/assistance-state.entity';
+import { AssistanceState } from '@modules/custom-states/assistance-state/entities/assistance-state.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { EmailThread } from './email-thread.entity';
 

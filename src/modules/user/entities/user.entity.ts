@@ -23,7 +23,7 @@ import { Skill } from '@modules/skill/entities/skill.entity';
 import { SkillUser } from '@modules/skill/entities/skill-user.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
-import { ChannelState } from '@modules/channel-state/entities/channel-state.entity';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 import { CallHistory } from '@modules/call/entities/call-history.entity';
 import { EmailAttention } from '@modules/email/entities/email-attention.entity';
 

@@ -10,7 +10,7 @@ import { InboxCredential } from './entities/inbox-credential.entity';
 import { InboxCredentialRepository } from './repositories/inbox-credential.repository';
 import { ChannelModule } from '@modules/channel/channel.module';
 import { Channel } from '@modules/channel/entities/channel.entity';
-import { ChannelStateModule } from '@modules/channel-state/channel-state.module';
+import { ChannelStateModule } from '@modules/custom-states/channel-state/channel-state.module';
 
 @Module({
   imports: [
