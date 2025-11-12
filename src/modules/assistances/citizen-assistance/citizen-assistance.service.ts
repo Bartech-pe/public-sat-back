@@ -30,18 +30,16 @@ export class CitizenAssistanceService {
     user: User,
     limit: number,
     offset: number,
+    q?: Record<string, any>,
+    verifyPayment?: boolean,
   ): Promise<PaginatedResponse<CitizenAssistance>> {
     try {
-      const whereOpts =
-        user.roleId == UserRole.Adm
-          ? {
-              where: {},
-            }
-          : {
-              where: {},
-            };
+      const byUser = q?.byUser;
+
       return this.repository.findAndCountAll({
-        ...whereOpts,
+        where: verifyPayment == null || verifyPayment == undefined ? {}: {
+          verifyPayment
+        },
         include: [
           {
             model: PortfolioDetail,
@@ -53,7 +51,12 @@ export class CitizenAssistanceService {
               },
             ],
           },
-          { model: User, as: 'createdByUser' },
+          {
+            model: User,
+            as: 'createdByUser',
+            where: byUser ? { id: user.id } : {},
+            required: true,
+          },
         ],
         limit,
         offset,

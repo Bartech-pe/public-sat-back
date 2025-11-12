@@ -16,6 +16,10 @@ import { MessagePreview } from '../dto/message-preview.dto';
 import { CreateSmsCampaignDto } from '../dto/create-sms-campaign.dto';
 import { UpdateSmsCampaignDto } from '../dto/update-sms-campaign.dto';
 import { SmsCampaignService } from '../services/sms-campaign.service';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { SmsCampaign } from '../entities/sms-campaign.entity';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { User } from '@modules/user/entities/user.entity';
 
 @Controller('sms-campaigns')
 export class SmsCampaignController {
@@ -37,9 +41,16 @@ export class SmsCampaignController {
   }
 
   @Post()
-  async createSMSCampaign(@Body() body: CreateSmsCampaignDto) {
-    return await this.smsCampaignService.createSmsCampaign(body);
-  }
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateSmsCampaignDto })
+  create(
+      @CurrentUser() user: User,
+      @Body() dto: CreateSmsCampaignDto,
+      @UploadedFile() file: Express.Multer.File,
+  ): Promise<SmsCampaign> {
+      return this.smsCampaignService.createSmsCampaign(dto, file,user.id);
+  }   
 
   @Delete(':id')
   remove(@Param('id') id: number) {
@@ -71,4 +82,10 @@ export class SmsCampaignController {
       body.contact,
     );
   }
+
+  @Get('view/:id')
+  viewMessageDetails(@Param('id') id: number) {
+    return this.smsCampaignService.viewMessageDetails(+id);
+  }
+  
 }

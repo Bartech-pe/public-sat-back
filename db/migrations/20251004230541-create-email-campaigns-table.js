@@ -15,6 +15,18 @@ module.exports = {
         comment: 'nombre Campaña',
       },
 
+      subject: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'Asunto correo del campaña',
+      },
+
+      sender: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'Remitente correo del campaña',
+      },
+
       template_id: {
         type: Sequelize.BIGINT,
         allowNull: false,
@@ -23,7 +35,7 @@ module.exports = {
         onUpdate: 'CASCADE',
       },
 
-      total_registrated: {
+      total_registered: {
         type: Sequelize.INTEGER,
         allowNull: false,
         comment: 'total registrados',

@@ -74,7 +74,7 @@ module.exports = {
           name: 'vicidial',
           description: 'Central de llamadas',
           logo: 'line-md:phone-call-twotone-loop',
-          status: true,
+          status: false,
           created_at: new Date(),
           updated_at: new Date(),
         },

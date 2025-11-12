@@ -11,6 +11,8 @@ import { EmailCampaignAttachment } from './entities/email-campaign-attachment.en
 import { EmailCampaignController } from './controllers/email-campaing.controller';
 import { EmailCampaignDetailRepository } from './repositories/email-campaign-detail.repository';
 import { EmailCampaignService } from './services/email-campaign.service';
+import { EmailCampaignAttachmentRepository } from './repositories/email-campaign-attachment.repository';
+import { SrvmensajeriaModule } from '@modules/api-sat/srvmensajeria/srvmensajeria.module';
 
 @Module({
   imports: [
@@ -20,8 +22,9 @@ import { EmailCampaignService } from './services/email-campaign.service';
       EmailCampaignAttachment,
     ]),
     BullModule.registerQueue({
-      name: 'email-queue',
+      name: 'email-queue-campaign',
     }),
+    SrvmensajeriaModule
   ],
   controllers: [EmailCampaignController, EmailCampaignDetailController],
   providers: [
@@ -30,6 +33,7 @@ import { EmailCampaignService } from './services/email-campaign.service';
     EmailCampaignDetailService,
     EmailCampaignRepository,
     EmailCampaignDetailRepository,
+    EmailCampaignAttachmentRepository
   ],
   exports: [EmailCampaignRepository],
 })

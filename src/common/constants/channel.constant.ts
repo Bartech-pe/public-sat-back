@@ -6,6 +6,8 @@ export const chatSatAvailableStateId = 3;
 
 export const wspAvailableStateId = 4;
 
+export const TelegramAvailableStateId = 21;
+
 export const emailCategoryId = 2;
 
 export enum ChannelAvailable {

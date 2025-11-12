@@ -17,7 +17,7 @@ import { AmiModule } from '../ami/ami.module';
 import { BullModule } from '@nestjs/bullmq';
 import { AudioQueueProcessor } from './audioQueueProcessor';
 import { HttpModule } from '@nestjs/axios';
-import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-assistance.module';
+import { ChannelAssistanceModule } from '@modules/assistances/channel-assistance/channel-assistance.module';
 import { DatabaseCentralModule } from '@database/central/database-central.module';
 import { VicidialUserRepository } from './repositories/vicidial-user.repository';
 import { AudioStoreDetailsRepository } from './repositories/audio-store-details.repository';

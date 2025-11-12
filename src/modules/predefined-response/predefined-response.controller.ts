@@ -15,6 +15,7 @@ import { UpdatePredefinedResponseDto } from './dto/update-predefined-response.dt
 import { PredefinedResponse } from './entities/predefined-response.entity';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
 
 @Controller('predefined-response')
 export class PredefinedResponseController {
@@ -54,6 +55,13 @@ export class PredefinedResponseController {
     @Body() dto: CreatePredefinedResponseDto,
   ): Promise<PredefinedResponse> {
     return this.service.create(dto);
+  }
+
+  @Post(":id/copy-to-other-channels")
+  copyToOtherChannels(
+    @Param('id') id: number,
+  ): Promise<BaseResponseDto> {
+    return this.service.copyToOtherChannels(id);
   }
 
   @Patch(':id')

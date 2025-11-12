@@ -54,8 +54,11 @@ export class MonitorController {
     return await this.monitorVicidialService.vicidialTable();
   }
 
-  @Get('stateDetailsByAdvisor/:userId')
-  async getStateDetailsByAdvisor(@Param('userId') userId: number) {
+  @Get('stateDetailsByAdvisor/:userId/:categoryId')
+  async getStateDetailsByAdvisor(
+    @Param('userId') userId: number,
+    @Param('categoryId') categoryId: number,
+  ) {
     return await this.monitorVicidialService.getStateDetailsByAdvisor(userId);
   }
 

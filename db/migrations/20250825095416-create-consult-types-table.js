@@ -21,6 +21,11 @@ module.exports = {
         allowNull: false,
         comment: 'Nombre de  tipo de consulta',
       },
+      generic: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+        comment: 'Campo que define si el tipo es generico o no',
+      },
 
       // Auditoría con FK hacia users
       created_by: {

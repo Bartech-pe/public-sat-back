@@ -11,6 +11,7 @@ import {
   UpdatedAt,
 } from 'sequelize-typescript';
 import { User } from '@modules/user/entities/user.entity';
+import { SmsCampaign } from './sms-campaign.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] },
@@ -36,17 +37,29 @@ export class SmsCampaignDetail extends Model {
   @Column({ field: 'contact', type: DataType.STRING, allowNull: false })
   contact!: string;
 
-  @Column({ field: 'country_code', type: DataType.BOOLEAN, allowNull: true })
-  countryCode?: boolean | null;
+  @ForeignKey(() => SmsCampaign)
+  @Column({
+    field: 'sms_campaign_id',
+    type: DataType.BIGINT,
+    allowNull: false,
+    comment: 'Id de la campaña sms',
+  })
+  smsCampaignId: number;
+  
+  @BelongsTo(() => SmsCampaign)
+  smsCampaign: SmsCampaign;
 
   @Column({ field: 'message', type: DataType.TEXT, allowNull: false })
   message!: string;
 
-  @Column({ field: 'excel_data', type: DataType.JSON, allowNull: false })
-  excelData!: Record<string, any>;
+  @Column({
+    field: 'active',
+    type: DataType.ENUM('Y', 'N'),
+    comment: 'estado  asignada a la campaña',
+    defaultValue: 'N',
+  })
+  active?: string;
 
-  @Column({ field: 'campaign_name', type: DataType.STRING, allowNull: true })
-  campaignName?: string;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

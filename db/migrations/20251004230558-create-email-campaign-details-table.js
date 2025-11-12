@@ -67,6 +67,11 @@ module.exports = {
         allowNull: false,
         comment: 'nomTerminal',
       },
+      active: {
+        type: Sequelize.STRING,
+        allowNull: false,
+        comment: 'Estado actual de la campaña ',
+      },
       status: {
         type: Sequelize.BOOLEAN,
         defaultValue: true,

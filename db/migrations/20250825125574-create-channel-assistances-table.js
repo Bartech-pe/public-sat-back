@@ -30,6 +30,11 @@ module.exports = {
         allowNull: true,
         comment: 'Detalle de la atención',
       },
+      citizen_contact_id: {
+        type: Sequelize.BIGINT,
+        allowNull: false,
+        comment: 'Identificador del contacto del ciudadano',
+      },
       communication_id: {
         type: Sequelize.BIGINT,
         allowNull: false,
@@ -87,6 +92,19 @@ module.exports = {
       name: 'fk_channel_assistances_citizen_id_citizens',
       references: {
         table: 'citizens',
+        field: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT',
+    });
+
+    // FK citizen_id -> citizen_contacts.id
+    await queryInterface.addConstraint('channel_assistances', {
+      fields: ['citizen_contact_id'],
+      type: 'foreign key',
+      name: 'fk_channel_assistances_citizen_contact_id_citizen_contacts',
+      references: {
+        table: 'citizen_contacts',
         field: 'id',
       },
       onUpdate: 'CASCADE',

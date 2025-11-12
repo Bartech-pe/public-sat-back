@@ -11,17 +11,17 @@ module.exports = {
         comment: 'Identificador del contacto del ciudadano',
       },
       tip_doc: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(20),
         allowNull: true,
         comment: 'Tipo de documento de identificación del ciudadano',
       },
       doc_ide: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(20),
         allowNull: true,
         comment: 'Documento de identificación del ciudadano',
       },
       contact_type: {
-        type: Sequelize.ENUM('PHONE', 'EMAIL', 'WHATSAPP'),
+        type: Sequelize.STRING(20),
         allowNull: true,
         comment: 'Tipo de contacto',
       },
@@ -86,7 +86,7 @@ module.exports = {
       ['tip_doc', 'doc_ide', 'contact_type', 'value'],
       {
         unique: true,
-        name: 'uq_citizen_contacts_unique_contact',
+        name: 'uq_citizen_contacts',
       },
     );
 

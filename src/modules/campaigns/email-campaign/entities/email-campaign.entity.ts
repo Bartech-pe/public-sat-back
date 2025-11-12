@@ -41,6 +41,22 @@ export class EmailCampaign extends Model {
   name: string;
 
   @Column({
+    field: 'subject',
+    type: DataType.STRING,
+    allowNull: false,
+    comment: 'Asunto correo del campaña',
+  })
+  subject: string;
+
+   @Column({
+    field: 'sender',
+    type: DataType.STRING,
+    allowNull: false,
+    comment: 'Remitente correo del campaña',
+  })
+  sender: string;
+
+  @Column({
     field: 'total_registered',
     type: DataType.INTEGER,
     allowNull: false,

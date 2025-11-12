@@ -9,6 +9,9 @@ import { CreatePredefinedResponseDto } from './dto/create-predefined-response.dt
 import { UpdatePredefinedResponseDto } from './dto/update-predefined-response.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
+import { ChannelAvailable } from '@common/constants/channel.constant';
+import { Op } from 'sequelize';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
 
 @Injectable()
 export class PredefinedResponseService {
@@ -47,7 +50,7 @@ export class PredefinedResponseService {
       );
     }
   }
-
+  
   async create(dto: CreatePredefinedResponseDto): Promise<PredefinedResponse> {
     try {
       return this.repository.create(dto);
@@ -56,6 +59,50 @@ export class PredefinedResponseService {
         error,
         'Error interno del servidor',
       );
+    }
+  }
+
+  async copyToOtherChannels(predefinedResponseId: number): Promise<BaseResponseDto> {
+    let response: BaseResponseDto = {
+      message: "",
+      success: false
+    }
+    try {
+      const channelCategories: number[] = [ChannelAvailable.EMAIL,ChannelAvailable.CHAT,ChannelAvailable.WSP]
+
+      const predefinedResponse: PredefinedResponse = (await this.repository.findById(predefinedResponseId)).toJSON();
+
+      let otherChannels = channelCategories.filter(categoryChannel => predefinedResponse.categoryId != categoryChannel) 
+      otherChannels.forEach(async (categoryChannel: number)=>{
+        const predefinedResponseExists =  await this.repository.findAll({
+          where: {
+            categoryId: {
+              [Op.in]: otherChannels
+            },
+            code: predefinedResponse.code,
+            title: predefinedResponse.title,
+            content: predefinedResponse.content,
+            keywords: predefinedResponse.keywords,
+            status: predefinedResponse.status
+          }
+        })
+        if(!predefinedResponseExists.length) {
+          await this.repository.create({
+            categoryId: categoryChannel,
+            code: predefinedResponse.code,
+            title: predefinedResponse.title,
+            content: predefinedResponse.content,
+            keywords: predefinedResponse.keywords,
+            status: predefinedResponse.status
+          })
+        }
+      })
+      response.message = "Esta respuesta predefinida se ha creado correctamente para todos los otros canales."
+      response.success = true;
+      return response;
+    } catch (error) {
+      response.error = error.toString();
+      return response;
     }
   }
 

@@ -47,14 +47,16 @@ export class InboxController {
 
   @Get(':channel/general-status')
   async getUserStatus(
-    @CurrentUser() currentUser: User, 
-    @Param('channel') channel: string
-  ): Promise<BaseResponseDto<{ userStatus: string, color?: string | null }>> {
+    @CurrentUser() currentUser: User,
+    @Param('channel') channel: string,
+  ): Promise<BaseResponseDto<{ userStatus: string; color?: string | null }>> {
     return this.service.getUserStatus(currentUser, channel);
   }
 
   @Get('available-channels')
-  async getInboxAvailablesForUser(@CurrentUser() currentUser: User): Promise<BaseResponseDto<string[]>> {
+  async getInboxAvailablesForUser(
+    @CurrentUser() currentUser: User,
+  ): Promise<BaseResponseDto<string[]>> {
     return this.service.getInboxAvailablesForUser(currentUser);
   }
 
@@ -104,17 +106,19 @@ export class InboxController {
   toggleStatus(@Param('id') id: number): Promise<Inbox> {
     return this.service.toggleStatus(id);
   }
-  
+
   @Put('inbox-users/change-all-status')
   changeAllUserStatus(
     @CurrentUser() currentUser: User,
-    @Body() payload: {
-      channel: string,
-      isAvailable?: boolean | null,
-      channelStateId?: number | null
-    }): Promise<BaseResponseDto> {
-    console.log('💥 CONTROLADOR payload:', payload);
-    console.log('👤 currentUser:', currentUser);
+    @Body()
+    payload: {
+      channel: string;
+      isAvailable?: boolean | null;
+      channelStateId?: number | null;
+    },
+  ): Promise<BaseResponseDto> {
+    console.log('CONTROLADOR payload:', payload);
+    console.log('currentUser:', currentUser);
     return this.service.changeAllUserStatus(currentUser, payload);
   }
 

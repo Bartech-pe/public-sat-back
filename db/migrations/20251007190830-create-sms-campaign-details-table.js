@@ -17,21 +17,19 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      country_code: {
-        type: Sequelize.BOOLEAN,
-        allowNull: true,
+      sms_campaign_id: {
+        type: Sequelize.BIGINT,
+        allowNull: false,
+        comment: 'Id de la campaña sms',
       },
       message: {
         type: Sequelize.TEXT,
         allowNull: false,
       },
-      excel_data: {
-        type: Sequelize.JSON,
-        allowNull: false,
-      },
-      campaign_name: {
+      active: {
         type: Sequelize.STRING,
         allowNull: false,
+        comment: 'Estado actual de la campaña (relación con CampaignState)',
       },
       created_by: {
         type: Sequelize.BIGINT,
@@ -73,6 +71,19 @@ module.exports = {
     //   onUpdate: 'CASCADE',
     //   onDelete: 'CASCADE',
     // });
+
+
+     await queryInterface.addConstraint('sms_campaign_details', {
+      fields: ['sms_campaign_id'],
+      type: 'foreign key',
+      name: 'fk_portfolio_details_sms_campaigns',
+      references: {
+        table: 'sms_campaigns',
+        field: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT',
+    });
 
     await queryInterface.addConstraint('sms_campaign_details', {
       fields: ['created_by'],

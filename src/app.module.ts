@@ -28,7 +28,6 @@ import { PortfolioModule } from '@modules/portfolio/portfolio.module';
 import { PortfolioDetailModule } from '@modules/portfolio-detail/portfolio-detail.module';
 import { MultiChannelChatModule } from '@modules/multi-channel-chat/multi-channel-chat.module';
 import { AutomaticMessageModule } from '@modules/automatic-message/automatic-message.module';
-import { CitizenAssistanceModule } from '@modules/citizen-assistance/citizen-assistance.module';
 import { ScheduleModule } from '@modules/schedule/schedule.module';
 import { SmsModule } from '@modules/sms/sms.module';
 import { CallModule } from '@modules/call/call.module';
@@ -38,13 +37,13 @@ import { ChannelScheduleModule } from '@modules/channel-schedule/channel-schedul
 import { SurveyModule } from '@modules/survey/survey.module';
 import { CitizenModule } from '@modules/citizen/citizen.module';
 import { ConsultTypeModule } from '@modules/consult-type/consult-type.module';
-import { ChannelAssistanceModule } from '@modules/channel-assistance/channel-assistance.module';
 import { MetabaseModule } from './modules/metabase/metabase.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { HealthModule } from './modules/health/health.module';
 import { CampaignsModule } from '@modules/campaigns/campaigns.module';
 import { CustomStatesModule } from './modules/custom-states/custom-states.module';
 import { MonitorModule } from '@modules/monitor/monitor.module';
+import { AssistancesModule } from './modules/assistances/assistances.module';
 
 @Module({
   imports: [
@@ -72,8 +71,7 @@ import { MonitorModule } from '@modules/monitor/monitor.module';
     ChatRoomModule,
     PortfolioModule,
     PortfolioDetailModule,
-    CitizenAssistanceModule,
-    ChannelAssistanceModule,
+    AssistancesModule,
     PredefinedResponseModule,
     QuickResponseModule,
     ReminderModule,

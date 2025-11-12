@@ -262,9 +262,9 @@ module.exports = {
         },
         {
           id: 24,
-          name: 'dashboard asesor',
-          description: 'Pantalla de dashboard asesor',
-          path: '/adviser/dashboard-adviser',
+          name: 'Mis Atenciones',
+          description: 'Pantalla de mis atenciones',
+          path: '/adviser/assistances',
           icon: null,
           parent_id: 23,
           status: true,

@@ -28,7 +28,7 @@ import { ParkCallDto } from '../dto/park-call.dto';
 import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { DispoChoiceDto } from '../dto/update-dispo.dto';
-import { ChannelAssistanceService } from '@modules/channel-assistance/channel-assistance.service';
+import { ChannelAssistanceService } from '@modules/assistances/channel-assistance/channel-assistance.service';
 import { RegisteerDispoDto } from '../dto/register-dispo.dto';
 import { CallService } from '@modules/call/services/call.service';
 

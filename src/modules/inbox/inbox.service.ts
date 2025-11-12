@@ -29,6 +29,7 @@ import { BaseResponseDto } from '@common/dto/base-response.dto';
 import {
   ChannelMultichannelCategory,
   chatSatAvailableStateId,
+  TelegramAvailableStateId,
   wspAvailableStateId,
 } from '@common/constants/channel.constant';
 import {
@@ -371,6 +372,7 @@ export class InboxService {
       const availableChannelStates = [
         chatSatAvailableStateId,
         wspAvailableStateId,
+        TelegramAvailableStateId
       ];
       const inboxOfUser = await this.inboxUserRepository.findAll({
         include: [
@@ -474,7 +476,7 @@ export class InboxService {
           .get('channelState')
           .toJSON() as ChannelState;
         if (payload.channel === 'all') {
-          return channel.name !== ChannelType.TELEGRAM;
+          return true;
         } else {
           return (
             channelState.categoryId ===

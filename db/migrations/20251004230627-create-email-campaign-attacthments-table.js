@@ -36,6 +36,12 @@ module.exports = {
         allowNull: true,
         comment: 'Ruta del archivo adjunto',
       },
+      
+      status: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true,
+        comment: 'Campo para habilitar o inhabilitar un registro',
+      },
 
       // Campos de auditoría
       created_by: {

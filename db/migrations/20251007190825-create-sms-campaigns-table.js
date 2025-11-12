@@ -14,11 +14,20 @@ module.exports = {
         allowNull: false,
         comment: 'nombre Campaña',
       },
-      total_registrated: {
+      total_registered: {
         type: Sequelize.INTEGER,
         allowNull: false,
         comment: 'total registrados',
       },
+      sender: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+      message: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
+      
       campaign_status: {
         type: Sequelize.INTEGER,
         allowNull: false,

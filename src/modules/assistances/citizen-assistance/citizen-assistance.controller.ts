@@ -18,8 +18,20 @@ import { CitizenAssistanceService } from './citizen-assistance.service';
 import { CitizenAssistance } from './entities/citizen-assistance.entity';
 import { CreateCitizenAssistanceDto } from './dto/create-citizen-assistance.dto';
 import { UpdateCitizenAssistanceDto } from './dto/update-citizen-assistance.dto';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiPropertyOptional } from '@nestjs/swagger';
 import { Response } from 'express';
+import { IsOptional } from 'class-validator';
+
+class CitizenAssistancesWithPaginatedDto extends PaginationQueryDto
+{
+    @ApiPropertyOptional({
+      description: 'Se filtran los resultados por usuario autenticado',
+      default: false,
+    })
+    @IsOptional()
+    verifyPayment?: boolean
+}
+
 
 /**
  * Controller for managing CitizenAssistance.
@@ -35,11 +47,11 @@ export class CitizenAssistanceController {
   @Get()
   findAll(
     @CurrentUser() user: User,
-    @Query() query: PaginationQueryDto,
+    @Query() query: CitizenAssistancesWithPaginatedDto,
   ): Promise<PaginatedResponse<CitizenAssistance>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(user, limit, offset);
+    return this.service.findAll(user, limit, offset, query.q, query.verifyPayment);
   }
 
   @Get(':id')

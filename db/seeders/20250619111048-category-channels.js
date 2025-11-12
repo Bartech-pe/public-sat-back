@@ -38,6 +38,14 @@ module.exports = {
           created_at: new Date(),
           updated_at: new Date(),
         },
+        {
+          id: 5,
+          name: 'Telegram',
+          icon: 'logos:telegram',
+          status: true,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
       ],
       {},
     );

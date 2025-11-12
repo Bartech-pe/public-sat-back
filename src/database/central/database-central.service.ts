@@ -43,7 +43,17 @@ export class DatabaseCentralService implements OnModuleInit, OnModuleDestroy {
         username: centralDBConfig.user,
         password: centralDBConfig.pass,
         database: centralDBConfig.name,
+        timezone: '-05:00',
         logging: false,
+        pool: {
+          max: 50,
+          min: 0,
+          acquire: 30000,
+          idle: 10000,
+        },
+        dialectOptions: {
+          connectTimeout: 60000, // aumenta tiempo para conectar
+        },
       });
 
       await sequelize.authenticate();

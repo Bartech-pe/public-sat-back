@@ -14,26 +14,26 @@ import { EmailCampaignDetail } from '../entities/email-campaign-detail.entity';
 @Injectable()
 export class EmailCampaignDetailService {
   constructor(
-    @InjectQueue('email-queue') private readonly emailQueue: Queue,
+    // @InjectQueue('email-queue') private readonly emailQueue: Queue,
     private readonly repository: EmailCampaignDetailRepository,
   ) {}
 
   async enqueueEmails(emails: CreateEmailCampaignDetailDto[]) {
     // Insertar todos los correos en la cola
-    const jobs = await Promise.all(
-      emails.map((email) =>
-        this.emailQueue.add('send-email', email, {
-          removeOnComplete: true,
-          removeOnFail: false,
-        }),
-      ),
-    );
+    // const jobs = await Promise.all(
+    //   emails.map((email) =>
+    //     this.emailQueue.add('send-email', email, {
+    //       removeOnComplete: true,
+    //       removeOnFail: false,
+    //     }),
+    //   ),
+    // );
 
-    return {
-      message: 'Correos encolados correctamente',
-      count: jobs.length,
-      jobs: jobs.map((job) => job.id),
-    };
+    // return {
+    //   message: 'Correos encolados correctamente',
+    //   count: jobs.length,
+    //   jobs: jobs.map((job) => job.id),
+    // };
   }
 
   async findAll(

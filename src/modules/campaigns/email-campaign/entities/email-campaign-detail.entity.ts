@@ -126,6 +126,14 @@ export class EmailCampaignDetail extends Model {
   })
   declare terminalName: string;
 
+  @Column({
+    field: 'active',
+    type: DataType.ENUM('Y', 'N'),
+    comment: 'estado  asignada a la campaña',
+    defaultValue: 'N',
+  })
+  active?: string;
+
   @HasMany(() => EmailCampaignAttachment, { foreignKey: 'emailCampaignId' })
   declare attachments?: EmailCampaignAttachment[];
 

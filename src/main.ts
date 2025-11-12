@@ -86,6 +86,8 @@ async function bootstrap() {
             'https://unpkg.com',
             'https://api.iconify.design',
             'https://api.simplesvg.com',
+            'https://cdn-icons-png.flaticon.com',
+            'https://yt3.googleusercontent.com',
           ],
           'font-src': [
             "'self'",

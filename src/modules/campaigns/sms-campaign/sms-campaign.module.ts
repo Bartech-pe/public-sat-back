@@ -8,6 +8,9 @@ import { SmsCampaignController } from './controllers/sms-campaign.controller';
 import { SmsCampaignService } from './services/sms-campaign.service';
 import { SmsCampaignRepository } from './repositories/sms-campaign.repository';
 import { SrvmensajeriaModule } from '@modules/api-sat/srvmensajeria/srvmensajeria.module';
+import { BullModule } from '@nestjs/bullmq';
+import { SmsCampaignProcessor } from './sms-campaign.processor';
+import { SmsCampaignDetailRepository } from './repositories/sms-campaign-detail.repository';
 
 @Module({
   imports: [
@@ -15,9 +18,12 @@ import { SrvmensajeriaModule } from '@modules/api-sat/srvmensajeria/srvmensajeri
     ScheduleModule,
     CampaignTypeModule,
     SrvmensajeriaModule,
+    BullModule.registerQueue({
+      name: 'sms-campaign',
+    }),
   ],
   controllers: [SmsCampaignController],
-  providers: [SmsCampaignService, SmsCampaignRepository],
+  providers: [SmsCampaignService, SmsCampaignRepository,SmsCampaignProcessor,SmsCampaignDetailRepository],
   exports: [SmsCampaignService, SmsCampaignRepository],
 })
 export class SmsCampaignModule {}

@@ -49,6 +49,14 @@ export class ConsultType extends Model {
   })
   name: string;
 
+  @Column({
+    field: 'generic',
+    type: DataType.BOOLEAN,
+    defaultValue: false,
+    comment: 'Campo que define si el tipo es generico o no',
+  })
+  generic: boolean;
+
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })
   declare createdBy: number;

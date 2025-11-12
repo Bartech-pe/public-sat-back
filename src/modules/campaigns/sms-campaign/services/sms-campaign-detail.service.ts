@@ -118,14 +118,14 @@ export class SmsCampaignDetailService {
     const updateSms: Partial<SmsCampaignDetail> = {
       senderId: body.senderId,
       contact: body.contact,
-      countryCode: body.countryCode,
+      //countryCode: body.countryCode,
       message: body.message,
-      campaignName: body.name,
+     // campaignName: body.name,
     };
 
     if (body.rows) {
       const result = body.rows.map((inner) => ({ ...inner }));
-      updateSms.excelData = result;
+     // updateSms.excelData = result;
     }
     await this.SmsCampaignDetailRepository.update(id, updateSms);
     // const updateCampaign: Partial<Campaign> = {

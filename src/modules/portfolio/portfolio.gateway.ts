@@ -15,7 +15,9 @@ import { forwardRef, Inject } from '@nestjs/common';
     origin: '*',
   },
 })
-export class PortfolioGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class PortfolioGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -37,6 +39,7 @@ export class PortfolioGateway implements OnGatewayConnection, OnGatewayDisconnec
     name: string,
     processed: number,
     total: number,
+    progress: number,
     remainingSeconds?: number,
   ) {
     this.server.emit('portfolio-progress', {
@@ -45,6 +48,7 @@ export class PortfolioGateway implements OnGatewayConnection, OnGatewayDisconnec
       name,
       processed,
       total,
+      progress,
       remainingSeconds,
     });
   }

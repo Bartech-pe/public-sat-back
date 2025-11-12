@@ -45,7 +45,17 @@ export class ChannelAssistanceService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<ChannelAssistance>> {
     try {
+      const byUser = q?.byUser;
       return this.repository.findAndCountAll({
+        include: [
+          {
+            model: User,
+            as: 'createdByUser',
+            where: byUser ? { id: user.id } : {},
+            required: true,
+          },
+        ],
+        distinct: true,
         limit,
         offset,
         order: [['id', 'ASC']],

@@ -46,6 +46,12 @@ export class SmsCampaign extends Model {
   })
   totalRegistered: number;
 
+  @Column({ field: 'sender', type: DataType.STRING, allowNull: false })
+  sender: string;
+
+  @Column({ field: 'message', type: DataType.TEXT, allowNull: false })
+  message: string;
+
   @Column({
     field: 'campaign_status',
     type: DataType.SMALLINT,

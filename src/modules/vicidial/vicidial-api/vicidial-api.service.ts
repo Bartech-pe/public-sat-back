@@ -1,4 +1,3 @@
-import { VicidialPauseCode } from '@common/enums/pause-code.enum';
 import { VicidialUserDto } from '@modules/user/dto/vicidial-user.dto';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
@@ -179,6 +178,9 @@ export class VicidialApiService {
     });
 
     try {
+      console.log('this.vicidialApi', this.vicidialApi);
+      console.log('payload', payload);
+
       const res = await axios.post(this.vicidialApi, payload.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -860,7 +862,10 @@ export class VicidialApiService {
       });
 
       // Parseamos la respuesta
-      const rawResponse = res.data;
+      // const rawResponse = res.data;
+
+      const rawResponse = `DateTime: 2025-11-12 12:15:35|UnixTime: 1762967735|Logged-in: N|CampCalls: N|Status: INCALL|DiaLCalls: N|APIHanguP: 0|APIStatuS: ::::::::::|APIPausE: |APIDiaL: |DEADcall: 0,0|InGroupChange: 0||||APIFields: 0|APIFieldsData: |APITimerAction: |APITimerMessage: |APITimerSeconds: -1|APIdtmf: |APItransferconf: |APIpark: |APITimerDestination: |APIManualDialQueue: 0|APIRecording: 447446|APIPaUseCodE: |WaitinGChats: N|WaitinGEmails: N|LivEAgentCommentS: |LeadIDSwitch: 0|DEADxfer: 0|CHANanswer: 0-----|Alogin_notes:
+3|Local/58600070@default-00085490;2 ~SIP/99999999-0008ad99 ~SIP/SBC1-0008b1e5 ~`;
 
       const parsed: ParsedResponse = rawResponse
         .split('|')
@@ -883,10 +888,11 @@ export class VicidialApiService {
                 .map((p) => p.trim())
                 .filter((p) => p && p != '');
               acc['channel'] = channels.find((c: string) =>
-                c.startsWith('SIP/inmagna'),
+                c.startsWith('SIP/SBC'),
               );
               acc['agentChannel'] = channels.find(
-                (c: string) => !c.startsWith('SIP/inmagna'),
+                (c: string) =>
+                  !c.startsWith('SIP/SBC') && !c.startsWith('Local/'),
               );
             } else {
               // 💡 Manejo de datos sueltos (sin ":" ni "~")

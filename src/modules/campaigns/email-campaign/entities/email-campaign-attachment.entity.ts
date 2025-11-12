@@ -13,6 +13,7 @@ import {
   UpdatedAt,
 } from 'sequelize-typescript';
 import { EmailCampaignDetail } from './email-campaign-detail.entity';
+import { EmailCampaign } from './email-campaign.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -32,9 +33,9 @@ export class EmailCampaignAttachment extends Model {
   })
   declare id: number;
 
-  @ForeignKey(() => EmailCampaignDetail)
-  @Column({ field: 'email_campaign_detail_id', allowNull: false })
-  emailCampaignDetailId: number;
+  @ForeignKey(() => EmailCampaign)
+  @Column({ field: 'email_campaign_id', allowNull: false })
+  emailCampaignId : number;
 
   @Column({
     field: 'filename',
@@ -42,7 +43,7 @@ export class EmailCampaignAttachment extends Model {
     allowNull: false,
     comment: 'Nombre del archivo',
   })
-  filename: string;
+  fileName: string;
 
   @Column({
     field: 'mime_type',
@@ -50,7 +51,7 @@ export class EmailCampaignAttachment extends Model {
     allowNull: false,
     comment: 'Código de tipo de archivo',
   })
-  mimeType: number;
+  fileTypeCode: number;
 
   @Column({
     field: 'order',
@@ -61,12 +62,12 @@ export class EmailCampaignAttachment extends Model {
   order: number;
 
   @Column({
-    field: 'public_url',
+    field: 'base64',
     type: DataType.TEXT('long'),
     allowNull: false,
-    comment: 'Ruta del archivo adjunto',
+    comment: 'Contenido del archivo en base64',
   })
-  publicUrl: string;
+  base64: string;
 
   @Column({
     field: 'status',

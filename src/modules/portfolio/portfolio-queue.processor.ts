@@ -57,6 +57,7 @@ export class PortfolioQueueProcessor extends WorkerHost {
         name,
         processed,
         total,
+        0,
         undefined,
       );
 
@@ -89,6 +90,7 @@ export class PortfolioQueueProcessor extends WorkerHost {
           name,
           processed,
           total,
+          Number.parseInt((progress * 100).toFixed(2)),
           remaining,
         );
       }
