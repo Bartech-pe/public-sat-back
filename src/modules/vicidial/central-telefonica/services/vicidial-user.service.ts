@@ -299,32 +299,136 @@ export class VicidialUserService {
         (day === 6 && hour >= 8 && hour < 13) // sábado
       ) {
         active = 'Y';
+      }else{
+         active = 'N';
       }
 
       // const  listCampaignRatio = await this.campaignModel.findAll({ where: { dial_method: 'RATIO' }});
 
       // const result = listCampaignRatio.map(c => c.toJSON());
 
-      const listCampaignRatio2 = await this.campaignModel.getModel()!.findAll({
-        where: { dial_method: 'RATIO' },
-        attributes: ['campaign_id'],
-      });
+      // const listCampaignRatio2 = await this.campaignModel.getModel()!.findAll({
+      //   where: { dial_method: 'RATIO' },
+      //   attributes: ['campaign_id'],
+      // });
 
-      const CAMPAIGNS = listCampaignRatio2.map((c) =>
-        c.getDataValue('campaign_id'),
-      );
+      // const CAMPAIGNS = listCampaignRatio2.map((c) =>
+      //   c.getDataValue('campaign_id'),
+      // );
 
-      await this.db!.query(
-        `UPDATE vicidial_campaigns 
-           SET active = :active 
-           WHERE campaign_id IN (:campaigns)`,
-        { replacements: { active, campaigns: CAMPAIGNS } },
-      );
-      // console.log(CAMPAIGNS);
+      // await this.db!.query(
+      //   `UPDATE vicidial_campaigns 
+      //      SET active = :active 
+      //      WHERE campaign_id IN (:campaigns)`,
+      //   { replacements: { active, campaigns: CAMPAIGNS } },
+      // );
 
-      // console.log("===========================================")
+      //   if (active === 'Y') {
+      //     for (const campaignId of CAMPAIGNS) {
+      //       await this.ensureSingleActiveList(campaignId);
+      //     }
+      //   }
 
-      //  console.log("=========================================== ",CAMPAIGNS)
     });
   }
+
+  private async ensureSingleActiveList(campaignId: string) {
+
+        try {
+            const [lists] = await this.db!.query(`
+              SELECT vl.list_id,
+                    vl.list_name,
+                    vl.active,
+                    SUM(CASE WHEN vll.status = 'NEW' THEN 1 ELSE 0 END) AS leads_pendientes,
+                    COUNT(vll.lead_id) AS total
+              FROM vicidial_lists vl
+              LEFT JOIN vicidial_list vll ON vll.list_id = vl.list_id
+              WHERE vl.campaign_id = '${campaignId}'
+              GROUP BY vl.list_id
+              ORDER BY vl.list_id ASC
+            `);
+
+            if (!Array.isArray(lists) || lists.length === 0) return;
+
+            const listas = lists as any[];
+            const listaPendiente = listas.find((l) => l.leads_pendientes > 0);
+
+            if (listaPendiente) {
+              // Activar la lista con leads pendientes
+              await this.db!.query(
+                `UPDATE vicidial_lists SET active = 'Y' WHERE list_id = :id`,
+                { replacements: { id: listaPendiente.list_id } },
+              );
+
+              // Desactivar las demás listas
+              const idsInactivos = listas
+                .filter((l) => l.list_id !== listaPendiente.list_id)
+                .map((l) => l.list_id);
+
+              if (idsInactivos.length) {
+                await this.db!.query(
+                  `UPDATE vicidial_lists SET active = 'N' WHERE list_id IN (:ids)`,
+                  { replacements: { ids: idsInactivos } },
+                );
+              }
+
+              this.logger.log(
+                `Campaña ${campaignId}: lista activa ${listaPendiente.list_name} (${listaPendiente.list_id})`,
+              );
+            } else {
+              // Todas las listas terminadas
+              await this.db!.query(
+                `UPDATE vicidial_lists SET active = 'N' WHERE campaign_id = :campaignId`,
+                { replacements: { campaignId } },
+              );
+
+              this.logger.warn(
+                `Campaña ${campaignId}: todas las listas completadas.`,
+              );
+            }
+        } catch (err) {
+          this.logger.error(
+            `Error al controlar listas de la campaña ${campaignId}:`,
+            err,
+          );
+        }
+  }
+
+
+  async getListDetailsByStatus(listId: number) {
+        
+        if (!this.db) {
+          throw new InternalServerErrorException(
+            'No se pudo otener la conexión con la base de datos de la central telefónica.',
+          );
+        }
+
+        const sql = `
+            SELECT 
+                vl2.lead_id,
+                vl2.phone_number,
+                vl2.status AS estado,
+                vs.status_name AS nombre_estado
+            FROM vicidial_list vl2
+            LEFT JOIN vicidial_statuses vs ON vl2.status = vs.status
+            WHERE vl2.list_id = ?
+            ORDER BY vl2.status, vl2.phone_number;
+        `;
+
+        try {
+          const [results] = await this.db.query(sql, {
+            replacements: [listId],
+            type: 'SELECT',
+          });
+
+          return results;
+        } catch (error) {
+          console.error('Error al obtener los agentes remotos:', error);
+          throw new InternalServerErrorException(
+            'Error al obtener los agentes remotos de Vicidial',
+          );
+        }
+  }
+
+
 }

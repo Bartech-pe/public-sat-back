@@ -12,6 +12,7 @@ import { ChatRoomMessage } from './entities/chat-room-message.entity';
 import { Op } from 'sequelize';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { MultiChannelChatService } from '@modules/multi-channel-chat/multi-channel-chat.service';
+import { NotificationRepository } from '@modules/notification/repositories/notification.repository';
 
 @Injectable()
 export class ChatRoomService {
@@ -22,6 +23,7 @@ export class ChatRoomService {
     private readonly userRoomRepository: UserChatRoomRepository,
     private readonly messageRepository: ChatRoomMessageRepository,
     private readonly userRepository: UserRepository,
+    private readonly repository:NotificationRepository
   ) {}
 
   async findAll(
@@ -176,11 +178,25 @@ export class ChatRoomService {
     return newRoom;
   }
 
-  async createRoomMessage(dto: CreateMessageDto,userId: number): Promise<ChatRoomMessage> {
+  async createRoomMessage(
+    dto: CreateMessageDto,
+    userId: number,
+  ): Promise<ChatRoomMessage> {
 
     try {
-       
- 
+        const registerNoti = await this.userRoomRepository.findAll({
+          where: { chatRoomId: dto.chatRoomId, userId: { [Op.ne]: userId } },
+          raw: true, 
+        });
+
+        for (const item of registerNoti) {
+            await this.repository.create({
+              userId: item.userId,
+              message: dto.content,
+              chatRoomId: dto.chatRoomId,
+            });
+        }
+
         const count = await this.messageRepository.count({
           where: {
             chatRoomId: Number(dto.chatRoomId),
@@ -188,32 +204,31 @@ export class ChatRoomService {
             isRead: false,
           },
         });
-        
+
         if (count > 0) {
           await ChatRoomMessage.update(
-              { isRead: true },
-              { where: { chatRoomId:dto.chatRoomId, senderId: { [Op.ne]: userId }, 
-                isRead: false,} }
+            { isRead: true },
+            {
+              where: {
+                chatRoomId: dto.chatRoomId,
+                senderId: { [Op.ne]: userId },
+                isRead: false,
+              },
+            },
           );
-           
+
           return await this.messageRepository.create({
             ...dto,
             isRead: true,
           });
-        
-        }else{
-          return this.messageRepository.create(dto);
+        } else {
+          return await this.messageRepository.create(dto);
         }
-
     } catch (error) {
-      throw new InternalServerErrorException(
-        error,
-        'Error interno del servidor',
-      );
+      throw new InternalServerErrorException('Error interno del servidor al crear el mensaje');
     }
+    
   }
-
-  //eliminar mensajes de la tabla message
 
   removeRoomMessage(id: number): Promise<void> {
     try {

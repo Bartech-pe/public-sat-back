@@ -11,12 +11,14 @@ import { UserChatRoomRepository } from './repositories/user-chat-room.repository
 import { ChatRoomMessageRepository } from './repositories/chat-room-message.repository';
 import { AuthModule } from '@modules/auth/auth.module';
 import { UserModule } from '@modules/user/user.module';
+import { NotificationModule } from '@modules/notification/notification.module';
 
 @Module({
   imports: [
     AuthModule,
     SequelizeModule.forFeature([ChatRoom, UserChatRoom, ChatRoomMessage]),
     UserModule,
+    NotificationModule
   ],
   controllers: [ChatRoomController],
   providers: [

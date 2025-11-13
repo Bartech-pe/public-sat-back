@@ -1331,7 +1331,11 @@ export class AloSatService {
       agentData.nextCID,
     );
 
-    if (!pauseAgent) {
+    console.log('pauseAgent', pauseAgent);
+
+    if (pauseAgent) {
+      await this.pauseAgent(userId);
+    } else {
       await this.resumeAgent(userId);
     }
   }

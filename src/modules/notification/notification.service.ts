@@ -28,8 +28,7 @@ export class NotificationService {
         },
       };
 
-      console.log(whereOpts)
-      
+   
       return this.repository.findAndCountAll({
         ...whereOpts,
         limit,
@@ -99,7 +98,7 @@ export class NotificationService {
         throw new NotFoundException('Notificación no encontrada');
       }
 
-      await notification.update({ isRead: true });
+      await notification.update({ isRead: false });
       return notification;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -119,7 +118,7 @@ export class NotificationService {
         if (!notifications.length) {
         throw new NotFoundException('No se encontraron notificaciones no leídas');
       }
-
+ 
       // 🔹 Actualizar cada notificación
       for (const notification of notifications) {
         await notification.update({ isRead: true });
