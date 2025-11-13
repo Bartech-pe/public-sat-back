@@ -12,4 +12,9 @@ export class CreateNotificationDto {
   @IsNotEmpty({ message: v.isNotEmpty('message') })
   @IsString({ message: v.isString('message') })
   message: string;
+
+  @ApiProperty({ description: 'ID del usuario que recibe la notificación' })
+  @IsNotEmpty({ message: v.isNotEmpty('chatRoomId') })
+  @IsNumber({}, { message: v.isNumber('chatRoomId') })
+  chatRoomId: number;
 }

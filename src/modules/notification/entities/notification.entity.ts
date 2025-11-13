@@ -53,6 +53,14 @@ export class Notification extends Model {
   message: string;
 
   @Column({
+    field: 'chat_room_id',
+    type: DataType.INTEGER,
+    allowNull: false,
+    comment: 'Id del chat room del mensaje',
+  })
+  chatRoomId: number;
+
+  @Column({
     field: 'is_read',
     type: DataType.BOOLEAN,
     defaultValue: false,

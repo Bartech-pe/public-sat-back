@@ -20,6 +20,11 @@ module.exports = {
         allowNull: false,
         comment: 'Mensaje de la notificación',
       },
+      chat_room_id: {
+        type: Sequelize.BIGINT,
+        allowNull: false,
+        comment: 'Id del chat room del mensaje',
+      },
       is_read: {
         type: Sequelize.BOOLEAN,
         defaultValue: false,
