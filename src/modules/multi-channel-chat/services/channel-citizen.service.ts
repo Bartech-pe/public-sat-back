@@ -31,6 +31,7 @@ import { ConsultType } from '@modules/consult-type/entities/consult-type.entity'
 import { MultiChannelChatService } from '../multi-channel-chat.service';
 import { ChannelRoomService } from './channel-room.service';
 import { ChannelQueryHistory } from '../entities/channel-query-history.entity';
+import { ChannelMultichannelCategory } from '@common/constants/channel.constant';
 
 @Injectable()
 export class ChannelCitizenService {
@@ -289,6 +290,7 @@ export class ChannelCitizenService {
           advisorIntervention: advisorIntervention,
           user: advisorIntervention ? user?.displayName : '',
           category: '',
+          categoryChannelId: ChannelMultichannelCategory[inboxChannel.name],
           type: attentionConsultType?.name,
           email: citizen.email,
           queryHistory,

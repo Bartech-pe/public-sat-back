@@ -129,7 +129,9 @@ export class AudioStoreService {
   async createlistar(
     dto: Omit<CreateVicidialListDto, 'file'>,
     file: Express.Multer.File,
-  ): Promise<VicidialLists> {
+  ): Promise<{ status: 'duplicate' | 'new'; data: VicidialLists }> {
+
+    console.log(dto);
     try {
       if (!file) {
         throw new BadRequestException('Debe subir un archivo Excel.');
@@ -148,7 +150,10 @@ export class AudioStoreService {
       });
 
       if (existingList) {
-        return existingList;
+          return {
+            status: 'duplicate',
+            data: existingList,
+          };
       }
 
       const result = await this.modelList.getModel()!.create({ ...dto });
@@ -190,7 +195,11 @@ export class AudioStoreService {
         type: 0,
       });
 
-      return result;
+      return {
+          status: 'new',
+          data: result,
+      };
+      
     } catch (error) {
       throw new InternalServerErrorException(
         error,
@@ -202,7 +211,7 @@ export class AudioStoreService {
   async createlistarMultiple(
     dto: Omit<CreateVicidialListDto, 'file'>,
     file: Express.Multer.File,
-  ): Promise<VicidialLists> {
+  ): Promise<{ status: string; data: VicidialLists }> {
     try {
       if (!file) {
         throw new BadRequestException('Debe subir un archivo Excel.');
@@ -221,7 +230,10 @@ export class AudioStoreService {
       });
 
       if (existingList) {
-        return existingList;
+          return {
+            status: 'duplicate',
+            data: existingList,
+          };
       }
 
       const result = await this.modelList.getModel()!.create({ ...dto });
@@ -268,7 +280,10 @@ export class AudioStoreService {
         type: 1,
       });
 
-      return result;
+      return {
+          status: 'new',
+          data: result,
+      };
     } catch (error) {
       throw new InternalServerErrorException(
         error,

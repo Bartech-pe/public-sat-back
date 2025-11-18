@@ -19,7 +19,6 @@ import { ReplyEmail } from '../dto/email-channel/reply-email.dto';
 import { ForwardTo } from '../dto/email-channel/forward-to.dto';
 import { ForwardCenterMail } from '../dto/forward-center-mail.dto';
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
-import { ChannelStateRepository } from '@modules/custom-states/channel-state/repositories/channel-state.repository';
 import { CenterEmail } from '../dto/center-email.dto';
 import {
   AttachementBody,
@@ -43,6 +42,7 @@ import { CitizenService } from '@modules/citizen/services/citizen.service';
 import { MailStates } from '@common/enums/assistance-state.enum';
 import { emailAvailableStateId } from '@common/constants/channel.constant';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
+import { Sequelize } from 'sequelize-typescript';
 
 @Injectable()
 export class EmailCenterService {
@@ -53,12 +53,12 @@ export class EmailCenterService {
     private readonly emailStateRepository: EmailStateRepository,
     private readonly emailChannelService: EmailChannelService,
     private readonly inboxUserRepository: InboxUserRepository,
-    private readonly channelStateRepository: ChannelStateRepository,
     private readonly emailCredentialRepository: EmailCredentialRepository,
     private readonly inboxRepository: InboxRepository,
     @Inject(forwardRef(() => EmailGateway))
     private readonly emailGateway: EmailGateway,
     private readonly citizenService: CitizenService,
+    private readonly sequelize: Sequelize,
   ) {}
 
   async getTickets(
@@ -368,7 +368,7 @@ export class EmailCenterService {
       clientId: credential.toJSON().clientID,
       email: credential.toJSON().email,
     };
-    console.log('request', request);
+
     await this.emailChannelService.replyEmail(request);
   }
 
@@ -566,7 +566,7 @@ export class EmailCenterService {
         'mailStateId',
         'mailAttentionId',
         'messageHeaderGmailId',
-        'inReplyTo',
+        'referencesMail',
         'isRead',
         'createdAt',
       ],
@@ -634,7 +634,7 @@ export class EmailCenterService {
           state: r.emailAttention.assistanceState,
           attachments: r.attachments,
           advisor: r.emailAttention.advisor,
-          inReplyTo: r.inReplyTo,
+          inReplyTo: r.referencesMail,
           isRead: r.isRead,
           mailAttentionId: r.mailAttentionId,
           createdAt: r.createdAt,
@@ -714,15 +714,12 @@ export class EmailCenterService {
         caseCounts.set(u.userId, u.assigns);
       });
 
-      console.log('caseCounts', caseCounts);
-
       const allCases = [...opens];
       for (const openCase of allCases) {
         let leastLoaded = Array.from(caseCounts.entries()).sort(
           (a, b) => a[1] - b[1],
         )[0];
         if (!leastLoaded) continue;
-        console.log('leastLoaded', leastLoaded);
         await this.emailAttentionRepository.update(openCase.id, {
           advisorUserId: leastLoaded[0],
         });
@@ -877,6 +874,39 @@ export class EmailCenterService {
       return inboxUser;
     } catch (error) {
       throw new InternalServerErrorException(error.message);
+    }
+  }
+
+  async getEmailCitizen(email: string): Promise<any[]> {
+    const sql = `SELECT DISTINCT e.email, e.name FROM (
+      SELECT distinct et.from AS email, UPPER(et.name) AS name 
+      FROM email_threads et WHERE et.from LIKE :searchEmail
+      UNION ALL 
+      SELECT distinct et.to AS email, UPPER(et.to_name) AS name 
+      FROM email_threads et WHERE et.to LIKE :searchEmail
+      UNION ALL
+      SELECT cc.value AS email, c.name 
+      FROM citizens AS c 
+      INNER JOIN citizen_contacts cc ON cc.tip_doc = c.tip_doc AND cc.doc_ide = c.doc_ide
+      WHERE cc.contact_type = 'EMAIL' AND LOWER(cc.value) LIKE :searchEmail
+      ) AS e 
+      WHERE e.email NOT IN ( SELECT email FROM email_credentials )
+      ORDER BY e.email ASC
+      LIMIT 10;
+      `;
+
+    try {
+      const searchEmail = `${email}%`;
+
+      const results = await this.sequelize.query(sql, {
+        replacements: { searchEmail },
+        type: 'SELECT',
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error al obtener el progreso:', error);
+      throw new InternalServerErrorException('Error al obtener el progreso');
     }
   }
 }

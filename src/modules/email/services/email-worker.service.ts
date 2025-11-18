@@ -348,16 +348,18 @@ export class EmailWorkerService {
           'Problemas con el estado de envio',
         );
       const created = await this.emailAttentionRepository.create({
-        emailCitizen: !!event.userId
-          ? this.parseEmail(event.to)?.email
-          : this.parseEmail(event.from)?.email,
+        emailCitizen:
+          !!event.userId || event.userId == 0
+            ? this.parseEmail(event.to)?.email
+            : this.parseEmail(event.from)?.email,
         advisorUserId: !!userId ? userId : undefined,
         advisorInboxId: !!inboxId ? inboxId : undefined,
         ticketCode: code,
         mailThreadId: event.threadId,
-        assistanceStateId: !!event.userId
-          ? MailStates.CLOSED
-          : attention.toJSON().id,
+        assistanceStateId:
+          !!event.userId || event.userId == 0
+            ? MailStates.CLOSED
+            : attention.toJSON().id,
       });
       const thread = await this.emailThreadRepository.create({
         subject: event.subject,
@@ -375,7 +377,10 @@ export class EmailWorkerService {
         messageHeaderGmailId: event.referencesMail,
         referencesMail: event.references,
         inReplyTo: event.inReplyTo,
-        type: !!event.userId ? MailType.ADVISOR : MailType.CITIZEN,
+        type:
+          !!event.userId || event.userId == 0
+            ? MailType.ADVISOR
+            : MailType.CITIZEN,
       });
       if (event.attachments) {
         const createFiles = await Promise.all(

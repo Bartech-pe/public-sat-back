@@ -11,6 +11,7 @@ import { AssistanceStateRepository } from './repositories/assistance-state.repos
 import { User } from '@modules/user/entities/user.entity';
 import { emailCategoryId } from '@common/constants/channel.constant';
 import { MailStates } from '@common/enums/assistance-state.enum';
+import { EmailAttentionRepository } from '@modules/email/repositories/email-attention.repository';
 
 /**
  * Service layer for managing Assistance Status.
@@ -21,7 +22,10 @@ import { MailStates } from '@common/enums/assistance-state.enum';
  */
 @Injectable()
 export class AssistanceStateService {
-  constructor(private readonly repository: AssistanceStateRepository) {}
+  constructor(
+    private readonly repository: AssistanceStateRepository,
+    private readonly emailAttentionRepository: EmailAttentionRepository,
+  ) {}
 
   /**
    *  Retrieves a paginated list of assistance status.
@@ -190,15 +194,21 @@ export class AssistanceStateService {
   }
 
   async getUnassignedMailState() {
-    return await this.repository.findOne({ where: { id: MailStates.UNASSIGNED } });
+    return await this.repository.findOne({
+      where: { id: MailStates.UNASSIGNED },
+    });
   }
 
   async getPenddingMailState() {
-    return await this.repository.findOne({ where: { id: MailStates.PENDDING } });
+    return await this.repository.findOne({
+      where: { id: MailStates.PENDDING },
+    });
   }
 
   async getAttentionMailState() {
-    return await this.repository.findOne({ where: { id: MailStates.ATTENTION } });
+    return await this.repository.findOne({
+      where: { id: MailStates.ATTENTION },
+    });
   }
 
   async getSpamMailState() {
@@ -210,14 +220,29 @@ export class AssistanceStateService {
    * @param user Current authenticated user
    * @returns PaginatedResponse containing channel status status
    */
-  async findAllAssistanceStateEmail(user: User): Promise<AssistanceState[]> {
+  async findAllAssistanceStateEmail(
+    user: User,
+  ): Promise<(AssistanceState & { count: number })[]> {
     try {
-      return this.repository.findAll({
+      const states = await this.repository.findAll({
         where: {
           categoryId: emailCategoryId,
         },
         order: [['id', 'DESC']],
       });
+
+      return await Promise.all(
+        states.map(async (t) => {
+          const count = await this.emailAttentionRepository.count({
+            where: { assistanceStateId: t.id },
+          });
+
+          return {
+            ...t.toJSON(), // todas las propiedades de AssistanceState
+            count, // la nueva propiedad
+          } as AssistanceState & { count: number };
+        }),
+      );
     } catch (error) {
       console.log('error', error);
       throw new InternalServerErrorException(

@@ -109,8 +109,7 @@ export class ChannelAssistanceService {
         { raw: true },
       );
 
-      if (dto.contact) {
-        const contact = await this.citizenContactRepository.findOrCreate(
+      const contact = await this.citizenContactRepository.findOrCreate(
           {
             tipDoc: dto.contact.tipDoc,
             docIde: dto.contact.docIde,
@@ -126,16 +125,17 @@ export class ChannelAssistanceService {
           },
           { raw: true },
         );
-      }
 
       return this.repository.create({
         citizenId: citizen.id,
+        citizenContactId: contact.id,
         categoryId: dto.categoryId,
         consultTypeCode: dto.consultTypeCode,
         detail: dto.detail,
         communicationId: dto.communicationId,
       });
     } catch (error) {
+      console.error(error)
       throw new InternalServerErrorException(
         error,
         'Error interno del servidor',

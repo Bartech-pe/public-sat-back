@@ -3,6 +3,11 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
 import { vicidialConfig } from 'config/env';
 
+import * as https from 'https';
+const agent = new https.Agent({
+  rejectUnauthorized: false, // ⚠️ ignora la validación SSL (solo desarrollo)
+});
+
 interface ParsedResponse {
   DateTimeString?: string;
   DateTime?: Date;
@@ -38,6 +43,7 @@ export class VicidialApiService {
     });
 
     const res = await axios.post(this.urlNonAgentApi, payload.toString(), {
+      httpsAgent: agent,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -182,6 +188,7 @@ export class VicidialApiService {
       console.log('payload', payload);
 
       const res = await axios.post(this.vicidialApi, payload.toString(), {
+        httpsAgent: agent,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -228,6 +235,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.managerSendApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -267,6 +275,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -304,6 +313,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -342,6 +352,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -390,6 +401,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -462,6 +474,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -515,6 +528,7 @@ export class VicidialApiService {
     channel: string,
     callerid: string,
     secondS: string = '0',
+    presetName: string = ''
   ) {
     const payload = new URLSearchParams({
       server_ip: vicidialConfig.privateIP,
@@ -535,13 +549,14 @@ export class VicidialApiService {
       secondS: secondS,
       session_id: confExten,
       nodeletevdac: '0',
-      preset_name: '',
+      preset_name: presetName,
       CalLCID: callerid,
       customerparked: '0',
     });
 
     try {
       const res = await axios.post(this.managerSendApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -596,6 +611,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.managerSendApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -663,6 +679,7 @@ export class VicidialApiService {
     callerId: string,
     agentChannel: string,
     protocol: string,
+    blindTransfer: string = '0'
   ) {
     const payload = new URLSearchParams({
       format: 'text',
@@ -699,7 +716,7 @@ export class VicidialApiService {
       conf_dialed: '0',
       leaving_threeway: '0',
       hangup_all_non_reserved: '1',
-      blind_transfer: '0',
+      blind_transfer: blindTransfer,
       dial_method: 'INBOUND_MAN',
       nodeletevdac: '',
       alt_num_status: '0',
@@ -712,6 +729,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -762,6 +780,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.managerSendApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -811,6 +830,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.managerSendApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
@@ -857,15 +877,13 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(url, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });
 
       // Parseamos la respuesta
-      // const rawResponse = res.data;
-
-      const rawResponse = `DateTime: 2025-11-12 12:15:35|UnixTime: 1762967735|Logged-in: N|CampCalls: N|Status: INCALL|DiaLCalls: N|APIHanguP: 0|APIStatuS: ::::::::::|APIPausE: |APIDiaL: |DEADcall: 0,0|InGroupChange: 0||||APIFields: 0|APIFieldsData: |APITimerAction: |APITimerMessage: |APITimerSeconds: -1|APIdtmf: |APItransferconf: |APIpark: |APITimerDestination: |APIManualDialQueue: 0|APIRecording: 447446|APIPaUseCodE: |WaitinGChats: N|WaitinGEmails: N|LivEAgentCommentS: |LeadIDSwitch: 0|DEADxfer: 0|CHANanswer: 0-----|Alogin_notes:
-3|Local/58600070@default-00085490;2 ~SIP/99999999-0008ad99 ~SIP/SBC1-0008b1e5 ~`;
+      const rawResponse = res.data;
 
       const parsed: ParsedResponse = rawResponse
         .split('|')
@@ -954,6 +972,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
@@ -1035,6 +1054,7 @@ export class VicidialApiService {
 
     try {
       const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 5000,
       });

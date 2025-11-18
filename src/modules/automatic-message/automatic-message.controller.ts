@@ -59,6 +59,13 @@ export class AutomaticMessageController {
     return this.service.getallAutomaticWelcomeMessagesFromChannel(categoryId)
   }
 
+  @Public()
+  @Get('farewell-by-channel/:categoryId')
+  getallAutomaticFarewellMessagesFromChannel(@Param('categoryId') categoryId: number)
+  {
+    return this.service.getallAutomaticFarewellMessagesFromChannel(categoryId)
+  }
+
 
   /**
    * Retrieves a single automatic message by its ID.

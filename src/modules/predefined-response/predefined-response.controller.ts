@@ -27,7 +27,7 @@ export class PredefinedResponseController {
   ): Promise<PaginatedResponse<PredefinedResponse>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(limit, offset);
+    return this.service.findAll(limit, offset, query.q);
   }
 
   @Get('allMail')
@@ -39,7 +39,7 @@ export class PredefinedResponseController {
   allPredefinedResponseChatSat(): Promise<PredefinedResponse[]> {
     return this.service.allPredefinedResponseChatSat();
   }
- 
+
   @Get('allWhatsapp')
   allPredefinedResponseWhatsapp(): Promise<PredefinedResponse[]> {
     return this.service.allPredefinedResponseWhatsapp();
@@ -57,10 +57,8 @@ export class PredefinedResponseController {
     return this.service.create(dto);
   }
 
-  @Post(":id/copy-to-other-channels")
-  copyToOtherChannels(
-    @Param('id') id: number,
-  ): Promise<BaseResponseDto> {
+  @Post(':id/copy-to-other-channels')
+  copyToOtherChannels(@Param('id') id: number): Promise<BaseResponseDto> {
     return this.service.copyToOtherChannels(id);
   }
 

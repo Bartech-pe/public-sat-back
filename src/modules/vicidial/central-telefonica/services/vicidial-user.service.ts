@@ -296,7 +296,7 @@ export class VicidialUserService {
 
       if (
         (day >= 1 && day <= 5 && hour >= 8 && hour < 20) || // lunes a viernes
-        (day === 6 && hour >= 8 && hour < 13) // sábado
+        (day === 6 && hour >= 8 && hour < 18) // sábado
       ) {
         active = 'Y';
       }else{
@@ -392,6 +392,41 @@ export class VicidialUserService {
             err,
           );
         }
+  }
+
+  async getProgresoLive(listId: number) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+    const sql = `SELECT 
+        vl.list_id,
+        vl.list_name,
+        vc.campaign_id,
+        vc.campaign_name,
+        COUNT(vl2.lead_id) AS total_leads,
+        SUM(CASE WHEN vl2.called_since_last_reset = 'Y' THEN 1 ELSE 0 END) AS numeros_discados,
+        SUM(CASE WHEN vl2.status = 'NEW' THEN 1 ELSE 0 END) AS not_called,
+        SUM(CASE WHEN vl2.status != 'NEW' THEN 1 ELSE 0 END) AS called,
+        ROUND(SUM(CASE WHEN vl2.status != 'NEW' THEN 1 ELSE 0 END) / COUNT(vl2.lead_id) * 100, 2) AS penetration
+      FROM vicidial_lists vl
+      JOIN vicidial_list vl2 ON vl.list_id = vl2.list_id
+      JOIN vicidial_campaigns vc ON vl.campaign_id = vc.campaign_id
+      WHERE vl.list_id = ?
+      GROUP BY vl.list_id, vl.list_name, vc.campaign_id, vc.campaign_name;`;
+
+    try {
+      const [results] = await this.db.query(sql, {
+        replacements: [listId],
+        type: 'SELECT',
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error al obtener el progreso:', error);
+      throw new InternalServerErrorException('Error al obtener el progreso');
+    }
   }
 
 

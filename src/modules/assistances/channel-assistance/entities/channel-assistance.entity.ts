@@ -15,6 +15,7 @@ import { User } from '@modules/user/entities/user.entity';
 import { Citizen } from '@modules/citizen/entities/citizen.entity';
 import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
+import { CitizenContact } from '@modules/citizen/entities/citizen-contact.entity';
 
 @DefaultScope(() => ({
   attributes: { exclude: ['deletedAt', 'deletedBy'] }, // Excluir campo de eliminación lógica
@@ -59,6 +60,15 @@ export class ChannelAssistance extends Model {
     comment: 'Id del ciudadano',
   })
   citizenId: number;
+
+  @ForeignKey(() => CitizenContact)
+  @Column({
+    field: 'citizen_contact_id',
+    type: DataType.BIGINT,
+    allowNull: true,
+    comment: 'Identificador del contacto del ciudadano',
+  })
+  citizenContactId: number;
 
   @ForeignKey(() => CategoryChannel)
   @Column({

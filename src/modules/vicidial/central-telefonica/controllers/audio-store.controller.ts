@@ -43,7 +43,7 @@ export class AudioController {
   create(
     @Body() dto: Omit<CreateVicidialListDto, 'file'>,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<VicidialLists> {
+  ): Promise<{ status: string; data: VicidialLists }> {
     return this.audioService.createlistar(dto, file);
   }
 
@@ -76,7 +76,7 @@ export class AudioController {
   createMultiple(
     @Body() dto: Omit<CreateVicidialListDto, 'file'>,
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<VicidialLists> {
+  ): Promise<{ status: string; data: VicidialLists }> {
     return this.audioService.createlistarMultiple(dto, file);
   }
 

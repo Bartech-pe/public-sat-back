@@ -1222,6 +1222,9 @@ export class AloSatService {
       },
     );
 
+    /* 
+    // Enviar a encuesta el asesor y el ciudadano a la vez
+
     const res: any = await this.vicidialApiService.transferSurvey(
       deal.toUpperCase(),
       agentUser,
@@ -1233,6 +1236,40 @@ export class AloSatService {
       `Local/${deals?.[deal]}@default`,
       agentData.vendor_lead_code,
       agentData.calleridnum,
+    ); */
+
+    const resStatus: any = await this.vicidialApiService.transferCall(
+      agentUser,
+      userPass,
+      campaignId,
+      agentData.session_name,
+      deals?.[deal],
+      agentData.conf_exten,
+      agentData.uniqueid,
+      agentData.lead_id,
+      agentData.channel,
+      agentData.callerid,
+      agentData.secondS,
+      deal.toUpperCase(),
+    );
+
+    const res: any = await this.vicidialApiService.endCall(
+      agentUser,
+      userPass,
+      agentData.campaign_id,
+      agentData.session_name,
+      agentData.uniqueid,
+      agentData.lead_id,
+      agentData.list_id,
+      agentData.phone_number,
+      agentData.phone_code,
+      agentData.channel,
+      agentData.conf_exten,
+      agentData.agent_log_id,
+      agentData.callerid,
+      resStatus.agentChannel,
+      agentData.protocol,
+      '1'
     );
   }
 

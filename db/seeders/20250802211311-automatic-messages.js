@@ -98,7 +98,23 @@ module.exports = {
         },
         {
           id: 12,
+          name: 'Despedida IA',
+          category_id: 3,
+          status: true,
+          updated_at: new Date(),
+          created_at: new Date(),
+        },
+        {
+          id: 13,
           name: 'Bienvenida IA',
+          category_id: 4,
+          status: true,
+          updated_at: new Date(),
+          created_at: new Date(),
+        },
+        {
+          id: 14,
+          name: 'Despedida IA',
           category_id: 4,
           status: true,
           updated_at: new Date(),

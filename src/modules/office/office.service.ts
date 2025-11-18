@@ -15,6 +15,8 @@ import { RoleScreenOfficeRepository } from './repositories/role-screen-office.re
 import { CreateRoleScreenOfficeDto } from './dto/create-role-screen.dto';
 import { RoleScreenOffice } from './entities/role-screen-office.entity';
 import { UserRole } from '@common/constants/role.constant';
+import { col, fn, literal, Order, where } from 'sequelize';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class OfficeService {
@@ -27,28 +29,45 @@ export class OfficeService {
     user: User,
     limit: number,
     offset: number,
+    q?: Record<string, any>,
   ): Promise<PaginatedResponse<Office>> {
     try {
-      const whereOpts =
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+
+      const whereOptions: any =
         user.roleId == UserRole.Adm
-          ? {
-              where: {},
-            }
+          ? {}
           : {
-              where: {
-                id: user.officeId,
-              },
+              id: user.officeId,
             };
+
+      // Búsqueda por nombre o email (solo si hay texto)
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('Office.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          literal(`LOWER(\`department\`.\`name\`) LIKE '%${safeTerm}%'`),
+        ];
+      }
+
+      // Ordenamiento
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
       return this.repository.findAndCountAll({
-        ...whereOpts,
+        where: whereOptions,
         include: [
           {
             model: Department,
           },
         ],
+        subQuery: false,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
       console.log('error', error);

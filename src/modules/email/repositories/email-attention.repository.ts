@@ -12,8 +12,4 @@ export class EmailAttentionRepository extends GenericCrudRepository<EmailAttenti
   ) {
     super(model);
   }
-
-  async count(options?: Omit<CountOptions<{}>, 'group'>) {
-    return await this.model.count(options);
-  }
 }

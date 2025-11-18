@@ -15,7 +15,7 @@ import { VicidialUser } from './entities/vicidial-user.entity';
 import { Skill } from '@modules/skill/entities/skill.entity';
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
-import { Op } from 'sequelize';
+import { col, fn, literal, Op, Order, where } from 'sequelize';
 import { VicidialUserRepository } from './repositories/vicidial-user.repository';
 import { ChannelPhoneState } from '@common/enums/status-call.enum';
 import { UserRole } from '@common/constants/role.constant';
@@ -34,48 +34,52 @@ export class UserService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<User>> {
     try {
-      const officeId = q?.officeId;
-      const whereOpts =
-        user.roleId == UserRole.Adm
-          ? {
-              where: {
-                ...(q?.byTransfer
-                  ? {
-                      id: {
-                        [Op.ne]: user.id,
-                      },
-                    }
-                  : {}),
-              },
-            }
-          : {
-              where: {
-                roleId: {
-                  ...(q?.byTransfer
-                    ? { [Op.in]: [2, 3] }
-                    : { [Op.gte]: user.roleId }),
-                },
-                ...(q?.byTransfer
-                  ? {
-                      id: {
-                        [Op.ne]: user.id,
-                      },
-                    }
-                  : {}),
-              },
-            };
-      const whereOffice = officeId
-        ? {
-            id: officeId,
-          }
-        : user.roleId == UserRole.Adm
-          ? {}
-          : {
-              id: user.officeId,
-            };
+      const { officeId, orderField, searchText = '', byTransfer } = q || {};
+      const searchTerm = searchText.toLowerCase();
+
+      const isAdmin = user.roleId === UserRole.Adm;
+      const whereOptions: any = {};
+      const officeWhere: any = {};
+
+      // Filtro base según rol
+      if (isAdmin) {
+        if (byTransfer) whereOptions.id = { [Op.ne]: user.id };
+      } else {
+        whereOptions.roleId = byTransfer
+          ? { [Op.in]: [2, 3] }
+          : { [Op.gte]: user.roleId };
+
+        if (byTransfer) whereOptions.id = { [Op.ne]: user.id };
+      }
+
+      // Búsqueda por nombre o email (solo si hay texto)
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('User.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          where(fn('LOWER', col('User.email')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          literal(`LOWER(\`role\`.\`name\`) LIKE '%${safeTerm}%'`),
+        ];
+      }
+
+      // Filtro por oficina
+      if (officeId) {
+        officeWhere.id = officeId;
+      } else if (!isAdmin) {
+        officeWhere.id = user.officeId;
+      }
+
+      // Ordenamiento
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
 
       return this.repository.findAndCountAll({
-        ...whereOpts,
+        where: whereOptions,
         include: [
           {
             model: Role,
@@ -83,7 +87,7 @@ export class UserService {
           },
           {
             model: Office,
-            where: whereOffice,
+            where: officeWhere,
             required: officeId ? true : !!user.officeId,
           },
           {
@@ -97,11 +101,13 @@ export class UserService {
           },
           { model: Skill, through: { attributes: [] }, required: false },
         ],
+        subQuery: false,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
+      console.debug(error);
       throw new InternalServerErrorException(
         error,
         'Error interno del servidor',

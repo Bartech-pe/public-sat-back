@@ -30,5 +30,6 @@ import { dbConfig, envConfig } from 'config/env';
     }),
   ],
   providers: [SequelizeHooksProvider],
+  exports: [SequelizeModule],
 })
 export class DatabaseCrmModule {}

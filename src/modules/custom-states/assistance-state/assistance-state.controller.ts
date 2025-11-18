@@ -53,10 +53,10 @@ export class AssistanceStateController {
    * @param query Pagination query parameters (limit, offset, filters)
    * @returns PaginatedResponse containing channel status
    */
-  @Put('assistanceStateEmail')
+  @Get('assistanceStateEmail')
   findAllChannelStateEmail(
     @CurrentUser() user: User,
-  ): Promise<AssistanceState[]> {
+  ): Promise<(AssistanceState & { count: number })[]> {
     return this.service.findAllAssistanceStateEmail(user);
   }
 

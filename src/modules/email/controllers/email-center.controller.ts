@@ -33,7 +33,6 @@ export class EmailCenterController {
     @CurrentUser() user: User,
     @Query() query: PaginationQueryDto,
   ): Promise<PaginatedResponse<any>> {
-    console.log('query', query);
     const limit = query.limit!;
     const offset = query.offset!;
     return this.mailCenterService.getTickets(user, limit, offset, query.q);
@@ -174,5 +173,10 @@ export class EmailCenterController {
     @Param('userId') userId: number,
   ) {
     return await this.mailCenterService.changeWspState(userId, channelStateId);
+  }
+
+  @Post('getEmailCitizen')
+  getEmailCitizen(@Body('email') email: string) {
+    return this.mailCenterService.getEmailCitizen(email);
   }
 }

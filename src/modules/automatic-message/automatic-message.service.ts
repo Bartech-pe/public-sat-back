@@ -22,7 +22,8 @@ import { Op } from 'sequelize';
  */
 @Injectable()
 export class AutomaticMessageService {
-  private welcomeMessagesId: number[] = [11, 12];
+  private welcomeMessagesId: number[] = [11, 13];
+  private farewellMessagesId: number[] = [12, 14];
 
   constructor(
     private readonly repository: AutomaticMessageRepository,
@@ -91,6 +92,25 @@ export class AutomaticMessageService {
         where: { 
           automaticMessageId: {
             [Op.in]: this.welcomeMessagesId
+          },
+        },
+        include: [{ 
+          model: AutomaticMessage, 
+          required: true,
+          where: {
+            categoryId: categoryId
+          }
+        }],
+      })).map(x => x.toJSON()?.description);
+    return exist;
+  }
+
+  public async getallAutomaticFarewellMessagesFromChannel(categoryId: number): Promise<string[]>
+  {
+    const exist = (await this.automaticMessageDescriptionRepository.findAll({
+        where: { 
+          automaticMessageId: {
+            [Op.in]: this.farewellMessagesId
           },
         },
         include: [{ 

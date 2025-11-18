@@ -38,7 +38,6 @@ import { CitizenModule } from '@modules/citizen/citizen.module';
 
 @Module({
   imports: [
-    AssistanceStateModule,
     ChannelStateModule,
     SequelizeModule.forFeature([
       EmailAttention,
@@ -60,6 +59,7 @@ import { CitizenModule } from '@modules/citizen/citizen.module';
     forwardRef(() => InboxModule),
     ChannelModule,
     forwardRef(() => AuthModule),
+    forwardRef(() => AssistanceStateModule),
     UserModule,
     CitizenModule,
   ],
