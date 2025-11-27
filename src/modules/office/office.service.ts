@@ -49,6 +49,9 @@ export class OfficeService {
           where(fn('LOWER', col('Office.name')), {
             [Op.like]: `%${safeTerm}%`,
           }),
+          where(fn('LOWER', col('Office.description')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
           literal(`LOWER(\`department\`.\`name\`) LIKE '%${safeTerm}%'`),
         ];
       }
@@ -57,6 +60,7 @@ export class OfficeService {
       const order: Order = orderField
         ? [[orderField.field, orderField.order]]
         : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
         where: whereOptions,
         include: [

@@ -63,7 +63,9 @@ export class EmailCredentialService {
     if (!credential)
       throw new InternalServerErrorException('no existe la credencial');
     if (!credential.toJSON().refreshToken)
-      throw new InternalServerErrorException('Watch: No existe el refresh token');
+      throw new InternalServerErrorException(
+        'Watch: No existe el refresh token',
+      );
     const watch = await this.emailChannelService.setWatch(
       credential.toJSON().refreshToken,
       credential.toJSON().clientTopic,
@@ -94,6 +96,51 @@ export class EmailCredentialService {
       const credential = await this.emailCredentialRepository.create({
         email: body.email,
         inboxId: createdInboxId,
+        clientID: body.clientId,
+        clientSecret: body.clientSecret,
+        clientTopic: body.topicName,
+        clientProject: body.projectId,
+        refreshToken: infoToken.refreshToken,
+      });
+      const watch = await this.emailChannelService.setWatch(
+        infoToken.refreshToken,
+        credential.toJSON().clientTopic,
+        credential.toJSON().clientProject,
+        credential.toJSON().clientID,
+        credential.toJSON().email,
+      );
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException(
+        `No existe el refresh token ${error.message}`,
+      );
+    }
+  }
+
+  async updateCredential(code: string, body: CreateMailCredential) {
+    try {
+      const infoToken = await this.emailChannelService.exchangeCode(
+        body.clientId,
+        body.email,
+        code,
+      );
+      const checkInbox = await this.inboxRepository.findOne({
+        where: { channelId: ChannelEnum.EMAIL },
+      });
+      if (!checkInbox)
+        throw new InternalServerErrorException('No existe la credencial');
+      await checkInbox.update({
+        name: body.name,
+        channelId: ChannelEnum.EMAIL,
+      });
+
+      const credential = await this.emailCredentialRepository.findOne({
+        where: { inboxId: checkInbox.toJSON().id },
+      });
+      if (!credential)
+        throw new InternalServerErrorException('No existe la credencial');
+      await credential.update({
+        email: body.email,
         clientID: body.clientId,
         clientSecret: body.clientSecret,
         clientTopic: body.topicName,

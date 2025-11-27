@@ -8,6 +8,10 @@ import { UpdateReminderDto } from './dto/update-reminder.dto';
 import { ReminderRepository } from './repositories/reminder.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { Reminder } from './entities/reminder.entity';
+import { User } from '@modules/user/entities/user.entity';
+import { Op } from 'sequelize';
+import { SocketGateway } from 'src/socket/socket.gateway';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
 
 /**
  * Service layer for managing Reminders.
@@ -18,7 +22,10 @@ import { Reminder } from './entities/reminder.entity';
  */
 @Injectable()
 export class ReminderService {
-  constructor(private readonly repository: ReminderRepository) {}
+  constructor(
+    private readonly repository: ReminderRepository,
+    private readonly socketGateway: SocketGateway
+  ) {}
 
   /**
    * Retrieves a paginated list of reminders.
@@ -28,23 +35,49 @@ export class ReminderService {
    * @param q Optional query filters
    * @returns PaginatedResponse containing reminders
    */
-  async findAll(
-    limit: number,
-    offset: number,
-  ): Promise<PaginatedResponse<Reminder>> {
-    try {
-      return this.repository.findAndCountAll({
-        limit,
-        offset,
-        order: [['id', 'DESC']],
-      });
-    } catch (error) {
-      throw new InternalServerErrorException(
-        error,
-        'Error interno del servidor',
-      );
-    }
+  // async findAll(
+  //   limit: number,
+  //   offset: number,
+  // ): Promise<PaginatedResponse<Reminder>> {
+  //   try {
+  //     return this.repository.findAndCountAll({
+  //       limit,
+  //       offset,
+  //       order: [['id', 'DESC']],
+  //     });
+  //   } catch (error) {
+  //     throw new InternalServerErrorException(
+  //       error,
+  //       'Error interno del servidor',
+  //     );
+  //   }
+  // }
+
+async findAll(
+  user: User,
+  limit: number,
+  offset: number,
+): Promise<PaginatedResponse<Reminder>> {
+  try {
+    const whereOpts = {
+      where: {
+        createdBy: user.id
+      },
+    };
+
+    return this.repository.findAndCountAll({
+      ...whereOpts,
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']],
+    });
+  } catch (error) {
+    console.error('Error in findAll:', error);
+    throw new InternalServerErrorException(
+      'Error al obtener las notificaciones',
+    );
   }
+}
 
   /**
    * Finds a reminder by its ID.
@@ -72,9 +105,14 @@ export class ReminderService {
    * @param dto Data Transfer Object containing the reminder data
    * @returns The created Reminder entity
    */
-  async create(dto: CreateReminderDto): Promise<Reminder> {
+  async create(dto: CreateReminderDto, userId:  number | null = null): Promise<Reminder> {
     try {
-      return this.repository.create(dto);
+      const reminder = this.repository.create(dto);
+      if(userId)
+      {
+        this.socketGateway.notifyNewReminderCreated({userId})
+      }
+      return reminder
     } catch (error) {
       throw new InternalServerErrorException(
         error,
@@ -101,6 +139,36 @@ export class ReminderService {
         error,
         'Error interno del servidor',
       );
+    }
+  }
+
+
+  async markRemindersAsRead(remindersId : number[]): Promise<BaseResponseDto>
+  {
+    let response: BaseResponseDto = {
+      message: "",
+      success: false
+    };
+    try {
+      if(!remindersId.length) return {
+        ...response,
+        message: "No hay recordatorios seleccionados"
+      }
+  
+      remindersId.forEach(reminderId => {
+        this.repository.update(reminderId, {
+          status: false
+        })
+      });
+
+      response.message = "Los registros fueron actualizados correctamente.";
+      response.success = true;
+      return response;
+    } catch (error) {
+      console.log(error);
+      response.message = "Hubo un error de servidor con markRemindersAsRead";
+      response.error = error.toString();
+      return response;
     }
   }
 

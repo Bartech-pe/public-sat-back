@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { metabaseConfig } from 'config/env';
+import { metabaseConfig, vicidialConfig } from 'config/env';
 
 @Injectable()
 export class MetabaseService {
@@ -16,6 +16,11 @@ export class MetabaseService {
     });
 
     const iframeUrl = `${metabaseConfig.url}/embed/dashboard/${token}#bordered=true&titled=true`;
+    return iframeUrl;
+  }
+
+  generateVicidialReportUrl(): string {
+    const iframeUrl = `${vicidialConfig.host}/index.php`;
     return iframeUrl;
   }
 }

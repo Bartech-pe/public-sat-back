@@ -20,16 +20,15 @@ import {
   SendMessageRasaDto,
 } from '@common/proxy/rasa/dto/Rasa';
 import { CallService } from './services/call.service';
-import {
-  CallItemNew,
-  CreateCallDto,
-} from './dto/call-collection.dto';
+import { CallItemNew, CreateCallDto } from './dto/call-collection.dto';
 import { SpyDTO } from './dto/spy.dto';
 import { AMIFilter } from '../vicidial/ami/dto/ami.dto';
 import { AmiService } from '@modules/vicidial/ami/ami.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { User } from '@modules/user/entities/user.entity';
 
 /**
  * Controller for managing Calls.
@@ -52,6 +51,19 @@ export class CallController {
     @Query() query: PaginationQueryDto,
   ): Promise<PaginatedResponse<CallItemNew>> {
     return this.callService.getCallsFromVicidial(
+      query.limit,
+      query.offset,
+      query.q,
+    );
+  }
+
+  @Get('ByUser')
+  async getCallsByUser(
+    @CurrentUser() user: User,
+    @Query() query: PaginationQueryDto,
+  ): Promise<PaginatedResponse<CallItemNew>> {
+    return this.callService.getCallsFromVicidialByUser(
+      user,
       query.limit,
       query.offset,
       query.q,
@@ -210,7 +222,9 @@ export class CallController {
 
   @Get('statesCount')
   async getCallsCounters(@Query() query: PaginationQueryDto) {
-    const response = await this.callService.getCallsCountersFromVicidial(query.q);
+    const response = await this.callService.getCallsCountersFromVicidial(
+      query.q,
+    );
     return response;
   }
 

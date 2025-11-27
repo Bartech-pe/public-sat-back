@@ -11,6 +11,7 @@ import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { User } from '@modules/user/entities/user.entity';
 import { UserRole } from '@common/constants/role.constant';
+import { col, fn, literal, Op, Order, where } from 'sequelize';
 
 @Injectable()
 export class DepartmentService {
@@ -20,23 +21,42 @@ export class DepartmentService {
     user: User,
     limit: number,
     offset: number,
+    q?: Record<string, any>,
   ): Promise<PaginatedResponse<Department>> {
     try {
-      const whereOpts =
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+
+      const whereOptions: any =
         user.roleId == UserRole.Adm
-          ? {
-              where: {},
-            }
+          ? {}
           : {
-              where: {
-                id: user.office?.departmentId,
-              },
+              id: user.office?.departmentId,
             };
+
+      // Búsqueda por nombre o email (solo si hay texto)
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('Department.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          where(fn('LOWER', col('Department.description')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+
+      // Ordenamiento
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
-        ...whereOpts,
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
       console.log('error', error);

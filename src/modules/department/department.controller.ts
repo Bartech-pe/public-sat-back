@@ -38,7 +38,7 @@ export class DepartmentController {
   ): Promise<PaginatedResponse<Department>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(user, limit, offset);
+    return this.service.findAll(user, limit, offset, query.q);
   }
 
   @Get(':id')

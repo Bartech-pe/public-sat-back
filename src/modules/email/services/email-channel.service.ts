@@ -7,6 +7,15 @@ import { ForwardTo } from '../dto/email-channel/forward-to.dto';
 import { EmailSent } from '../dto/center-email.dto';
 import { channelConnectorConfig, envConfig } from 'config/env';
 
+export type ISpamMessagesBody = {
+  maxResults?: number;
+  pageToken?: string;
+  clientId: string;
+  email: string;
+  sender?:string;
+  messageId?:string;
+}
+
 @Injectable()
 export class EmailChannelService {
   private client: AxiosInstance;
@@ -190,6 +199,59 @@ export class EmailChannelService {
     if (response.status < 200 || response.status >= 300) {
       throw new InternalServerErrorException(
         `Error con la peticion para el send Mail de ${response.status}`,
+      );
+    }
+    return response.data;
+  }
+
+  async GetSpamMessages(body: ISpamMessagesBody) {
+    const response: AxiosResponse<any> = await this.client.post(
+      `mail/spam/messages`,
+      body,
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw new InternalServerErrorException(
+        `Error con la peticion para el GetMessages de ${response.status}`,
+      );
+    }
+    return response.data;
+  }
+
+
+  async blockSender(body: ISpamMessagesBody) {
+    const response: AxiosResponse<any> = await this.client.put(
+      `mail/block-sender`,
+      body,
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw new InternalServerErrorException(
+        `Error con la peticion para el blockSender de ${response.status}`,
+      );
+    }
+    return response.data;
+  }
+
+  async unblockSender(body: ISpamMessagesBody) {
+    const response: AxiosResponse<any> = await this.client.put(
+      `mail/unblock-sender`,
+      body,
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw new InternalServerErrorException(
+        `Error con la peticion para el unblockSender de ${response.status}`,
+      );
+    }
+    return response.data;
+  }
+
+  async moveMessageToSpam(body: ISpamMessagesBody) {
+    const response: AxiosResponse<any> = await this.client.put(
+      `mail/move-to-spam`,
+      body,
+    );
+    if (response.status < 200 || response.status >= 300) {
+      throw new InternalServerErrorException(
+        `Error con la peticion para el moveMessageToSpam de ${response.status}`,
       );
     }
     return response.data;

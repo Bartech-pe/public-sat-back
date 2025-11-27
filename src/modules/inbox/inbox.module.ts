@@ -11,15 +11,27 @@ import { InboxCredentialRepository } from './repositories/inbox-credential.repos
 import { ChannelModule } from '@modules/channel/channel.module';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { ChannelStateModule } from '@modules/custom-states/channel-state/channel-state.module';
+import { InboxSchedule } from './entities/inbox-schedule.entity';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([Channel, Inbox, InboxUser, InboxCredential]),
+    SequelizeModule.forFeature([
+      Channel,
+      Inbox,
+      InboxUser,
+      InboxCredential,
+      InboxSchedule,
+    ]),
     ChannelModule,
-    ChannelStateModule
+    ChannelStateModule,
   ],
   controllers: [InboxController],
-  providers: [InboxService, InboxRepository, InboxUserRepository, InboxCredentialRepository],
+  providers: [
+    InboxService,
+    InboxRepository,
+    InboxUserRepository,
+    InboxCredentialRepository,
+  ],
   exports: [InboxRepository, InboxUserRepository, InboxCredentialRepository],
 })
 export class InboxModule {}

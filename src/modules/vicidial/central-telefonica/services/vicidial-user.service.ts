@@ -1,28 +1,35 @@
 import {
-  BadRequestException,
-  Inject,
   Injectable,
   InternalServerErrorException,
   Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { VicidialUser } from '../entities/vicidial-user.entity';
 import { VicidialCampaign } from '../entities/vicidial-campaign.entity';
 import { CreateVicidialCampaignDto } from '../dto/create-vicidial-campaing.dto';
 import { UpdateVicidialCampaignDto } from '../dto/update-vicidial-campaing.dto';
-import { Sequelize } from 'sequelize';
+import { QueryTypes, Sequelize } from 'sequelize';
 import * as cron from 'node-cron';
 import { DatabaseCentralService } from '@database/central/database-central.service';
 import { VicidialCampaingRepository } from '../repositories/vicidial-campaing.repository';
 import { VicidialUserRepository } from '../repositories/vicidial-user.repository';
+import { CampaignScheduleRepository } from '@modules/campaigns/campaign-schedule/repositories/campaign-schedule.repository';
+import { CampaignSchedule } from '@modules/campaigns/campaign-schedule/entities/campaign-schedule.entity';
+import { AudioCampaignRepository } from '@modules/campaigns/audio-campaign/repositories/audio-campaign.repository';
+
 @Injectable()
-export class VicidialUserService {
+export class VicidialUserService implements OnModuleInit {
   private readonly logger = new Logger(VicidialUserService.name);
   constructor(
     private readonly dbCentralService: DatabaseCentralService,
     private readonly campaignModel: VicidialCampaingRepository,
     private readonly userModel: VicidialUserRepository,
-  ) {
+    private readonly campaignScheduleRepository: CampaignScheduleRepository,
+    private readonly audioCampaignRepository: AudioCampaignRepository,
+  ) {}
+
+  onModuleInit() {
     this.scheduleCampaign();
   }
 
@@ -73,7 +80,7 @@ export class VicidialUserService {
       throw new InternalServerErrorException(
         'No se pudo otener la conexión con la base de datos de la central telefónica.',
       );
-    } 
+    }
 
     const existing = await this.campaignModel.getModel()!.findOne({
       where: { campaign_id },
@@ -281,117 +288,156 @@ export class VicidialUserService {
   }
 
   async scheduleCampaign() {
+    console.log('scheduleCampaign');
     // se ejecuta cada 5 minutos
-    cron.schedule('*/5 * * * *', async () => {
+    cron.schedule('*/1 * * * *', async () => {
       if (!this.db) {
         this.logger.error(
           'No se pudo obtener la conexión con la base de datos de la central telefónica.',
         );
         return;
       }
+
       const now = new Date();
-      const day = now.getDay(); // 0=Domingo, 1=Lunes,...,6=Sábado
-      const hour = now.getHours();
-      let active = 'N';
 
-      if (
-        (day >= 1 && day <= 5 && hour >= 8 && hour < 20) || // lunes a viernes
-        (day === 6 && hour >= 8 && hour < 18) // sábado
-      ) {
-        active = 'Y';
-      }else{
-         active = 'N';
-      }
+      const schedules = await this.campaignScheduleRepository.findAll();
 
-      // const  listCampaignRatio = await this.campaignModel.findAll({ where: { dial_method: 'RATIO' }});
+      const schedule = schedules
+        .map((s) => s.toJSON())
+        .find((s: CampaignSchedule) => {
+          const startDay = parseInt(s.intervalDays.split('-')[0]);
+          const endDay = parseInt(s.intervalDays.split('-')[1]);
+          const start = new Date(now);
+          const startHours = parseInt(s.startTime.split(':')[0]);
+          const startMinutes = parseInt(s.startTime.split(':')[1]);
+          start.setHours(startHours, startMinutes, 0, 0);
+          const end = new Date(now);
+          const endHours = parseInt(s.endTime.split(':')[0]);
+          const endMinutes = parseInt(s.endTime.split(':')[1]);
+          end.setHours(endHours, endMinutes, 0, 0);
+          return (
+            now.getTime() >= start.getTime() &&
+            now.getTime() <= end.getTime() &&
+            now.getDay() >= startDay &&
+            now.getDay() <= endDay
+          );
+        });
 
-      // const result = listCampaignRatio.map(c => c.toJSON());
+      console.log('schedule', now, schedule);
 
+      const audioCampaignsList = (
+        await this.audioCampaignRepository.findAll({
+          where: {
+            active: 'Y',
+          },
+        })
+      ).map((c) => c.toJSON());
+
+      if (audioCampaignsList.length === 0) return;
+
+      const vdlistIds: number[] = audioCampaignsList.map((c) => c.vdlistId);
+
+      await this.ensureSingleActiveList(vdlistIds, !!schedule);
+
+      // let active = 'N';
+      // if (schedule) {
+      //   active = 'Y';
+      // }
       // const listCampaignRatio2 = await this.campaignModel.getModel()!.findAll({
       //   where: { dial_method: 'RATIO' },
       //   attributes: ['campaign_id'],
       // });
-
       // const CAMPAIGNS = listCampaignRatio2.map((c) =>
       //   c.getDataValue('campaign_id'),
       // );
-
       // await this.db!.query(
-      //   `UPDATE vicidial_campaigns 
-      //      SET active = :active 
+      //   `UPDATE vicidial_campaigns
+      //      SET active = :active
       //      WHERE campaign_id IN (:campaigns)`,
       //   { replacements: { active, campaigns: CAMPAIGNS } },
       // );
-
-      //   if (active === 'Y') {
-      //     for (const campaignId of CAMPAIGNS) {
-      //       await this.ensureSingleActiveList(campaignId);
-      //     }
+      // if (active === 'Y') {
+      //   for (const campaignId of CAMPAIGNS) {
+      //     await this.ensureSingleActiveList(campaignId);
       //   }
-
+      // }
     });
   }
 
-  private async ensureSingleActiveList(campaignId: string) {
-
-        try {
-            const [lists] = await this.db!.query(`
+  private async ensureSingleActiveList(vdlistIds: number[], isActive: boolean) {
+    try {
+      const listaPendiente = await this.db!.query<CampaignList>(
+        `
               SELECT vl.list_id,
                     vl.list_name,
                     vl.active,
-                    SUM(CASE WHEN vll.status = 'NEW' THEN 1 ELSE 0 END) AS leads_pendientes,
-                    COUNT(vll.lead_id) AS total
+                    CAST(SUM(CASE WHEN vll.status = 'NEW' THEN 1 ELSE 0 END) AS SIGNED) AS leads_pendientes,
+                    CAST(COUNT(vll.lead_id) AS SIGNED) AS total
               FROM vicidial_lists vl
               LEFT JOIN vicidial_list vll ON vll.list_id = vl.list_id
-              WHERE vl.campaign_id = '${campaignId}'
+              WHERE vl.list_id IN (:listIds) AND vl.active = :active
               GROUP BY vl.list_id
+              HAVING leads_pendientes > 0
               ORDER BY vl.list_id ASC
-            `);
+            `,
+        {
+          replacements: { listIds: vdlistIds, active: isActive ? 'N' : 'Y' },
+          type: QueryTypes.SELECT,
+        },
+      );
 
-            if (!Array.isArray(lists) || lists.length === 0) return;
+      console.log('listaPendiente', listaPendiente);
 
-            const listas = lists as any[];
-            const listaPendiente = listas.find((l) => l.leads_pendientes > 0);
+      // if (!Array.isArray(lists) || lists.length === 0) return;
 
-            if (listaPendiente) {
-              // Activar la lista con leads pendientes
-              await this.db!.query(
-                `UPDATE vicidial_lists SET active = 'Y' WHERE list_id = :id`,
-                { replacements: { id: listaPendiente.list_id } },
-              );
+      // const listaPendiente = lists.filter((l) => l.leads_pendientes > 0);
 
-              // Desactivar las demás listas
-              const idsInactivos = listas
-                .filter((l) => l.list_id !== listaPendiente.list_id)
-                .map((l) => l.list_id);
+      for (const list of listaPendiente) {
+        await this.db!.query(
+          `UPDATE vicidial_lists SET active = :active WHERE list_id = :id`,
+          { replacements: { id: list.list_id, active: isActive ? 'Y' : 'N' } },
+        );
+        this.logger.warn(
+          `Lista ${list.list_name} ${isActive ? 'activada' : 'desactivada'}`,
+        );
+      }
 
-              if (idsInactivos.length) {
-                await this.db!.query(
-                  `UPDATE vicidial_lists SET active = 'N' WHERE list_id IN (:ids)`,
-                  { replacements: { ids: idsInactivos } },
-                );
-              }
+      // if (listaPendiente) {
+      //   // Activar la lista con leads pendientes
+      //   await this.db!.query(
+      //     `UPDATE vicidial_lists SET active = 'Y' WHERE list_id = :id`,
+      //     { replacements: { id: listaPendiente.list_id } },
+      //   );
 
-              this.logger.log(
-                `Campaña ${campaignId}: lista activa ${listaPendiente.list_name} (${listaPendiente.list_id})`,
-              );
-            } else {
-              // Todas las listas terminadas
-              await this.db!.query(
-                `UPDATE vicidial_lists SET active = 'N' WHERE campaign_id = :campaignId`,
-                { replacements: { campaignId } },
-              );
+      //   // Desactivar las demás listas
+      //   const idsInactivos = listas
+      //     .filter((l) => l.list_id !== listaPendiente.list_id)
+      //     .map((l) => l.list_id);
 
-              this.logger.warn(
-                `Campaña ${campaignId}: todas las listas completadas.`,
-              );
-            }
-        } catch (err) {
-          this.logger.error(
-            `Error al controlar listas de la campaña ${campaignId}:`,
-            err,
-          );
-        }
+      //   if (idsInactivos.length) {
+      //     await this.db!.query(
+      //       `UPDATE vicidial_lists SET active = 'N' WHERE list_id IN (:ids)`,
+      //       { replacements: { ids: idsInactivos } },
+      //     );
+      //   }
+
+      //   this.logger.log(
+      //     `Campaña ${campaignId}: lista activa ${listaPendiente.list_name} (${listaPendiente.list_id})`,
+      //   );
+      // } else {
+      //   // Todas las listas terminadas
+      //   await this.db!.query(
+      //     `UPDATE vicidial_lists SET active = 'N' WHERE campaign_id = :campaignId`,
+      //     { replacements: { campaignId } },
+      //   );
+
+      //   this.logger.warn(
+      //     `Campaña ${campaignId}: todas las listas completadas.`,
+      //   );
+      // }
+    } catch (err) {
+      this.logger.error(`Error al controlar listas`, err);
+    }
   }
 
   async getProgresoLive(listId: number) {
@@ -429,16 +475,14 @@ export class VicidialUserService {
     }
   }
 
-
   async getListDetailsByStatus(listId: number) {
-        
-        if (!this.db) {
-          throw new InternalServerErrorException(
-            'No se pudo otener la conexión con la base de datos de la central telefónica.',
-          );
-        }
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
 
-        const sql = `
+    const sql = `
             SELECT 
                 vl2.lead_id,
                 vl2.phone_number,
@@ -450,20 +494,26 @@ export class VicidialUserService {
             ORDER BY vl2.status, vl2.phone_number;
         `;
 
-        try {
-          const [results] = await this.db.query(sql, {
-            replacements: [listId],
-            type: 'SELECT',
-          });
+    try {
+      const [results] = await this.db.query(sql, {
+        replacements: [listId],
+        type: 'SELECT',
+      });
 
-          return results;
-        } catch (error) {
-          console.error('Error al obtener los agentes remotos:', error);
-          throw new InternalServerErrorException(
-            'Error al obtener los agentes remotos de Vicidial',
-          );
-        }
+      return results;
+    } catch (error) {
+      console.error('Error al obtener los agentes remotos:', error);
+      throw new InternalServerErrorException(
+        'Error al obtener los agentes remotos de Vicidial',
+      );
+    }
   }
+}
 
-
+interface CampaignList {
+  list_id: number;
+  list_name: string;
+  active: string;
+  leads_pendientes: number;
+  total: number;
 }

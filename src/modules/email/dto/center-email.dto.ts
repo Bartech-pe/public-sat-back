@@ -33,6 +33,7 @@ export class EmailSent {
   messageId: string;
   referencesMail: string;
   threadId: string;
+  isSpam?: boolean;
   subject: string;
   from: string;
   to: string;

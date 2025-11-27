@@ -9,9 +9,16 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 export class MetabaseController {
   constructor(private readonly service: MetabaseService) {}
 
+  @Get('reports/vicidial')
+  generateVicidialReportUrl() {
+    const url = this.service.generateVicidialReportUrl();
+    return { url };
+  }
+
   @Get('dashboard/:id')
   findAll(@CurrentUser() user: User, @Param('id') id: number) {
     const url = this.service.generateDashboardUrl(id);
     return { url };
   }
+
 }

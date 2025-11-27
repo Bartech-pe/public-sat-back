@@ -1,3 +1,7 @@
+import {
+  buildQueryCID,
+  buildQueryCIDSurvey,
+} from '@common/helpers/vicidial.helper';
 import { VicidialUserDto } from '@modules/user/dto/vicidial-user.dto';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
@@ -184,9 +188,6 @@ export class VicidialApiService {
     });
 
     try {
-      console.log('this.vicidialApi', this.vicidialApi);
-      console.log('payload', payload);
-
       const res = await axios.post(this.vicidialApi, payload.toString(), {
         httpsAgent: agent,
         headers: {
@@ -223,7 +224,7 @@ export class VicidialApiService {
       ACTION: 'OriginateVDRelogin',
       format: 'text',
       channel: extension,
-      queryCID: this.buildQueryCID(user, 'AC', 'agcW'),
+      queryCID: buildQueryCID(user, 'AC', 'agcW'),
       ext_context: 'default',
       ext_priority: '1',
       extension: phoneLogin,
@@ -528,7 +529,7 @@ export class VicidialApiService {
     channel: string,
     callerid: string,
     secondS: string = '0',
-    presetName: string = ''
+    presetName: string = '',
   ) {
     const payload = new URLSearchParams({
       server_ip: vicidialConfig.privateIP,
@@ -540,7 +541,7 @@ export class VicidialApiService {
       ACTION: 'RedirectVD',
       format: 'text',
       channel: channel,
-      queryCID: this.buildQueryCID(user, 'XB'),
+      queryCID: buildQueryCID(user, 'XB'),
       ext_context: 'default',
       ext_priority: '1',
       auto_dial_level: '1',
@@ -590,7 +591,7 @@ export class VicidialApiService {
       ACTION: 'Originate',
       format: 'text',
       channel: channel,
-      queryCID: this.buildQueryCIDSurvey(leadId),
+      queryCID: buildQueryCIDSurvey(leadId),
       exten: confExten,
       ext_context: 'default',
       ext_priority: '1',
@@ -645,7 +646,7 @@ export class VicidialApiService {
       pass: pass,
       channel: channel,
       call_server_ip: vicidialConfig.privateIP,
-      queryCID: this.buildQueryCID(user, 'HL', 'vdcW'),
+      queryCID: buildQueryCID(user, 'HL', 'vdcW'),
       auto_dial_level: '1',
       CalLCID: nextCID,
       secondS: '6',
@@ -679,7 +680,7 @@ export class VicidialApiService {
     callerId: string,
     agentChannel: string,
     protocol: string,
-    blindTransfer: string = '0'
+    blindTransfer: string = '0',
   ) {
     const payload = new URLSearchParams({
       format: 'text',
@@ -764,7 +765,7 @@ export class VicidialApiService {
       format: 'text',
       channel: channel,
       call_server_ip: vicidialConfig.privateIP,
-      queryCID: this.buildQueryCID(user, 'LP', 'vdcW'),
+      queryCID: buildQueryCID(user, 'LP', 'vdcW'),
       exten: putOn ? '8301' : confExten,
       ext_context: 'default',
       ext_priority: '1',
@@ -814,7 +815,7 @@ export class VicidialApiService {
       format: 'text',
       channel: channel,
       call_server_ip: vicidialConfig.privateIP,
-      queryCID: this.buildQueryCID(user, 'LP', 'vdcW'),
+      queryCID: buildQueryCID(user, 'LP', 'vdcW'),
       exten: extension,
       ext_context: 'default',
       ext_priority: '1',
@@ -855,6 +856,7 @@ export class VicidialApiService {
         pauseCode?: string;
         channel?: string;
         agentChannel?: string;
+        queueCalls?: number;
       }
     | undefined
   > {
@@ -1068,14 +1070,117 @@ export class VicidialApiService {
     }
   }
 
-  private buildQueryCID(user: string, prefix: string, sufix?: string) {
-    const random = sufix ?? Math.random().toString(36).substring(2, 6); // 4 chars aleatorios
-    const epoch = Math.floor(Date.now() / 1000);
-    return `${prefix}${random}${epoch}${user.repeat(4)}`;
+  async updateSettings(
+    user: string,
+    pass: string,
+    campaignId: string,
+    sessionName: string,
+    agentLogId: string,
+  ) {
+    const payload = new URLSearchParams({
+      server_ip: vicidialConfig.privateIP,
+      session_name: sessionName,
+      ACTION: 'update_settings',
+      format: 'text',
+      user,
+      pass,
+      agent_log_id: agentLogId,
+      campaign: campaignId,
+    });
+
+    try {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      });
+
+      const data = res.data;
+
+      return { data };
+    } catch (error) {
+      console.error('Error:', error.response?.data || error.message);
+      throw new Error(error.response?.data || error.message);
+    }
   }
 
-  private buildQueryCIDSurvey(leadId: string) {
-    const epoch = Math.floor(Date.now() / 1000);
-    return `DC${epoch}W0000000${leadId}W`;
+  async manDiaLnextCaLL(
+    user: string,
+    pass: string,
+    phoneLogin: string,
+    campaignId: string,
+    campaignCid: string,
+    sessionName: string,
+    confExten: string,
+    dialTimeout: string,
+    dialPrefix: string,
+    agentLogId: string,
+    listId: string,
+    leadId: string,
+    phoneNumber: string,
+    phoneCode: string,
+    localChannel: string,
+  ) {
+    const payload = new URLSearchParams({
+      server_ip: vicidialConfig.privateIP,
+      session_name: sessionName,
+      ACTION: 'manDiaLnextCaLL',
+      format: 'text',
+      conf_exten: confExten,
+      user,
+      pass,
+      campaign: campaignId,
+      ext_context: 'default',
+      dial_timeout: dialTimeout,
+      dial_prefix: dialPrefix,
+      campaign_cid: campaignCid,
+      preview: 'NO',
+      agent_log_id: agentLogId,
+      callback_id: '',
+      lead_id: leadId,
+      phone_code: phoneCode,
+      phone_number: phoneNumber,
+      list_id: listId,
+      stage: 'new',
+      use_internal_dnc: 'N',
+      use_campaign_dnc: 'N',
+      omit_phone_code: 'Y',
+      manual_dial_filter: 'NONE',
+      manual_dial_search_filter: 'NONE',
+      vendor_lead_code: '',
+      usergroupalias: '0',
+      account: '',
+      agent_dialed_number: '1',
+      agent_dialed_type: 'MANUAL_DIALNOW',
+      vtiger_callback_id: '0',
+      dial_method: 'INBOUND_MAN',
+      manual_dial_call_time_check: 'DISABLED',
+      qm_extension: phoneLogin,
+      dial_ingroup: '',
+      nocall_dial_flag: 'DISABLED',
+      cid_lock: '0',
+      last_VDRP_stage: 'PAUSED',
+      routing_initiated_recording: 'Y',
+      exten: '8309',
+      recording_filename: 'FULLDATE_CUSTPHONE',
+      channel: localChannel,
+      manual_dial_validation: 'N',
+      phone_login: phoneLogin,
+    });
+
+    try {
+      const res = await axios.post(this.vdcDbQueryApi, payload.toString(), {
+        httpsAgent: agent,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 5000,
+      });
+
+      const data = res.data;
+
+      return { data };
+    } catch (error) {
+      console.error('Error:', error.response?.data || error.message);
+      throw new Error(error.response?.data || error.message);
+    }
   }
 }

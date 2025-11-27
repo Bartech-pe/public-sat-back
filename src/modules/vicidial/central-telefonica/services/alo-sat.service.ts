@@ -672,6 +672,7 @@ export class AloSatService {
         pauseCode?: string;
         channel?: string;
         agentChannel?: string;
+        queueCalls?: number;
       }
     | undefined
   > {
@@ -688,6 +689,7 @@ export class AloSatService {
       campaignId,
       sessionName,
       confExten,
+      inboundGroups,
     } = await this.getAgent(userId);
 
     const res = await this.vicidialApiService.checkVdc(
@@ -702,33 +704,46 @@ export class AloSatService {
       const [agentData]: any = await this.db.query(
         `
           SELECT 
-              vla.user,
-              vla.campaign_id,
-              vla.pause_code,
-              vsd.session_name,
-              val.agent_log_id,
-              p.phone_ip,
-              CASE
-                  WHEN vla.status = 'PAUSED' 
-                      AND vla.lead_id <> 0 THEN 'DISPO'
-                  WHEN vla.status = 'INCALL' THEN 'INCALL'
-                  WHEN vla.status = 'READY' THEN 'READY'
-                  WHEN vla.status = 'PAUSED' THEN 'PAUSED'
-                  ELSE vla.status
-              END AS status
-          FROM vicidial_live_agents vla
-          JOIN vicidial_session_data vsd
-              ON vla.conf_exten = vsd.conf_exten
-          LEFT JOIN phones p
-              ON vsd.extension = p.extension
-          LEFT JOIN vicidial_agent_log val
-              ON val.user = vla.user
-          WHERE vla.user = ?
-          ORDER BY val.event_time DESC, vsd.login_time DESC
-          LIMIT 1;
+            -- Datos del agente
+            vla.user,
+            vla.campaign_id,
+            vla.pause_code,
+            vsd.session_name,
+            val.agent_log_id,
+            p.phone_ip,
+            CASE
+                WHEN vla.status = 'PAUSED' AND vla.lead_id <> 0 THEN 'DISPO'
+                WHEN vla.status = 'INCALL' THEN 'INCALL'
+                WHEN vla.status = 'READY' THEN 'READY'
+                WHEN vla.status = 'PAUSED' THEN 'PAUSED'
+                ELSE vla.status
+            END AS status,
+
+            -- Datos agregados de la cola (queue)
+            (
+                SELECT COUNT(*)
+                FROM vicidial_auto_calls vac
+                WHERE vac.call_type = 'IN'
+                  AND vac.status = 'LIVE'
+                  AND vac.campaign_id = :campaign
+            ) AS queue_count
+
+        FROM vicidial_live_agents vla
+        JOIN vicidial_session_data vsd
+            ON vla.conf_exten = vsd.conf_exten
+        LEFT JOIN phones p
+            ON vsd.extension = p.extension
+        LEFT JOIN vicidial_agent_log val
+            ON val.user = vla.user
+        WHERE vla.user = :agentUser
+        ORDER BY val.event_time DESC, vsd.login_time DESC
+        LIMIT 1;
         `,
         {
-          replacements: [agentUser],
+          replacements: {
+            agentUser,
+            campaign: inboundGroups.replace(' -', '').trim(),
+          },
           type: QueryTypes.SELECT,
         },
       );
@@ -736,6 +751,8 @@ export class AloSatService {
       res.status = agentData.status!;
 
       res.pauseCode = agentData.pause_code ? agentData.pause_code : undefined;
+
+      res.queueCalls = agentData?.queue_count ?? 0;
 
       if (['CLOSER', 'QUEUE'].includes(res.status!)) {
         await this.vicidialApiService.checkINCOMING(
@@ -1269,7 +1286,7 @@ export class AloSatService {
       agentData.callerid,
       resStatus.agentChannel,
       agentData.protocol,
-      '1'
+      '1',
     );
   }
 
@@ -1368,12 +1385,119 @@ export class AloSatService {
       agentData.nextCID,
     );
 
-    console.log('pauseAgent', pauseAgent);
-
     if (pauseAgent) {
       await this.pauseAgent(userId);
     } else {
       await this.resumeAgent(userId);
     }
+  }
+
+  async manualDialing(
+    userId: number,
+    phoneNumber: string,
+    phoneCode: string,
+  ): Promise<any> {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+    const { agentUser, userPass, phoneLogin, campaignId, inboundGroups } =
+      await this.getAgent(userId);
+
+    const [campaign]: any = await this.db.query(
+      `
+        SELECT 
+          UPPER(vc.campaign_id) AS campaign_id,
+          vc.campaign_cid,
+          vc.campaign_name,
+          vc.dial_timeout,
+          vc.dial_prefix
+        FROM vicidial_campaigns vc
+        WHERE vc.active = 'Y' AND UPPER(vc.campaign_id)  = ?
+        LIMIT 1;
+      `,
+      {
+        replacements: [campaignId],
+        type: QueryTypes.SELECT,
+      },
+    );
+    console.log('campaign', campaign);
+
+    const [agentData]: any = await this.db.query(
+      `
+        SELECT 
+            vsd.session_name,
+            vla.channel,
+            vcl.uniqueid,
+            vla.lead_id,
+            vl.list_id,
+            vl.phone_number,
+            vl.phone_code,
+            vla.extension,
+            vla.conf_exten,
+            vla.agent_log_id,
+            vac.callerid,
+            p.protocol,
+            vl.called_count,
+            cl.extension AS nextCID,
+            TIMESTAMPDIFF(SECOND, vac.call_time, NOW()) AS secondS
+        FROM vicidial_live_agents vla
+        LEFT JOIN vicidial_session_data vsd 
+                ON vsd.user = vla.user
+        LEFT JOIN vicidial_users vu 
+                ON vu.user = vla.user
+        LEFT JOIN vicidial_list vl 
+                ON vl.lead_id = vla.lead_id
+        LEFT JOIN vicidial_auto_calls vac 
+                ON vac.lead_id = vla.lead_id
+        LEFT JOIN vicidial_closer_log vcl 
+                ON vcl.lead_id = vla.lead_id
+        LEFT JOIN call_log cl 
+                ON cl.uniqueid = vcl.uniqueid
+        LEFT JOIN phones p
+                ON vsd.extension = p.extension
+        WHERE vla.user = ?
+        ORDER BY vla.last_update_time DESC
+        LIMIT 1;
+      `,
+      {
+        replacements: [agentUser],
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    console.log('agentData', agentData);
+
+    const resSettings: any = await this.vicidialApiService.updateSettings(
+      agentUser,
+      userPass,
+      campaignId,
+      agentData.session_name,
+      agentData.agent_log_id,
+    );
+
+    console.log('resSettings', resSettings);
+
+    const resDialing: any = await this.vicidialApiService.manDiaLnextCaLL(
+      agentUser,
+      userPass,
+      phoneLogin,
+      campaignId,
+      campaign?.campaign_cid,
+      agentData.session_name,
+      agentData.conf_exten,
+      campaign.dial_timeout,
+      campaign.dial_prefix,
+      agentData.agent_log_id,
+      agentData.list_id,
+      agentData.lead_id,
+      phoneNumber,
+      phoneCode,
+      `Local/5${agentData.conf_exten}@default`,
+    );
+
+    console.log('resDialing', resDialing);
+    return resDialing;
   }
 }

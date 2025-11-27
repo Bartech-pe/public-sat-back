@@ -26,6 +26,7 @@ import { VicidialLeadRepository } from './repositories/vicidial-lead.repository'
 import { VicidialCallTimesHolidaysRepository } from './repositories/vicidial-call-times-holidays.repository';
 import { VicidialCallTimesRepository } from './repositories/vicidial-call-times.repository';
 import { AudioCampaignModule } from '@modules/campaigns/audio-campaign/audio-campaign.module';
+import { CampaignScheduleModule } from '@modules/campaigns/campaign-schedule/campaign-schedule.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { AudioCampaignModule } from '@modules/campaigns/audio-campaign/audio-cam
     }),
     forwardRef(() => ChannelAssistanceModule),
     DatabaseCentralModule,
+    CampaignScheduleModule,
   ],
   controllers: [
     CentralTelefonicaController,

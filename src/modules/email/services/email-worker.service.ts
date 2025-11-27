@@ -30,6 +30,7 @@ import { emailAvailableStateId } from '@common/constants/channel.constant';
 import { Op } from 'sequelize';
 import { MailStates } from '@common/enums/assistance-state.enum';
 import { InboxUser } from '@modules/inbox/entities/inbox-user.entity';
+import { EmailCredential } from '../entities/email-credentials.entity';
 
 @Injectable()
 export class EmailWorkerService {
@@ -65,21 +66,21 @@ export class EmailWorkerService {
     return { name: undefined, email: input.trim() };
   }
 
-  async getSatCredential(): Promise<{ email: string; clientId: string }> {
+  async getSatCredential(id?: number): Promise<EmailCredential> {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
           model: Inbox,
-          where: { channelId: ChannelEnum.EMAIL },
+          required: true,
+          where: id
+            ? { id, channelId: ChannelEnum.EMAIL }
+            : { channelId: ChannelEnum.EMAIL },
         },
       ],
     });
     if (!credential)
       throw new NotFoundException('No se encontro la credencial');
-    return {
-      email: credential.toJSON().email,
-      clientId: credential.toJSON().clientID,
-    };
+    return credential.toJSON<EmailCredential>();
   }
 
   async caseAdvisor(event: EmailSent, emailGeneral: string) {
@@ -357,6 +358,9 @@ export class EmailWorkerService {
         ticketCode: code,
         mailThreadId: event.threadId,
         assistanceStateId:
+          event.isSpam ? 
+            MailStates.SPAM
+          :
           !!event.userId || event.userId == 0
             ? MailStates.CLOSED
             : attention.toJSON().id,

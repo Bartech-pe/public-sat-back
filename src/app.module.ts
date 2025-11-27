@@ -44,6 +44,7 @@ import { CampaignsModule } from '@modules/campaigns/campaigns.module';
 import { CustomStatesModule } from './modules/custom-states/custom-states.module';
 import { MonitorModule } from '@modules/monitor/monitor.module';
 import { AssistancesModule } from './modules/assistances/assistances.module';
+import { TtsModule } from './modules/tts/tts.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { AssistancesModule } from './modules/assistances/assistances.module';
     HealthModule,
     CustomStatesModule,
     MonitorModule,
+    TtsModule,
   ],
   providers: [
     {

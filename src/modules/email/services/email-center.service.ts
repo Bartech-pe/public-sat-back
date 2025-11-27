@@ -14,7 +14,7 @@ import { MailFilter } from '../dto/mail-filter.dto';
 import { EmailStateRepository } from '../repositories/email-state.repository';
 import { EmailTicketList } from '../email-ticket-list';
 import { RequestContextService } from '@common/context/request-context.service';
-import { EmailChannelService } from './email-channel.service';
+import { EmailChannelService, ISpamMessagesBody } from './email-channel.service';
 import { ReplyEmail } from '../dto/email-channel/reply-email.dto';
 import { ForwardTo } from '../dto/email-channel/forward-to.dto';
 import { ForwardCenterMail } from '../dto/forward-center-mail.dto';
@@ -319,9 +319,35 @@ export class EmailCenterService {
     if (!existAttentions) {
       throw new NotFoundException('No se encontro el ticket');
     }
+    const credential = await this.emailCredentialRepository.findOne({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          where: { channelId: ChannelEnum.EMAIL },
+        },
+      ],
+    });
+      
+
     const state = await this.assistanceStateService.getSpamMailState();
     if (!state) throw new NotFoundException('No se encontro el estado');
     for (const attention of existAttentions) {
+
+      const emailThread = await this.emailThreadRepository.findOne({
+        where: {
+          mailAttentionId: attention.id
+        }
+      })
+      let credentialParsed = credential?.toJSON()
+      let emailThreadParsed = emailThread?.toJSON()
+      let options : ISpamMessagesBody = {
+          clientId: credentialParsed.clientID, 
+          email: credentialParsed.email,
+          messageId: emailThreadParsed?.messageGmailId
+      }
+      console.log(options)
+      await this.emailChannelService.moveMessageToSpam(options)
       await attention.update({
         assistanceStateId: state.toJSON().id,
       });
@@ -908,5 +934,31 @@ export class EmailCenterService {
       console.error('Error al obtener el progreso:', error);
       throw new InternalServerErrorException('Error al obtener el progreso');
     }
+  }
+
+  async getSpamMessages(pageToken: string | null = null)
+  {
+    const credential = await this.emailCredentialRepository.findOne({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          where: { channelId: ChannelEnum.EMAIL },
+        },
+      ],
+    });
+    if (!credential)
+      throw new NotFoundException('No se encontro la credencial');
+    let credentialParsed = credential.toJSON()
+    let options : ISpamMessagesBody = {
+        clientId: credentialParsed.clientID, 
+        email: credentialParsed.email, 
+        maxResults: 10,
+    }
+    if(pageToken != null) options.pageToken = pageToken;
+
+    return await this.emailChannelService.GetSpamMessages(
+      options
+    )
   }
 }

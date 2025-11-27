@@ -23,7 +23,7 @@ export class EmailWorker extends WorkerHost {
 
       if (
         !credentials ||
-        credentials.clientId.trim() !== event.clientId.trim() ||
+        credentials.clientID!.trim() !== event.clientId.trim() ||
         credentials.email.toLowerCase().trim() !==
           event.email.toLowerCase().trim()
       ) {

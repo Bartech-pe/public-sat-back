@@ -73,6 +73,10 @@ export class SocketGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+
+  notifyNewReminderCreated(payload: {userId: number}) {
+    this.server.emit('reminders.new', payload);
+  }
   // @SubscribeMessage('send_message')
   // handleSendMessage(
   //   @MessageBody()

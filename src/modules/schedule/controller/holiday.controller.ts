@@ -14,6 +14,7 @@ import { CreateHolidayDto } from '../dto/holiday/create-holiday.dto';
 import { UpdateHolidayDto } from '../dto/holiday/update-holiday.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { Holiday } from '../entities/holiday.entity';
+import { Public } from '@common/decorators/public.decorator';
 
 @ApiBearerAuth()
 @Controller('holidays')
@@ -32,6 +33,12 @@ export class HolidayController {
 
   @Get()
   async findAll() {
+    return this.service.findAll();
+  }
+
+  @Get("crm/retrieve")
+  @Public()
+  async findAllPublic() {
     return this.service.findAll();
   }
 

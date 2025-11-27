@@ -31,6 +31,7 @@ import { DispoChoiceDto } from '../dto/update-dispo.dto';
 import { ChannelAssistanceService } from '@modules/assistances/channel-assistance/channel-assistance.service';
 import { RegisteerDispoDto } from '../dto/register-dispo.dto';
 import { CallService } from '@modules/call/services/call.service';
+import { ManualDialDto } from '../dto/manual-dial.dto';
 
 @ApiBearerAuth()
 @Controller('alosat')
@@ -422,5 +423,13 @@ export class AloSatController {
     }
 
     return res;
+  }
+
+  @Post('manual-dialing')
+  manualDialing(
+    @CurrentUser() user: User,
+    @Body() dto: ManualDialDto,
+  ): Promise<any> {
+    return this.service.manualDialing(user.id, dto.phoneNumber, dto.phoneCode);
   }
 }

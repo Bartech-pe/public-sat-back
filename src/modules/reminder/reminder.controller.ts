@@ -17,6 +17,9 @@ import { Reminder } from './entities/reminder.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { PaginationQueryDto } from '@common/dto/pagination-query.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { User } from '@modules/user/entities/user.entity';
+import { BaseResponseDto } from '@common/dto/base-response.dto';
 
 /**
  * Controller for managing Reminders.
@@ -37,11 +40,12 @@ export class ReminderController {
   @ApiBearerAuth()
   @Get()
   findAll(
+    @CurrentUser() user: User,
     @Query() query: PaginationQueryDto,
   ): Promise<PaginatedResponse<Reminder>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(limit, offset);
+    return this.service.findAll(user, limit, offset);
   }
 
   /**
@@ -62,8 +66,11 @@ export class ReminderController {
    */
   @ApiBearerAuth()
   @Post()
-  create(@Body() dto: CreateReminderDto): Promise<Reminder> {
-    return this.service.create(dto);
+  create(
+    @CurrentUser() user: User,
+    @Body() dto: CreateReminderDto
+  ): Promise<Reminder> {
+    return this.service.create(dto, user.id);
   }
 
   /**
@@ -78,6 +85,13 @@ export class ReminderController {
     @Body() dto: UpdateReminderDto,
   ): Promise<Reminder> {
     return this.service.update(+id, dto);
+  }
+  
+  @Put('mark-all-read')
+  markRemindersAsRead(
+    @Body() payload: {reminderIds: number[]},
+  ): Promise<BaseResponseDto> {
+    return this.service.markRemindersAsRead(payload.reminderIds);
   }
 
   /**

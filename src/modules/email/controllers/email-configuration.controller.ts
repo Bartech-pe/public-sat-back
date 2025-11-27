@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  InternalServerErrorException,
+  Param,
   Post,
   Put,
   Query,
@@ -14,6 +16,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { envConfig } from 'config/env';
 import { CreateMailCredential } from '../dto/create-mail-credential.dto';
 import { RedisService } from '../redis/redis.service';
+import { EmailWorkerService } from '../services/email-worker.service';
 
 @Controller('mail-configuration')
 export class EmailConfigurationController {
@@ -21,11 +24,20 @@ export class EmailConfigurationController {
     private readonly emailCredentialService: EmailCredentialService,
     private readonly emailChannelService: EmailChannelService,
     private redisService: RedisService,
+    private readonly emailWorkerService: EmailWorkerService,
   ) {}
 
   @Post('loginCredential')
   async generateUrl(@Body() body: CreateMailCredential) {
     const { name, projectId, topicName, email, clientId, clientSecret } = body;
+
+    const credentials = await this.emailWorkerService.getSatCredential();
+
+    if (credentials) {
+      throw new InternalServerErrorException(
+        'Ya existe la credencial de correo electrónico',
+      );
+    }
 
     // Genera un identificador temporal
     const state = crypto.randomUUID();
@@ -51,6 +63,42 @@ export class EmailConfigurationController {
     );
   }
 
+  @Get('refreshCredential/:id')
+  async refreshCredential(@Param('id') id: number) {
+    const credentials = await this.emailWorkerService.getSatCredential(id);
+
+    if (!credentials) {
+      throw new InternalServerErrorException(
+        'No existe la credencial de correo electrónico',
+      );
+    }
+
+    // Genera un identificador temporal
+    const state = crypto.randomUUID();
+
+    // Guarda datos temporales por 5 minutos
+    await this.redisService.set(
+      `oauth_state:${state}`,
+      JSON.stringify({
+        id: id,
+        name: credentials.inbox.name,
+        projectId: credentials.clientProject,
+        topicName: credentials.clientTopic,
+        email: credentials.email,
+        clientId: credentials.clientID,
+        clientSecret: credentials.clientSecret,
+      }),
+      300,
+    );
+
+    return this.emailChannelService.authUrl(
+      credentials.email,
+      credentials.clientID!,
+      credentials.clientSecret!,
+      state,
+    );
+  }
+
   @Public()
   @Get('createCredential')
   @Redirect(undefined, 302)
@@ -70,6 +118,12 @@ export class EmailConfigurationController {
     const body = JSON.parse(saved);
 
     if (code) {
+      const credentials = await this.emailWorkerService.getSatCredential(
+        body.id,
+      );
+      if (credentials) {
+        await this.emailCredentialService.updateCredential(code, body);
+      }
       await this.emailCredentialService.createCredential(code, body);
     }
 
