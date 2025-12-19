@@ -12,7 +12,7 @@ import { TeamUser } from './entities/team-user.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { TeamUserRepository } from './repositories/team-user.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { Op } from 'sequelize';
+import { Op, Order } from 'sequelize';
 
 @Injectable()
 export class TeamService {
@@ -28,11 +28,19 @@ export class TeamService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<Team>> {
     try {
+
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+        
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
         include: [{ model: User, as: 'users', through: { attributes: [] } }],
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order
       });
     } catch (error) {
       throw new InternalServerErrorException(

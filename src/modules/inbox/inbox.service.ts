@@ -13,18 +13,17 @@ import { InboxUser } from './entities/inbox-user.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { InboxUserRepository } from './repositories/inbox-user.repository';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
-import { Op } from 'sequelize';
+import { col, fn, Op } from 'sequelize';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { InboxCredentialRepository } from './repositories/inbox-credential.repository';
 import { CreateInboxCredentialDto } from './dto/create-inbox-credential.dto';
-import { InjectModel } from '@nestjs/sequelize';
 import { InvalidateInboxCredentialDto } from './dto/invalidate-inbox-credentials.dto';
 import { InboxCredential } from './entities/inbox-credential.entity';
 import { VicidialCredential } from '@modules/vicidial/entities/vicidial-credentials.entity';
-import { ChannelStateEnum } from '@common/enums/channel-state.enum';
-import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
-import { CategoryChannelRepository } from '@modules/channel/repositories/category-channel.repository';
-import { ChannelStateRepository } from '@modules/custom-states/channel-state/repositories/channel-state.repository';
+import {
+  ChannelStateEnum,
+  OfflineEnumToChannel,
+} from '@common/enums/channel-state.enum';
 import { BaseResponseDto } from '@common/dto/base-response.dto';
 import {
   ChannelMultichannelCategory,
@@ -36,9 +35,9 @@ import {
   AvailableEnumToCategory,
   UnavailableEnumToCategory,
 } from '@common/enums/channel.enum';
-import { x } from 'joi';
-import { ChannelType } from '@common/interfaces/channel-connector/messaging.interface';
-import { response } from 'express';
+import { ChannelStateUserHistoryRepository } from './repositories/channel-state-user-history.repository';
+import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
+import { CategoryChannelEnumToChannelEnum } from '@common/enums/category-channel.enum';
 
 // CategoryChannelEnum
 @Injectable()
@@ -47,11 +46,9 @@ export class InboxService {
 
   constructor(
     private readonly repository: InboxRepository,
-    private readonly categoryChannelRepository: CategoryChannelRepository,
-    private readonly channelStateRepository: ChannelStateRepository,
     private readonly inboxCredentialRepository: InboxCredentialRepository,
     private readonly inboxUserRepository: InboxUserRepository,
-    @InjectModel(InboxUser) private readonly inboxUser: typeof InboxUser,
+    private readonly channelStateUserHistoryRepository: ChannelStateUserHistoryRepository,
   ) {}
 
   async findAll(
@@ -140,12 +137,16 @@ export class InboxService {
     dtoList: CreateInboxUserDto[],
   ): Promise<InboxUser[]> {
     try {
+      const inbox = await this.repository.findById(id, {
+        raw: true,
+      });
+
       const securedDtoList = await Promise.all(
         dtoList.map(
           async (dto) =>
             ({
               ...dto,
-              channelStateId: ChannelStateEnum.OFFLINE,
+              channelStateId: OfflineEnumToChannel[inbox!.channelId],
             }) as InboxUser,
         ),
       );
@@ -192,10 +193,15 @@ export class InboxService {
   ): Promise<InboxUser[]> {
     try {
       const securedDtoList = await Promise.all(
-        dtoList.map(async (dto) => ({
-          ...dto,
-          channelStateId: ChannelStateEnum.OFFLINE,
-        })),
+        dtoList.map(async (dto) => {
+          const inbox = await this.repository.findById(dto.inboxId, {
+            raw: true,
+          });
+          return {
+            ...dto,
+            channelStateId: OfflineEnumToChannel[inbox!.channelId],
+          };
+        }),
       );
 
       await this.inboxUserRepository.bulkDestroy({
@@ -372,7 +378,7 @@ export class InboxService {
       const availableChannelStates = [
         chatSatAvailableStateId,
         wspAvailableStateId,
-        TelegramAvailableStateId
+        TelegramAvailableStateId,
       ];
       const inboxOfUser = await this.inboxUserRepository.findAll({
         include: [
@@ -597,6 +603,67 @@ export class InboxService {
       this.inboxCredentialRepository.update(inboxCredentials[0].dataValues.id, {
         expiresAt: dateNow,
       });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getChannelStateHistoryByUserIdAndCategoryId(
+    userId: number,
+    categoryId: number,
+  ) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    try {
+      const inbox = await this.repository.findOne({
+        where: {
+          channelId: CategoryChannelEnumToChannelEnum[categoryId],
+        },
+      });
+
+      const channelStateHistory =
+        await this.channelStateUserHistoryRepository.findAll({
+          where: {
+            userId,
+            inboxId: inbox?.id,
+            startTime: {
+              [Op.between]: [today, tomorrow],
+            },
+          },
+          attributes: [
+            'newChannelStateId',
+            [fn('SUM', col('duration')), 'duration'],
+          ],
+          include: [
+            {
+              model: User,
+              required: true,
+              attributes: ['id', 'displayName'],
+            },
+            {
+              model: ChannelState,
+              as: 'newChannelState',
+              required: true,
+              attributes: ['id', 'name'],
+            },
+          ],
+          group: [
+            'ChannelStateUserHistory.new_channel_state_id',
+            'newChannelState.id',
+            'User.id',
+          ],
+          order: [['newChannelStateId', 'ASC']],
+        });
+
+      return {
+        states: channelStateHistory.map((item) => item.toJSON()),
+        total: channelStateHistory.reduce(
+          (acc, item) => acc + parseInt(item.toJSON().duration ?? '0'),
+          0,
+        ),
+      };
     } catch (error) {
       throw error;
     }

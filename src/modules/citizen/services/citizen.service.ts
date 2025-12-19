@@ -12,7 +12,7 @@ import { User } from '@modules/user/entities/user.entity';
 import { CitizenContact } from '../entities/citizen-contact.entity';
 import { ContactoDto } from '@modules/api-sat/omnicanalidad/dto/Contacto.dto';
 import { CitizenContactRepository } from '../repositories/citizen-contact.repository';
-import { Op } from 'sequelize';
+import { col, fn, Op, Order, where } from 'sequelize';
 import { CitizenContactDto } from '../dto/citizen-contact.dto';
 
 /**
@@ -44,10 +44,30 @@ export class CitizenService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<Citizen>> {
     try {
+
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('Citizen.docIde')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          where(fn('LOWER', col('Citizen.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'ASC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'ASC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

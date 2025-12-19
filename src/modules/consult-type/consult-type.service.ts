@@ -9,6 +9,7 @@ import { ConsultType } from './entities/consult-type.entity';
 import { CreateConsultTypeDto } from './dto/create-consult-type.dto';
 import { UpdateConsultTypeDto } from './dto/update-consult-type.dto';
 import { User } from '@modules/user/entities/user.entity';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 /**
  * Service layer for managing ConsultTypes.
@@ -36,10 +37,29 @@ export class ConsultTypeService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<ConsultType>> {
     try {
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('ConsultType.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          where(fn('LOWER', col('ConsultType.code')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'ASC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'ASC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

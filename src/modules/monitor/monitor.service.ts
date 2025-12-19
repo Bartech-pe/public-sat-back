@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Op } from 'sequelize';
+import { col, fn, Op } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { ChannelState } from '@modules/custom-states/channel-state/entities/channel-state.entity';
 import { Channel } from '@modules/channel/entities/channel.entity';
@@ -18,6 +18,8 @@ import { getDayMonth } from '@common/helpers/time.helper';
 import { InboxCredential } from '@modules/inbox/entities/inbox-credential.entity';
 import { ChannelEnum } from '@common/enums/channel.enum';
 import { CallService } from '@modules/call/services/call.service';
+import { MailStates } from '@common/enums/assistance-state.enum';
+import { Survey } from '@modules/survey/entities/survey.entity';
 
 @Injectable()
 export class MonitorService {
@@ -173,6 +175,7 @@ export class MonitorService {
       include: [
         {
           model: ChannelRoom,
+          required: true,
           attributes: [],
           include: [
             {
@@ -209,11 +212,11 @@ export class MonitorService {
       where: { userId: userId },
     });
 
-    console.log('vicidialuser', !!vicidialuser);
     if (vicidialuser) {
-      const username = vicidialuser.toJSON().username;
-      console.log('username', username);
-      const { total } = await this.callService.getCallsCounterByNow(username);
+      const username = vicidialuser.toJSON().username as string;
+      const { total } = await this.callService.getCallsCounterByNowAndUsers([
+        username,
+      ]);
       alosat = total;
     }
     const count = recievedCount + chat + chatbot + alosat;
@@ -223,41 +226,44 @@ export class MonitorService {
   async mailCount() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
     const recievedCount = await this.mailAttentionRepository.count({
       where: {
         createdAt: {
           [Op.gte]: today,
-          [Op.lt]: tomorrow,
         },
       } as any,
     });
     const attendedCount = await this.mailAttentionRepository.count({
       where: {
-        assistanceStateId: 5,
+        assistanceStateId: MailStates.CLOSED,
         createdAt: {
           [Op.gte]: today,
-          [Op.lt]: tomorrow,
         },
       } as any,
     });
     const notAttendedToday = await this.mailAttentionRepository.count({
       where: {
-        assistanceStateId: { [Op.ne]: 5 },
+        assistanceStateId: { [Op.ne]: MailStates.CLOSED },
         createdAt: {
           [Op.gte]: today,
-          [Op.lt]: tomorrow,
         },
       } as any,
     });
-    const notAttendedYesterday = await this.mailAttentionRepository.count({
+    const attendedPrevCount = await this.mailAttentionRepository.count({
       where: {
-        assistanceStateId: { [Op.ne]: 5 },
+        assistanceStateId: MailStates.CLOSED,
         createdAt: {
-          [Op.gte]: yesterday,
+          [Op.lt]: today,
+        },
+        updatedAt: {
+          [Op.gte]: today,
+        },
+      } as any,
+    });
+    const notAttendedPrev = await this.mailAttentionRepository.count({
+      where: {
+        assistanceStateId: { [Op.ne]: MailStates.CLOSED },
+        createdAt: {
           [Op.lt]: today,
         },
       } as any,
@@ -265,7 +271,8 @@ export class MonitorService {
     return {
       attendedCount,
       notAttendedToday,
-      notAttendedYesterday,
+      attendedPrevCount,
+      notAttendedPrev,
       recievedCount,
     };
   }
@@ -372,32 +379,39 @@ export class MonitorService {
         const advisorJson = advisor.toJSON();
 
         // Obtener todas las atenciones cerradas del asesor del día
-        const attentions = await this.attentionRepository.findAll({
-          include: [
-            {
-              model: ChannelRoom,
-              required: true,
-              where: {
-                inboxId: advisorJson.inboxId,
+        const attentions = (
+          await this.attentionRepository.findAll({
+            include: [
+              {
+                model: ChannelRoom,
+                required: true,
+                where: {
+                  inboxId: advisorJson.inboxId,
+                },
+                attributes: [],
               },
-              attributes: [],
+              {
+                model: Survey,
+                attributes: ['rating', 'userId'],
+              },
+            ],
+            where: {
+              userId: advisorJson.userId,
+              status: ChannelAttentionStatus.CLOSED,
+              createdAt: {
+                [Op.gte]: today,
+                [Op.lt]: tomorrow,
+              },
+              endDate: { [Op.ne]: null },
             },
-          ],
-          where: {
-            userId: advisorJson.userId,
-            status: ChannelAttentionStatus.CLOSED,
-            createdAt: {
-              [Op.gte]: today,
-              [Op.lt]: tomorrow,
-            },
-            endDate: { [Op.ne]: null },
-          },
-          attributes: ['id', 'startDate', 'endDate'],
-          raw: true,
-        });
+            attributes: ['id', 'startDate', 'endDate'],
+          })
+        ).map((att) => att.toJSON());
 
         let promedioAtencion = 0;
         let totalDurationMinutes = 0;
+
+        let aprobacion = 0;
 
         if (attentions.length > 0) {
           // Filtrar solo las atenciones que tengan endDate válido
@@ -422,6 +436,10 @@ export class MonitorService {
               totalMinutes / validAttentions.length,
             );
           }
+          aprobacion =
+            validAttentions.reduce((sum, att) => {
+              return sum + (att.survey?.rating || 0);
+            }, 0) / validAttentions.length;
         }
 
         // Contar total de atenciones del día (incluyendo en progreso)
@@ -466,6 +484,7 @@ export class MonitorService {
           percentage: efectividad,
           attentionCount: totalAttentions,
           phoneNumber,
+          approval: aprobacion,
         };
       }),
     );
@@ -547,8 +566,7 @@ export class MonitorService {
           where: {
             advisorUserId: advisorJson.userId,
             advisorInboxId: advisorJson.inboxId,
-            closedAt: { [Op.ne]: null } as any,
-            createdAt: {
+            closedAt: {
               [Op.between]: [startDay, endDay],
             },
           },
@@ -587,7 +605,7 @@ export class MonitorService {
           where: {
             advisorUserId: advisorJson.userId,
             advisorInboxId: advisorJson.inboxId,
-            createdAt: {
+            updatedAt: {
               [Op.between]: [startDay, endDay],
             },
           },

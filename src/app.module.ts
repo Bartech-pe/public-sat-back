@@ -45,6 +45,7 @@ import { CustomStatesModule } from './modules/custom-states/custom-states.module
 import { MonitorModule } from '@modules/monitor/monitor.module';
 import { AssistancesModule } from './modules/assistances/assistances.module';
 import { TtsModule } from './modules/tts/tts.module';
+import { DashboardReportModule } from './modules/dashboard-reports/dashboard-reports.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { TtsModule } from './modules/tts/tts.module';
     CustomStatesModule,
     MonitorModule,
     TtsModule,
+    DashboardReportModule,
   ],
   providers: [
     {

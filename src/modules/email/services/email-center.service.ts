@@ -14,12 +14,15 @@ import { MailFilter } from '../dto/mail-filter.dto';
 import { EmailStateRepository } from '../repositories/email-state.repository';
 import { EmailTicketList } from '../email-ticket-list';
 import { RequestContextService } from '@common/context/request-context.service';
-import { EmailChannelService, ISpamMessagesBody } from './email-channel.service';
+import {
+  EmailChannelService,
+  ISpamMessagesBody,
+} from './email-channel.service';
 import { ReplyEmail } from '../dto/email-channel/reply-email.dto';
 import { ForwardTo } from '../dto/email-channel/forward-to.dto';
 import { ForwardCenterMail } from '../dto/forward-center-mail.dto';
 import { InboxUserRepository } from '@modules/inbox/repositories/inbox-user.repository';
-import { CenterEmail } from '../dto/center-email.dto';
+import { AttchDataDto, CenterEmail } from '../dto/center-email.dto';
 import {
   AttachementBody,
   BuildCenterEmail,
@@ -328,26 +331,24 @@ export class EmailCenterService {
         },
       ],
     });
-      
 
     const state = await this.assistanceStateService.getSpamMailState();
     if (!state) throw new NotFoundException('No se encontro el estado');
     for (const attention of existAttentions) {
-
       const emailThread = await this.emailThreadRepository.findOne({
         where: {
-          mailAttentionId: attention.id
-        }
-      })
-      let credentialParsed = credential?.toJSON()
-      let emailThreadParsed = emailThread?.toJSON()
-      let options : ISpamMessagesBody = {
-          clientId: credentialParsed.clientID, 
-          email: credentialParsed.email,
-          messageId: emailThreadParsed?.messageGmailId
-      }
-      console.log(options)
-      await this.emailChannelService.moveMessageToSpam(options)
+          mailAttentionId: attention.id,
+        },
+      });
+      let credentialParsed = credential?.toJSON();
+      let emailThreadParsed = emailThread?.toJSON();
+      let options: ISpamMessagesBody = {
+        clientId: credentialParsed.clientID,
+        email: credentialParsed.email,
+        messageId: emailThreadParsed?.messageGmailId,
+      };
+      console.log(options);
+      await this.emailChannelService.moveMessageToSpam(options);
       await attention.update({
         assistanceStateId: state.toJSON().id,
       });
@@ -796,13 +797,19 @@ export class EmailCenterService {
     };
     if (files.attachments) {
       const attachments: FileEmail[] = [];
+
+      let index = 0;
+
       for (const file of files.attachments) {
+        const data = body.attData[index];
         const newAttachmnent: FileEmail = {
           filename: `${file.originalname}`,
           content: file.buffer,
           mimeType: file.mimetype,
+          cid: data.cid,
         };
         attachments.push(newAttachmnent);
+        index++;
       }
       mail.attachments = attachments;
     }
@@ -936,8 +943,7 @@ export class EmailCenterService {
     }
   }
 
-  async getSpamMessages(pageToken: string | null = null)
-  {
+  async getSpamMessages(pageToken: string | null = null) {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
@@ -949,16 +955,14 @@ export class EmailCenterService {
     });
     if (!credential)
       throw new NotFoundException('No se encontro la credencial');
-    let credentialParsed = credential.toJSON()
-    let options : ISpamMessagesBody = {
-        clientId: credentialParsed.clientID, 
-        email: credentialParsed.email, 
-        maxResults: 10,
-    }
-    if(pageToken != null) options.pageToken = pageToken;
+    let credentialParsed = credential.toJSON();
+    let options: ISpamMessagesBody = {
+      clientId: credentialParsed.clientID,
+      email: credentialParsed.email,
+      maxResults: 10,
+    };
+    if (pageToken != null) options.pageToken = pageToken;
 
-    return await this.emailChannelService.GetSpamMessages(
-      options
-    )
+    return await this.emailChannelService.GetSpamMessages(options);
   }
 }

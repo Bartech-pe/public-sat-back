@@ -27,6 +27,8 @@ import { VicidialCallTimesHolidaysRepository } from './repositories/vicidial-cal
 import { VicidialCallTimesRepository } from './repositories/vicidial-call-times.repository';
 import { AudioCampaignModule } from '@modules/campaigns/audio-campaign/audio-campaign.module';
 import { CampaignScheduleModule } from '@modules/campaigns/campaign-schedule/campaign-schedule.module';
+import { ScheduleModule } from '@modules/schedule/schedule.module';
+import { AloSatGateway } from './alo-sat.gateway';
 
 @Module({
   imports: [
@@ -42,6 +44,7 @@ import { CampaignScheduleModule } from '@modules/campaigns/campaign-schedule/cam
     forwardRef(() => ChannelAssistanceModule),
     DatabaseCentralModule,
     CampaignScheduleModule,
+    ScheduleModule,
   ],
   controllers: [
     CentralTelefonicaController,
@@ -64,6 +67,7 @@ import { CampaignScheduleModule } from '@modules/campaigns/campaign-schedule/cam
     VicidialLeadRepository,
     VicidialCallTimesRepository,
     VicidialCallTimesHolidaysRepository,
+    AloSatGateway,
   ],
   exports: [AloSatService, VicidialCampaingRepository, AudioQueueProcessor],
 })

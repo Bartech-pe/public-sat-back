@@ -8,21 +8,21 @@ module.exports = {
       [
         {
           id: 1,
-          name: 'Documento Nacional de Identidad',
-          code: 'DNI',
+          name: 'DNI/LE',
+          code: 'DNI/LE',
           created_at: new Date(),
           updated_at: new Date(),
         },
         {
           id: 2,
-          name: 'Registro Único de Contribuyente',
+          name: 'RUC',
           code: 'RUC',
           created_at: new Date(),
           updated_at: new Date(),
         },
         {
           id: 3,
-          name: 'Pasaporte',
+          name: 'PASAPORTE',
           code: 'PASAPORTE',
           created_at: new Date(),
           updated_at: new Date(),

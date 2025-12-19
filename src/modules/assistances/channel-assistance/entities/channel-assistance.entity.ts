@@ -106,6 +106,9 @@ export class ChannelAssistance extends Model {
   @BelongsTo(() => Citizen)
   citizen: Citizen;
 
+  @BelongsTo(() => CitizenContact)
+  citizenContact: CitizenContact;
+
   @BelongsTo(() => CategoryChannel)
   categoryChannel: CategoryChannel;
 

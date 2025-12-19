@@ -17,6 +17,8 @@ import { VicidialUserRepository } from '../repositories/vicidial-user.repository
 import { CampaignScheduleRepository } from '@modules/campaigns/campaign-schedule/repositories/campaign-schedule.repository';
 import { CampaignSchedule } from '@modules/campaigns/campaign-schedule/entities/campaign-schedule.entity';
 import { AudioCampaignRepository } from '@modules/campaigns/audio-campaign/repositories/audio-campaign.repository';
+import { HolidayRepository } from '@modules/schedule/repositories/holiday.repository';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class VicidialUserService implements OnModuleInit {
@@ -27,6 +29,7 @@ export class VicidialUserService implements OnModuleInit {
     private readonly userModel: VicidialUserRepository,
     private readonly campaignScheduleRepository: CampaignScheduleRepository,
     private readonly audioCampaignRepository: AudioCampaignRepository,
+    private readonly holidayRepository: HolidayRepository,
   ) {}
 
   onModuleInit() {
@@ -289,7 +292,7 @@ export class VicidialUserService implements OnModuleInit {
 
   async scheduleCampaign() {
     console.log('scheduleCampaign');
-    // se ejecuta cada 5 minutos
+    // se ejecuta cada 1 minutos
     cron.schedule('*/1 * * * *', async () => {
       if (!this.db) {
         this.logger.error(
@@ -299,6 +302,17 @@ export class VicidialUserService implements OnModuleInit {
       }
 
       const now = new Date();
+
+      const holiday = await this.holidayRepository.findOne({
+        where: {
+          startTime: {
+            [Op.lte]: now,
+          },
+          endTime: {
+            [Op.gte]: now,
+          },
+        },
+      });
 
       const schedules = await this.campaignScheduleRepository.findAll();
 
@@ -323,8 +337,6 @@ export class VicidialUserService implements OnModuleInit {
           );
         });
 
-      console.log('schedule', now, schedule);
-
       const audioCampaignsList = (
         await this.audioCampaignRepository.findAll({
           where: {
@@ -337,7 +349,7 @@ export class VicidialUserService implements OnModuleInit {
 
       const vdlistIds: number[] = audioCampaignsList.map((c) => c.vdlistId);
 
-      await this.ensureSingleActiveList(vdlistIds, !!schedule);
+      await this.ensureSingleActiveList(vdlistIds, !!schedule && !holiday);
 
       // let active = 'N';
       // if (schedule) {

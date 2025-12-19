@@ -850,16 +850,13 @@ export class VicidialApiService {
     campaign: string,
     sessionName: string,
     confExten: string,
-  ): Promise<
-    | {
-        status?: string;
-        pauseCode?: string;
-        channel?: string;
-        agentChannel?: string;
-        queueCalls?: number;
-      }
-    | undefined
-  > {
+  ): Promise<{
+    status?: string;
+    pauseCode?: string;
+    channel?: string;
+    agentChannel?: string;
+    queueCalls?: number;
+  }> {
     const payload = new URLSearchParams({
       server_ip: vicidialConfig.privateIP,
       session_name: sessionName,
@@ -933,7 +930,7 @@ export class VicidialApiService {
             channel: parsed.channel,
             agentChannel: parsed.agentChannel,
           }
-        : undefined;
+        : {};
     } catch (error) {
       console.error('Error:', error.response?.data || error.message);
       throw new Error(error.response?.data || error.message);

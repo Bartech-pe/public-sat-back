@@ -41,7 +41,7 @@ module.exports = {
         {
           id: 5,
           name: 'Telegram',
-          icon: 'logos:telegram',
+          icon: 'line-md:telegram',
           status: true,
           created_at: new Date(),
           updated_at: new Date(),

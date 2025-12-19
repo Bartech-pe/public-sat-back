@@ -10,7 +10,7 @@ module.exports = {
           id: 1,
           name: 'telegram',
           description: 'Aplicación de mensajería',
-          logo: 'logos:telegram',
+          logo: 'line-md:telegram',
           status: true,
           created_at: new Date(),
           updated_at: new Date(),

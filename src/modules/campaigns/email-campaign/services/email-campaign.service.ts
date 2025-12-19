@@ -16,6 +16,7 @@ import { Queue } from 'bullmq';
 import { EmailCampaignDetailRepository } from '../repositories/email-campaign-detail.repository';
 import { EmailCampaignAttachmentRepository } from '../repositories/email-campaign-attachment.repository';
 import { SrvmensajeriaService } from '@modules/api-sat/srvmensajeria/srvmensajeria.service';
+import { col, fn, Op, Order, where } from 'sequelize';
 @Injectable()
 export class EmailCampaignService {
   constructor(
@@ -30,12 +31,30 @@ export class EmailCampaignService {
   async findAll(
     limit: number,
     offset: number,
+    q?: Record<string, any>,
   ): Promise<PaginatedResponse<EmailCampaign>> {
     try {
+
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('EmailCampaign.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
         include: [
           {
             model: EmailTemplate,

@@ -45,12 +45,12 @@ export class SmsCampaignController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateSmsCampaignDto })
   create(
-      @CurrentUser() user: User,
-      @Body() dto: CreateSmsCampaignDto,
-      @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: User,
+    @Body() dto: CreateSmsCampaignDto,
+    @UploadedFile() file: Express.Multer.File,
   ): Promise<SmsCampaign> {
-      return this.smsCampaignService.createSmsCampaign(dto, file,user.id);
-  }   
+    return this.smsCampaignService.createSmsCampaign(dto, file, user.id);
+  }
 
   @Delete(':id')
   remove(@Param('id') id: number) {
@@ -66,7 +66,7 @@ export class SmsCampaignController {
   findAll(@Query() query: PaginationQueryDto) {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.smsCampaignService.findAll(limit, offset);
+    return this.smsCampaignService.findAll(limit, offset, query?.q);
   }
 
   @Get(':id')
@@ -84,8 +84,16 @@ export class SmsCampaignController {
   }
 
   @Get('view/:id')
-  viewMessageDetails(@Param('id') id: number) {
-    return this.smsCampaignService.viewMessageDetails(+id);
+  viewMessageDetails(
+    @Param('id') id: number,
+    @Query() query: PaginationQueryDto,
+  ) {
+    const limit = query.limit!;
+    const offset = query.offset!;
+    return this.smsCampaignService.viewMessageDetails(
+      +id,
+      limit,
+      offset
+    );
   }
-  
 }

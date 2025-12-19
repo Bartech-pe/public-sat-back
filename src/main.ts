@@ -12,6 +12,7 @@ import {
   channelConnectorConfig,
   envConfig,
   metabaseConfig,
+  vicidialConfig,
 } from 'config/env';
 import * as helmet from 'helmet';
 
@@ -43,6 +44,7 @@ async function bootstrap() {
   const META_BASE = metabaseConfig.url;
   const API_AUDIOS = audiobaseConfig.url;
   const CHANNEL_CONECTOR = channelConnectorConfig.baseUrl;
+  const VICIDIAL_HOST = vicidialConfig.host;
 
   const ORIGINS = [...FRONTEND_ORIGINS, API_AUDIOS];
 
@@ -107,8 +109,15 @@ async function bootstrap() {
             CHANNEL_CONECTOR,
             API_AUDIOS,
             META_BASE,
+            VICIDIAL_HOST,
+            'https://satvcwebcc01.sat.gob.pe',
           ],
-          'frame-src': ["'self'", META_BASE],
+          'frame-src': [
+            "'self'",
+            META_BASE,
+            VICIDIAL_HOST,
+            'https://satvcwebcc01.sat.gob.pe',
+          ],
           'object-src': ["'none'"],
           'frame-ancestors': ["'none'"],
           'base-uri': ["'self'"],

@@ -9,6 +9,8 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { User } from '@modules/user/entities/user.entity';
+import { literal } from 'sequelize';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class NotificationService {
@@ -20,17 +22,26 @@ export class NotificationService {
     offset: number,
   ): Promise<PaginatedResponse<Notification>> {
     try {
-     
-      const whereOpts = {
-        where: {
-          userId: user.id,
-          isRead: false
-        },
-      };
+      const subQuery = `
+        SELECT MAX(id)
+        FROM notifications n2
+        WHERE n2.user_id = ${user.id}
+          AND n2.is_read = false
+        GROUP BY n2.sender_id
+      `;
 
-   
       return this.repository.findAndCountAll({
-        ...whereOpts,
+        where: {
+          id: {
+            [Op.in]: literal(`(${subQuery})`)
+          },
+        },
+        include: [
+          {
+            model: User,
+            as: 'sender',
+          },
+        ],
         limit,
         offset,
         order: [['createdAt', 'DESC']],
@@ -97,8 +108,16 @@ export class NotificationService {
       if (!notification) {
         throw new NotFoundException('Notificación no encontrada');
       }
+      const allNotificationsUnread: Notification[] = await this.repository.findAll({
+        where: {chatRoomId: notification.dataValues.chatRoomId, isRead: false}
+      })
+      
 
-      await notification.update({ isRead: false });
+      allNotificationsUnread.forEach(async (element) => {
+        await element.update({ isRead: true })
+      });
+
+      await notification.update({ isRead: true });
       return notification;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

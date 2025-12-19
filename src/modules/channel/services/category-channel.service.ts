@@ -9,6 +9,7 @@ import { CategoryChannel } from '../entities/category-channel.entity';
 import { CreateCategoryChannelDto } from '../dto/create-category-channel.dto';
 import { UpdateCategoryChannelDto } from '../dto/update-category-channel.dto';
 import { User } from '@modules/user/entities/user.entity';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 /**
  * Service layer for managing CategoryChannels.
@@ -36,10 +37,26 @@ export class CategoryChannelService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<CategoryChannel>> {
     try {
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('CategoryChannel.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'ASC']];
+      
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'ASC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

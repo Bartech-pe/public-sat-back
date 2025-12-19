@@ -7,7 +7,7 @@ import { dbConfig, envConfig } from 'config/env';
   imports: [
     SequelizeModule.forRoot({
       dialect: dbConfig.dialect,
-      timezone: '-05:00',
+      // timezone: '-05:00',
       port: dbConfig.port,
       host: envConfig.isDev ? dbConfig.hostDev : dbConfig.hostProd,
       username: envConfig.isDev ? dbConfig.userDev : dbConfig.userProd,

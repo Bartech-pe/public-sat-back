@@ -14,6 +14,8 @@ import { Citizen } from '@modules/citizen/entities/citizen.entity';
 import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
+import { Office } from '@modules/office/entities/office.entity';
+import { CitizenContact } from '@modules/citizen/entities/citizen-contact.entity';
 
 /**
  * Service layer for managing ChannelAssistances.
@@ -52,6 +54,26 @@ export class ChannelAssistanceService {
             model: User,
             as: 'createdByUser',
             where: byUser ? { id: user.id } : {},
+            required: true,
+          },
+          {
+            model: ConsultType,
+            as: 'consultType',
+            required: true,
+          },
+          {
+            model: CategoryChannel,
+            as: 'categoryChannel',
+            required: true,
+          },
+          {
+            model: Citizen,
+            as: 'citizen',
+            required: true,
+          },
+          {
+            model: CitizenContact,
+            as: 'citizenContact',
             required: true,
           },
         ],
@@ -110,21 +132,21 @@ export class ChannelAssistanceService {
       );
 
       const contact = await this.citizenContactRepository.findOrCreate(
-          {
-            tipDoc: dto.contact.tipDoc,
-            docIde: dto.contact.docIde,
-            contactType: dto.contact.contactType,
-            value: dto.contact.value,
-          },
-          {
-            tipDoc: dto.contact.tipDoc,
-            docIde: dto.contact.docIde,
-            contactType: dto.contact.contactType,
-            value: dto.contact.value,
-            isAdditional: dto.contact.isAdditional,
-          },
-          { raw: true },
-        );
+        {
+          tipDoc: dto.contact.tipDoc,
+          docIde: dto.contact.docIde,
+          contactType: dto.contact.contactType,
+          value: dto.contact.value,
+        },
+        {
+          tipDoc: dto.contact.tipDoc,
+          docIde: dto.contact.docIde,
+          contactType: dto.contact.contactType,
+          value: dto.contact.value,
+          isAdditional: dto.contact.isAdditional,
+        },
+        { raw: true },
+      );
 
       return this.repository.create({
         citizenId: citizen.id,
@@ -135,7 +157,7 @@ export class ChannelAssistanceService {
         communicationId: dto.communicationId,
       });
     } catch (error) {
-      console.error(error)
+      console.error(error);
       throw new InternalServerErrorException(
         error,
         'Error interno del servidor',

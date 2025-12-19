@@ -14,71 +14,56 @@ import {
 } from 'sequelize-typescript';
 
 @DefaultScope(() => ({
-  attributes: { exclude: ['deletedAt'] },
-  order: [['createdAt', 'DESC']],
+  attributes: { exclude: ['deletedAt', 'deletedBy'] },
 }))
 @Scopes(() => ({}))
 @Table({
-  tableName: 'notifications',
+  tableName: 'dashboard_reports',
   timestamps: true,
   paranoid: true,
+  underscored: true,
 })
-export class Notification extends Model {
+export class DashboardReport extends Model {
   @Column({
     field: 'id',
     type: DataType.BIGINT,
     autoIncrement: true,
     primaryKey: true,
+    comment: 'Identificador del widget del dashboard',
   })
   declare id: number;
 
-  @ForeignKey(() => User)
   @Column({
-    field: 'user_id',
-    type: DataType.INTEGER,
-    allowNull: false,
-    comment: 'ID del usuario que recibe la notificación',
+    field: 'dashboard_id',
+    type: DataType.BIGINT,
+    allowNull: true,
+    comment: 'Id del dashboard asociado (nullable sin FK)',
   })
-  userId: number;
+  dashboardId: number | null;
   
-  @BelongsTo(() => User, 'userId')
-  user?: User;
-
-  @ForeignKey(() => User)
   @Column({
-    field: 'sender_id',
-    type: DataType.INTEGER,
+    field: 'name',
+    type: DataType.STRING,
     allowNull: false,
-    comment: 'ID del usuario remitente que recibe la notificación',
+    comment: 'Nombre del widget',
   })
-  senderId: number;
-
-  @BelongsTo(() => User, 'senderId')
-  sender?: User;
+  name: string;
 
   @Column({
-    field: 'message',
-    type: DataType.TEXT,
+    field: 'description',
+    type: DataType.STRING,
+    allowNull: true,
+    comment: 'Descripción del widget',
+  })
+  description: string | null;
+
+  @Column({
+    field: 'type',
+    type: DataType.ENUM('metabase', 'vicidial', 'custom'),
     allowNull: false,
-    comment: 'Mensaje de la notificación',
+    comment: 'Tipo de widget',
   })
-  message: string;
-
-  @Column({
-    field: 'chat_room_id',
-    type: DataType.INTEGER,
-    allowNull: false,
-    comment: 'Id del chat room del mensaje',
-  })
-  chatRoomId: number;
-
-  @Column({
-    field: 'is_read',
-    type: DataType.BOOLEAN,
-    defaultValue: false,
-    comment: 'Indica si la notificación ha sido leída',
-  })
-  isRead: boolean;
+  type: 'metabase' | 'vicidial' | 'custom';
 
   @Column({
     field: 'status',
@@ -88,6 +73,7 @@ export class Notification extends Model {
   })
   status: boolean;
 
+  /** AUDITORÍA */
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })
   declare createdBy: number;

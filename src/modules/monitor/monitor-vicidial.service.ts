@@ -8,6 +8,7 @@ import { ChannelState } from '@modules/custom-states/channel-state/entities/chan
 import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 import { Op } from 'sequelize';
 import { DatabaseCentralService } from '@database/central/database-central.service';
+import { UserRole } from '@common/constants/role.constant';
 
 @Injectable()
 export class MonitorVicidialService {
@@ -84,7 +85,7 @@ export class MonitorVicidialService {
         {
           model: User,
           as: 'user',
-          where: { roleId: 3 },
+          where: { roleId: UserRole.Ase },
           attributes: [],
         },
       ],
@@ -135,7 +136,7 @@ export class MonitorVicidialService {
         GROUP BY user
       ) ult ON t.user = ult.user AND t.event_time = ult.max_event
     ) al_last ON vu.user = al_last.user
-    WHERE vu.phone_login IN (:phoneLogins)
+    WHERE vu.phone_login IN (${phoneLogins.map((p) => `'${p}'`).join(',')})
     GROUP BY vu.user, vu.phone_login, al_last.event_time;
   `;
 
@@ -145,7 +146,7 @@ export class MonitorVicidialService {
 
     const table = await this.db!.query<any>(query, {
       type: QueryTypes.SELECT,
-      replacements: { phoneLogins },
+      replacements: {},
     });
 
     const finalResults = table.map((result) => ({
@@ -155,138 +156,6 @@ export class MonitorVicidialService {
 
     return finalResults;
   }
-
-  // async vicidialTable() {
-  //   // Obtener todos los usuarios con rol 3 que tienen phoneLogin
-  //   const users = await this.userVicidialRepository.findAll({
-  //     attributes: ['userId', 'phoneLogin'],
-  //     include: [
-  //       {
-  //         model: User,
-  //         as: 'user',
-  //         where: { roleId: 3 },
-  //         attributes: ['displayName'],
-  //       },
-  //     ],
-  //   });
-
-  //   const advisorJson: any[] = users.map((a) => a.toJSON());
-
-  //   if (advisorJson.length === 0) {
-  //     return [];
-  //   }
-
-  //   const phoneLogins = advisorJson
-  //     .map((a) => a.phoneLogin)
-  //     .filter((p): p is string => !!p);
-
-  //   if (phoneLogins.length === 0) {
-  //     // Si no hay phoneLogins, devolver asesores con data vacía
-  //     return advisorJson.map((advisor) => ({
-  //       userId: advisor.userId,
-  //       name: advisor.user?.displayName,
-  //       phonelogin: advisor.phoneLogin,
-  //       ultimo_estado: null,
-  //       tiempo_en_estado: null,
-  //       tiempo_total_llamadas: '00:00:00',
-  //       llamadas_atendidas: 0,
-  //       promedio_atencion: '00:00:00',
-  //       efectividad: '0.00%',
-  //     }));
-  //   }
-
-  //   const query = `
-  //     SELECT
-  //       vu.phone_login AS phonelogin,
-  //       (
-  //         SELECT CASE
-  //           WHEN al2.talk_sec > 0 THEN 'INCALL'
-  //           WHEN al2.pause_sec > 0 THEN 'PAUSED'
-  //           WHEN al2.wait_sec > 0 THEN 'WAITING'
-  //           WHEN al2.dispo_sec > 0 THEN 'DISPO'
-  //           ELSE 'UNKNOWN'
-  //         END
-  //         FROM vicidial_agent_log al2
-  //         WHERE al2.user = vu.user
-  //         ORDER BY al2.event_time DESC
-  //         LIMIT 1
-  //       ) AS ultimo_estado,
-  //       TIMEDIFF(NOW(), al_last.event_time) AS tiempo_en_estado,
-  //       IFNULL(SEC_TO_TIME(SUM(val.talk_sec)), '00:00:00') AS tiempo_total_llamadas,
-  //       IFNULL(SUM(CASE WHEN val.talk_sec > 0 THEN 1 ELSE 0 END), 0) AS llamadas_atendidas,
-  //       IFNULL(SEC_TO_TIME(AVG(NULLIF(val.talk_sec, 0))), '00:00:00') AS promedio_atencion,
-  //       CONCAT(
-  //         IFNULL(
-  //           ROUND(
-  //             (SUM(CASE WHEN val.talk_sec > 0 THEN 1 ELSE 0 END) /
-  //              NULLIF(COUNT(val.agent_log_id), 0)) * 100, 2
-  //           ), 0
-  //         ), '%'
-  //       ) AS efectividad
-  //     FROM vicidial_users vu
-  //     LEFT JOIN vicidial_agent_log val ON vu.user = val.user
-  //       AND DATE(val.event_time) = CURDATE()
-  //     LEFT JOIN (
-  //       SELECT t.user, t.event_time, t.talk_sec, t.pause_sec, t.wait_sec, t.dispo_sec
-  //       FROM vicidial_agent_log t
-  //       INNER JOIN (
-  //         SELECT user, MAX(event_time) AS max_event
-  //         FROM vicidial_agent_log
-  //         GROUP BY user
-  //       ) ult ON t.user = ult.user AND t.event_time = ult.max_event
-  //     ) al_last ON vu.user = al_last.user
-  //     WHERE vu.phone_login IN (:phoneLogins)
-  //     GROUP BY vu.user, vu.phone_login, al_last.event_time;
-  //   `;
-
-  //   const phoneLoginMap = new Map(
-  //     advisorJson.map((user) => [user.phoneLogin, user]),
-  //   );
-
-  //   const table = await this.db.query<any>(query, {
-  //     type: QueryTypes.SELECT,
-  //     replacements: { phoneLogins },
-  //   });
-
-  //   // Crear un Set de phoneLogins que tienen data
-  //   const phoneLoginsWithData = new Set(table.map((r) => r.phonelogin));
-
-  //   // Mapear resultados existentes
-  //   const resultsWithData = table.map((result) => {
-  //     const advisor = phoneLoginMap.get(result.phonelogin);
-  //     return {
-  //       userId: advisor?.userId,
-  //       name: advisor?.user?.displayName,
-  //       phonelogin: result.phonelogin,
-  //       ultimo_estado: result.ultimo_estado,
-  //       tiempo_en_estado: result.tiempo_en_estado,
-  //       tiempo_total_llamadas: result.tiempo_total_llamadas,
-  //       llamadas_atendidas: result.llamadas_atendidas,
-  //       promedio_atencion: result.promedio_atencion,
-  //       efectividad: result.efectividad,
-  //     };
-  //   });
-
-  //   // Agregar asesores sin data
-  //   const advisorsWithoutData = advisorJson
-  //     .filter((advisor) => !phoneLoginsWithData.has(advisor.phoneLogin))
-  //     .map((advisor) => ({
-  //       userId: advisor.userId,
-  //       name: advisor.user?.displayName,
-  //       phonelogin: advisor.phoneLogin,
-  //       ultimo_estado: null,
-  //       tiempo_en_estado: null,
-  //       tiempo_total_llamadas: '00:00:00',
-  //       llamadas_atendidas: 0,
-  //       promedio_atencion: '00:00:00',
-  //       efectividad: '0.00%',
-  //     }));
-
-  //   // Combinar ambos arrays
-  //   const finalResults = [...resultsWithData, ...advisorsWithoutData];
-
-  //   return finalResults;
-  // }
 
   formatDateToMySQL(date: Date): string {
     return date.toISOString().slice(0, 19).replace('T', ' ');

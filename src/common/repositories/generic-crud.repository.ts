@@ -123,14 +123,14 @@ export class GenericCrudRepository<T extends Model> {
    * @returns The found or newly created record
    */
   async findOrCreate(
-    where: WhereOptions<any>,
+    where: WhereOptions<T>,
     defaults: Partial<T> = {},
     options?: any,
   ): Promise<T> {
     const [item] = await this.model.findOrCreate({
       ...options,
       where,
-      defaults: defaults as unknown as T,
+      defaults,
     });
 
     return item as T;

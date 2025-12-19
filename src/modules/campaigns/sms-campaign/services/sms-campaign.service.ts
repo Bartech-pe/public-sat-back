@@ -20,6 +20,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { SmsCampaignDetail } from '../entities/sms-campaign-detail.entity';
 import { SmsCampaignDetailRepository } from '../repositories/sms-campaign-detail.repository';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 @Injectable()
 export class SmsCampaignService {
@@ -31,11 +32,32 @@ export class SmsCampaignService {
     @InjectQueue('sms-campaign')
     private readonly smsQueue: Queue,
   ) {}
-  async findAll(limit: number, offset: number) {
-    const data = await this.smsCampaignRepository.findAndCountAll({
+  async findAll(
+    limit: number, 
+    offset: number, 
+    q?: Record<string, any>
+  ) {
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('SmsCampaign.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['createdAt', 'ASC']];
+
+    return this.smsCampaignRepository.findAndCountAll({
+      where: whereOptions,
       limit,
       offset,
-      order: [['createdAt', 'ASC']],
+      order,
       attributes: [
          'id',
          'name',
@@ -47,25 +69,25 @@ export class SmsCampaignService {
       ],
       // include: [{ model: Campaign, attributes: ['name'] }],
     });
-    const smsData = data.data.map((a) => {
-      const json = a.toJSON();
-      return {
-        id: json.id,
-        name: json.name,
-        total_registered: json.total_registered,
-        campaign_status: json.campaign_status,
-        sender: json.sender,
-        message: json.message,
-        createdAt: formatYearTime(json.createdAt),
-      };
-    });
-    const paginated = {
-      data: smsData,
-      limit: limit,
-      offset: offset,
-      total: smsData.length,
-    };
-    return paginated;
+    // const smsData = data.data.map((a) => {
+    //   const json = a.toJSON();
+    //   return {
+    //     id: json.id,
+    //     name: json.name,
+    //     total_registered: json.total_registered,
+    //     campaign_status: json.campaign_status,
+    //     sender: json.sender,
+    //     message: json.message,
+    //     createdAt: formatYearTime(json.createdAt),
+    //   };
+    // });
+    // const paginated = {
+    //   data: smsData,
+    //   limit: limit,
+    //   offset: offset,
+    //   total: smsData.length,
+    // };
+    // return paginated;
   }
 
   async findOne(id: number) {
@@ -352,54 +374,40 @@ export class SmsCampaignService {
       console.log(`Finalizado: ${processed}/${total} registros procesados y enviados`);
   }
 
-  async viewMessageDetails(idCampaign: number) {
+
+  async viewMessageDetails(idCampaign: number, limit: number, offset: number, q?: Record<string, any>) {
     try {
 
-        if (!idCampaign || isNaN(idCampaign)) {
+      if (!idCampaign || isNaN(idCampaign)) {
           throw new BadRequestException('El ID de campaña no es válido');
         }
 
-      const messages = await this.smsRepository.findAll({
-        where: { smsCampaignId: idCampaign },
-          order: [['createdAt', 'DESC']],
-        });
+      const result = await this.smsRepository.findAndCountAll({ where: { smsCampaignId: idCampaign}, limit, offset, order: [['id', 'DESC']] });
+      const result2 = await this.smsRepository.findAndCountAll({ where: { smsCampaignId: idCampaign, active: 'Y'}, order: [['id', 'DESC']] });
+      const result3 =  await this.smsRepository.findAndCountAll({ where: { smsCampaignId: idCampaign, active: 'N'}, order: [['id', 'DESC']] });
 
-        if (!messages.length) {
-          throw new NotFoundException(
-            `No messages found for campaign ID ${idCampaign}`,
-          );
-        }
+      const data = result.data;
+      const total = result.total;
+      const sentCount = result2.total;
+      const notSentCount = result3.total;
 
-
-      const messagesSent = await this.smsRepository.findAll({
-          where: { smsCampaignId: idCampaign , active: 'Y'},
-            order: [['createdAt', 'DESC']],
-      });
-      const messagesNotSent = await this.smsRepository.findAll({
-          where: { smsCampaignId: idCampaign, active: 'N' },
-            order: [['createdAt', 'DESC']],
-      });
-    
-      const totalMessages = messages.length;
-      const sentCount = messagesSent.length;
-      const notSentCount = messagesNotSent.length;
-
-      const sentPercentage = totalMessages > 0 ? (sentCount / totalMessages) * 100 : 0;
-      const notSentPercentage = totalMessages > 0 ? (notSentCount / totalMessages) * 100 : 0;
+      // const sentPercentage = total > 0 ? (sentCount / total) * 100 : 0;
+      // const notSentPercentage = total > 0 ? (notSentCount / total) * 100 : 0;
 
       return {
-        totalMessages,
+        data,
+        total,
         sentCount,
         notSentCount,
-        sentPercentage: sentPercentage.toFixed(2) + '%',
-        notSentPercentage: notSentPercentage.toFixed(2) + '%',
-        messages
+        limit,
+        offset,
+        // sentPercentage: sentPercentage.toFixed(2),
+        // notSentPercentage: notSentPercentage.toFixed(2),
       };
     } catch (error) {
       console.error(`Error al obtener detalles de la campaña ${idCampaign}:`, error.message);
       throw new InternalServerErrorException('Error al obtener los detalles de los mensajes');
     }
   }
-
 
 }

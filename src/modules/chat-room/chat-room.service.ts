@@ -194,6 +194,7 @@ export class ChatRoomService {
               userId: item.userId,
               message: dto.content,
               chatRoomId: dto.chatRoomId,
+              senderId: userId
             });
         }
 

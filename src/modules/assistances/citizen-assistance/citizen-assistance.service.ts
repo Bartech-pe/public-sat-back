@@ -15,7 +15,7 @@ import { Office } from '@modules/office/entities/office.entity';
 import { PortfolioDetail } from '@modules/portfolio-detail/entities/portfolio-detail.entity';
 import { Portfolio } from '@modules/portfolio/entities/portfolio.entity';
 import { UserRole } from '@common/constants/role.constant';
-import { Op } from 'sequelize';
+import { col, fn, Op, Order, where } from 'sequelize';
 import { Response } from 'express';
 import * as ExcelJS from 'exceljs';
 
@@ -34,9 +34,19 @@ export class CitizenAssistanceService {
     verifyPayment?: boolean,
   ): Promise<PaginatedResponse<CitizenAssistance>> {
     try {
-      const byUser = q?.byUser;
+      const { byUser, orderField, searchText = '' } = q || {};
+      const whereOptions: any = {};
 
-      return this.repository.findAndCountAll({
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+      
+      if(byUser)
+      {
+        whereOptions.id = { [Op.ne]: user.id };
+      }
+
+        return this.repository.findAndCountAll({
         where: verifyPayment == null || verifyPayment == undefined ? {}: {
           verifyPayment
         },
@@ -54,13 +64,13 @@ export class CitizenAssistanceService {
           {
             model: User,
             as: 'createdByUser',
-            where: byUser ? { id: user.id } : {},
+            where: whereOptions,
             required: true,
           },
         ],
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order: order,
       });
     } catch (error) {
       console.log('error', error);

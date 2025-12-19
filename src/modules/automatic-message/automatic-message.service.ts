@@ -11,7 +11,7 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { User } from '@modules/user/entities/user.entity';
 import { AutomaticMessageDescriptionRepository } from './repositories/automatic-message-description.repository';
 import { AutomaticMessageDescription } from './entities/automatic-message-description.entity';
-import { Op } from 'sequelize';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 /**
  * Service layer for managing Automatic Messages.
@@ -46,6 +46,23 @@ export class AutomaticMessageService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<AutomaticMessage>> {
     try {
+
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('AutomaticMessage.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+
+
       return this.repository.findAndCountAll({
         include: [{ 
           model: AutomaticMessageDescription, 
@@ -54,7 +71,7 @@ export class AutomaticMessageService {
         }],
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order: order,
       });
     } catch (error) {
       throw new InternalServerErrorException(error, 'Internal server error');

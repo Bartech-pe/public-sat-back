@@ -9,6 +9,7 @@ import { CampaignStateRepository } from './repositories/campaign-state.repositor
 import { CampaignState } from './entities/campaign-state.entity';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { User } from '@modules/user/entities/user.entity';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 /**
  * Service layer for managing Campaign State.
@@ -36,10 +37,27 @@ export class CampaignStateService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<CampaignState>> {
     try {
+
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('CampaignState.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(error, 'Internal server error');

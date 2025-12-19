@@ -37,7 +37,7 @@ export class EmailCampaignController {
   ): Promise<PaginatedResponse<EmailCampaign>> {
     const limit = query.limit!;
     const offset = query.offset!;
-    return this.service.findAll(limit, offset);
+    return this.service.findAll(limit, offset, query?.q);
   }
 
   @Get(':id')

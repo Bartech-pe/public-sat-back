@@ -16,22 +16,40 @@ import { Public } from '@common/decorators/public.decorator';
 import { envConfig } from 'config/env';
 import { CreateMailCredential } from '../dto/create-mail-credential.dto';
 import { RedisService } from '../redis/redis.service';
-import { EmailWorkerService } from '../services/email-worker.service';
+import { EmailCredentialRepository } from '../repositories/email-credential.repository';
+import { Inbox } from '@modules/inbox/entities/inbox.entity';
+import { ChannelEnum } from '@common/enums/channel.enum';
+import { EmailCredential } from '../entities/email-credentials.entity';
 
 @Controller('mail-configuration')
 export class EmailConfigurationController {
   constructor(
     private readonly emailCredentialService: EmailCredentialService,
     private readonly emailChannelService: EmailChannelService,
-    private redisService: RedisService,
-    private readonly emailWorkerService: EmailWorkerService,
+    private readonly redisService: RedisService,
+    private readonly emailCredentialRepository: EmailCredentialRepository,
   ) {}
+
+  private async getSatCredential(id?: number): Promise<EmailCredential | null> {
+    const credential = await this.emailCredentialRepository.findOne({
+      include: [
+        {
+          model: Inbox,
+          required: true,
+          where: id
+            ? { id, channelId: ChannelEnum.EMAIL }
+            : { channelId: ChannelEnum.EMAIL },
+        },
+      ],
+    });
+    return credential ? credential.toJSON() : null;
+  }
 
   @Post('loginCredential')
   async generateUrl(@Body() body: CreateMailCredential) {
     const { name, projectId, topicName, email, clientId, clientSecret } = body;
 
-    const credentials = await this.emailWorkerService.getSatCredential();
+    const credentials = await this.getSatCredential();
 
     if (credentials) {
       throw new InternalServerErrorException(
@@ -65,7 +83,7 @@ export class EmailConfigurationController {
 
   @Get('refreshCredential/:id')
   async refreshCredential(@Param('id') id: number) {
-    const credentials = await this.emailWorkerService.getSatCredential(id);
+    const credentials = await this.getSatCredential(id);
 
     if (!credentials) {
       throw new InternalServerErrorException(
@@ -118,9 +136,7 @@ export class EmailConfigurationController {
     const body = JSON.parse(saved);
 
     if (code) {
-      const credentials = await this.emailWorkerService.getSatCredential(
-        body.id,
-      );
+      const credentials = await this.getSatCredential(body.id);
       if (credentials) {
         await this.emailCredentialService.updateCredential(code, body);
       }

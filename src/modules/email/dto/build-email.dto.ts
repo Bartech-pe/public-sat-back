@@ -33,6 +33,7 @@ export class FileEmail {
   filename: string;
   content: Buffer | string;
   mimeType: string;
+  cid: string;
 }
 export class BuildCenterEmail extends BuildEmail {
   @IsString()

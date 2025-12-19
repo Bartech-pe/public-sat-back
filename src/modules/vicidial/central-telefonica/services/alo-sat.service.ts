@@ -14,6 +14,12 @@ import { vicidialConfig } from 'config/env';
 import { stripPeruCode } from '@common/helpers/phone.helper';
 import { VicidialUser } from '@modules/user/entities/vicidial-user.entity';
 import { DatabaseCentralService } from '@database/central/database-central.service';
+import { AloSatGateway } from '../alo-sat.gateway';
+import {
+  ChannelPhoneState,
+  VicidialAgentStatus,
+  VicidialAgentStatusObj,
+} from '@common/enums/status-call.enum';
 
 interface TransactionExtended extends Transaction {
   finished?: 'commit' | 'rollback';
@@ -30,12 +36,19 @@ interface UserAgent {
   confExten: string;
 }
 
+// El timeout de Vicidial - 2 segundos para seguridad
+const VICIDIAL_PING_INTERVAL = 2000;
+
 @Injectable()
 export class AloSatService {
+  private activeSessions = new Map<string, NodeJS.Timeout>();
+  private activeState = new Map<string, { state?: string; code?: string }>();
+
   constructor(
     private readonly dbCentralService: DatabaseCentralService,
     private readonly vicidialUserRepository: VicidialUserRepository,
     private readonly vicidialApiService: VicidialApiService,
+    private readonly aloSatGateway: AloSatGateway,
   ) {}
 
   private get db(): Sequelize | null {
@@ -179,7 +192,6 @@ export class AloSatService {
         .map((item) => item as VicidialCampaign)
         .filter((item: VicidialCampaign) => item.campaign_id != '');
     } catch (error) {
-      console.log('error', error);
       throw new InternalServerErrorException('Error al obtener el progreso');
     }
   }
@@ -509,6 +521,8 @@ export class AloSatService {
 
     const transaction: TransactionExtended = await this.db.transaction();
 
+    console.log('agentLogout', userId);
+
     try {
       const [agentData]: any = await this.db.query(
         `
@@ -547,11 +561,14 @@ export class AloSatService {
           agentData?.conf_exten,
           agentData?.protocol,
         );
+        this.stopSession(userId);
 
         return true;
       }
+      this.stopSession(userId);
       return true;
     } catch (error) {
+      console.log(error);
       if (!transaction.finished) await transaction.rollback();
       throw new InternalServerErrorException(error.message);
     }
@@ -663,19 +680,19 @@ export class AloSatService {
       agentData?.session_name,
       agentData?.agent_log_id,
     );
+
+    this.startSession(userId);
+
     return response;
   }
 
-  async checkVdc(userId: number): Promise<
-    | {
-        status?: string;
-        pauseCode?: string;
-        channel?: string;
-        agentChannel?: string;
-        queueCalls?: number;
-      }
-    | undefined
-  > {
+  async checkVdc(userId: number): Promise<{
+    status?: string;
+    pauseCode?: string;
+    channel?: string;
+    agentChannel?: string;
+    queueCalls?: number;
+  }> {
     if (!this.db) {
       throw new InternalServerErrorException(
         'No se pudo otener la conexión con la base de datos de la central telefónica.',
@@ -768,6 +785,40 @@ export class AloSatService {
       }
     }
 
+    if (res) {
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId },
+      });
+
+      const stateId =
+        VicidialAgentStatusObj[
+          res.status?.toUpperCase() as VicidialAgentStatus
+        ];
+
+      if (
+        vicidialUser?.toJSON().channelStateId != stateId ||
+        (res.pauseCode && vicidialUser?.toJSON().pauseCode != res.pauseCode)
+      ) {
+        await vicidialUser?.update({
+          pauseCode: res.pauseCode ?? null,
+          channelStateId: stateId,
+        } as VicidialUser);
+      }
+    } else {
+      await this.agentLogout(userId);
+      const vicidialUser = await this.vicidialUserRepository.findOne({
+        where: { userId },
+      });
+      await vicidialUser?.update({
+        channelStateId: ChannelPhoneState.OFFLINE,
+        campaignId: null,
+        pauseCode: null,
+        inboundGroups: null,
+        sessionName: null,
+        confExten: null,
+      } as VicidialUser);
+    }
+
     return res;
   }
 
@@ -804,7 +855,7 @@ export class AloSatService {
     const { callInfo } = await this.checkIncomingCall(
       agentUser,
       campaignId,
-      agentData.calls_today,
+      agentData?.calls_today ?? 0,
     );
 
     return callInfo;
@@ -1422,7 +1473,6 @@ export class AloSatService {
         type: QueryTypes.SELECT,
       },
     );
-    console.log('campaign', campaign);
 
     const [agentData]: any = await this.db.query(
       `
@@ -1467,8 +1517,6 @@ export class AloSatService {
       },
     );
 
-    console.log('agentData', agentData);
-
     const resSettings: any = await this.vicidialApiService.updateSettings(
       agentUser,
       userPass,
@@ -1476,8 +1524,6 @@ export class AloSatService {
       agentData.session_name,
       agentData.agent_log_id,
     );
-
-    console.log('resSettings', resSettings);
 
     const resDialing: any = await this.vicidialApiService.manDiaLnextCaLL(
       agentUser,
@@ -1497,7 +1543,55 @@ export class AloSatService {
       `Local/5${agentData.conf_exten}@default`,
     );
 
-    console.log('resDialing', resDialing);
     return resDialing;
+  }
+
+  restartSession(userId: number) {
+    if (!this.activeSessions.has(userId.toString())) {
+      this.startSession(userId);
+    }
+  }
+
+  // Invocado cuando el Front se conecta
+  startSession(userId: number) {
+    console.log(`Iniciando sesión para el usuario ${userId}`);
+    // 1. Detener cualquier ping anterior
+    this.stopSession(userId);
+
+    // 2. Iniciar el ping recurrente a Vicidial
+    const pingTimer = setInterval(() => {
+      this.pingVicidial(userId);
+    }, VICIDIAL_PING_INTERVAL);
+
+    this.activeSessions.set(userId.toString(), pingTimer);
+  }
+
+  // Invocado cuando el Front se desconecta (o por inactividad prolongada)
+  stopSession(userId: number) {
+    console.log(`Deteniendo sesión para el usuario ${userId}`);
+    const timer = this.activeSessions.get(userId.toString());
+    if (timer) {
+      clearInterval(timer);
+      this.activeSessions.delete(userId.toString());
+    }
+  }
+
+  private pingVicidial(userId: number) {
+    // Lógica para llamar a la API de Vicidial y mantener la sesión
+    this.checkVdc(userId).then((data) => {
+      const agentState = this.activeState.get(userId.toString());
+      // console.log('Data:', data);
+      if (
+        agentState?.state !== data.status ||
+        agentState?.code !== data.pauseCode
+      ) {
+        this.activeState.set(userId.toString(), {
+          state: data?.status,
+          code: data?.pauseCode,
+        });
+        this.aloSatGateway.notifyChangeState(userId);
+      }
+      console.log(`Pinging Vicidial for user: ${userId}`);
+    });
   }
 }

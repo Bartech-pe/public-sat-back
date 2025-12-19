@@ -15,6 +15,7 @@ import { ConsultType } from '@modules/consult-type/entities/consult-type.entity'
 import { CitizenContactRepository } from '@modules/citizen/repositories/citizen-contact.repository';
 import { Office } from '@modules/office/entities/office.entity';
 import { CitizenContact } from '@modules/citizen/entities/citizen-contact.entity';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 /**
  * Service layer for managing GenericAssistances.
@@ -46,7 +47,28 @@ export class GenericAssistanceService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<GenericAssistance>> {
     try {
-      const byUser = q?.byUser;
+      const { byUser, orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('GenericAssistance.consultTypeCode')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+          where(fn('LOWER', col('GenericAssistance.detail')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      if(byUser)
+      {
+        whereOptions.id = { [Op.ne]: user.id };
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'ASC']];
+
       return this.repository.findAndCountAll({
         include: [
           { model: Citizen },
@@ -56,14 +78,14 @@ export class GenericAssistanceService {
           {
             model: User,
             as: 'createdByUser',
-            where: byUser ? { id: user.id } : {},
+            where: whereOptions,
             required: true,
           },
         ],
         distinct: true,
         limit,
         offset,
-        order: [['id', 'ASC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

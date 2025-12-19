@@ -12,6 +12,8 @@ import { User } from '@modules/user/entities/user.entity';
 import { emailCategoryId } from '@common/constants/channel.constant';
 import { MailStates } from '@common/enums/assistance-state.enum';
 import { EmailAttentionRepository } from '@modules/email/repositories/email-attention.repository';
+import { col, fn, Order, where } from 'sequelize';
+import { Op } from 'sequelize';
 
 /**
  * Service layer for managing Assistance Status.
@@ -42,10 +44,26 @@ export class AssistanceStateService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<AssistanceState>> {
     try {
+            const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('AssistanceState.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

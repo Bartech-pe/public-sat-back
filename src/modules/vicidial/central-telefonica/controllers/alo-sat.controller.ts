@@ -95,6 +95,9 @@ export class AloSatController {
     const res = (
       await this.vicidialUserRepository.getAloSatState(user)
     )?.toJSON();
+    if (res?.channelState?.id !== ChannelPhoneState.OFFLINE) {
+      this.service.restartSession(user.id);
+    }
     return {
       state: res?.channelState,
       pauseCode: res.pauseCode,
@@ -106,21 +109,33 @@ export class AloSatController {
   async allAgentStatus(@CurrentUser() user: User): Promise<any[]> {
     const users = await this.vicidialUserRepository.getAllAloSatState();
 
+    const userNames = users.map((user) => user.toJSON().username as string);
+
+    const { calls, total, saleTotal } =
+      await this.callService.getCallsCounterByNowAndUsers(userNames);
+
     const results = await Promise.all(
       users.map(async (data) => {
         const item: VicidialUser = data.toJSON();
 
-        const { calls, total, saleTotal } =
-          await this.callService.getCallsCounterByNow(item.username);
+        const saleCall = calls.find(
+          (call) => call.callStatus === 'SALE' && call.user === item.username,
+        );
 
-        const saleCall = calls.find((call) => call.callStatus === 'SALE');
+        const duration = saleCall?.duration ?? 0;
 
-        console.log(total, saleTotal);
+        const total = saleCall?.total ?? 0;
+
+        const average = duration / total;
+
+        const efectividad = total / saleTotal;
 
         return {
           ...item,
-          average: saleCall ? saleCall?.duration / saleCall?.total : 0,
+          average: isNaN(average) ? 0 : average,
           calls: total,
+          efectividad: isNaN(efectividad) ? 0 : efectividad,
+          aprobacion: saleCall ? saleCall.aprobacion : 0,
         };
       }),
     );
@@ -183,6 +198,7 @@ export class AloSatController {
   @Get('agent-logout')
   async agentLogout(@CurrentUser() user: User): Promise<any> {
     try {
+      console.log('agentLogout', user.id);
       const res = await this.service.agentLogout(user.id);
       const vicidialUser = await this.vicidialUserRepository.findOne({
         where: { userId: user.id },
@@ -207,6 +223,7 @@ export class AloSatController {
   async agentLogoutByUserId(@Param('userId') userId: number): Promise<any> {
     try {
       const res = await this.service.agentLogout(userId);
+      this.service.stopSession(userId);
       const vicidialUser = await this.vicidialUserRepository.findOne({
         where: { userId: userId },
       });

@@ -2,12 +2,16 @@ import { Controller, Get, Param } from '@nestjs/common';
 import { MonitorService } from './monitor.service';
 import { MonitorVicidialService } from './monitor-vicidial.service';
 import { ChannelEnum } from '@common/enums/channel.enum';
+import { CategoryChannelEnum } from '@common/enums/category-channel.enum';
+import { InboxService } from '@modules/inbox/inbox.service';
 
 @Controller('monitor')
 export class MonitorController {
   constructor(
     private readonly monitorService: MonitorService,
     private readonly monitorVicidialService: MonitorVicidialService,
+    private readonly inboxService: InboxService,
+    // private readonly monitorMultiChannelService: ,
   ) {}
 
   @Get('countChat')
@@ -59,7 +63,14 @@ export class MonitorController {
     @Param('userId') userId: number,
     @Param('categoryId') categoryId: number,
   ) {
-    return await this.monitorVicidialService.getStateDetailsByAdvisor(userId);
+    if (categoryId === CategoryChannelEnum.PHONE) {
+      return await this.monitorVicidialService.getStateDetailsByAdvisor(userId);
+    } else {
+      return await this.inboxService.getChannelStateHistoryByUserIdAndCategoryId(
+        userId,
+        categoryId,
+      );
+    }
   }
 
   @Get('monitorVicidialCountDashBoard')

@@ -9,6 +9,7 @@ import { EmailSignature } from '../entities/email-signature.entity';
 import { CreateEmailSignatureDto } from '../dto/create-email-signature.dto';
 import { UpdateEmailSignatureDto } from '../dto/update-email-signature.dto';
 import { User } from '@modules/user/entities/user.entity';
+import { col, fn, Op, Order, where } from 'sequelize';
 
 /**
  * Service layer for managing EmailSignatures.
@@ -36,10 +37,27 @@ export class EmailSignatureService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<EmailSignature>> {
     try {
+
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('EmailSignature.content')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'ASC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'ASC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

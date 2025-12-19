@@ -63,7 +63,6 @@ export class EmailCenterController {
     return await this.mailCenterService.getTicketsNoAdvisor(query);
   }
 
-
   @Get('messageDetail/:mailAttentionId')
   async MessageDetail(@Param('mailAttentionId') mailAttentionId: number) {
     return await this.mailCenterService.GetEmailAttentionDetail(
@@ -73,7 +72,7 @@ export class EmailCenterController {
 
   @Post('sendEmailCenter')
   @UseInterceptors(
-    FileFieldsInterceptor([{ name: 'attachments', maxCount: 10 }]),
+    FileFieldsInterceptor([{ name: 'attachments', maxCount: 20 }]),
   )
   async SendEmailCenter(
     @CurrentUser() user: User,
@@ -181,9 +180,8 @@ export class EmailCenterController {
     return this.mailCenterService.getEmailCitizen(email);
   }
 
-  
   @Get('spam/messages')
-  async getSpamMessages(@Query() query: {pageToken: string | null}) {
+  async getSpamMessages(@Query() query: { pageToken: string | null }) {
     return await this.mailCenterService.getSpamMessages(query?.pageToken);
   }
 }

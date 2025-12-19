@@ -15,6 +15,13 @@ module.exports = {
         allowNull: false,
         comment: 'ID del usuario que recibe la notificación',
       },
+
+      sender_id: {
+        type: Sequelize.BIGINT,
+        allowNull: false,
+        comment: 'ID del usuario remitente que envía la notificación',
+      },
+
       message: {
         type: Sequelize.TEXT,
         allowNull: false,
@@ -75,7 +82,7 @@ module.exports = {
      * Constraints (FKs)
      * ------------------------- */
 
-    // FK hacia users (usuario que recibe la notificación)
+    // usuario que recibe la notificación
     await queryInterface.addConstraint('notifications', {
       fields: ['user_id'],
       type: 'foreign key',
@@ -88,7 +95,20 @@ module.exports = {
       onDelete: 'RESTRICT',
     });
 
-    // FK hacia users (created_by)
+    // usuario remitente
+    await queryInterface.addConstraint('notifications', {
+      fields: ['sender_id'],
+      type: 'foreign key',
+      name: 'fk_notifications_sender',
+      references: {
+        table: 'users',
+        field: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT',
+    });
+
+    // created_by
     await queryInterface.addConstraint('notifications', {
       fields: ['created_by'],
       type: 'foreign key',
@@ -101,7 +121,7 @@ module.exports = {
       onDelete: 'RESTRICT',
     });
 
-    // FK hacia users (updated_by)
+    // updated_by
     await queryInterface.addConstraint('notifications', {
       fields: ['updated_by'],
       type: 'foreign key',
@@ -114,7 +134,7 @@ module.exports = {
       onDelete: 'RESTRICT',
     });
 
-    // FK hacia users (deleted_by)
+    // deleted_by
     await queryInterface.addConstraint('notifications', {
       fields: ['deleted_by'],
       type: 'foreign key',

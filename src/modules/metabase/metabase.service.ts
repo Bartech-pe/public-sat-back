@@ -15,7 +15,7 @@ export class MetabaseService {
       expiresIn: '10m',
     });
 
-    const iframeUrl = `${metabaseConfig.url}/embed/dashboard/${token}#bordered=true&titled=true`;
+    const iframeUrl = `${metabaseConfig.url}/embed/dashboard/${token}#bordered=false&titled=true`;
     return iframeUrl;
   }
 

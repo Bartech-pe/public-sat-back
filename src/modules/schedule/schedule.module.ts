@@ -22,6 +22,11 @@ import { CentralTelefonicaModule } from '@modules/vicidial/central-telefonica/ce
     ScheduleRepository,
     HolidayRepository,
   ],
-  exports: [ScheduleService],
+  exports: [
+    ScheduleService,
+    HolidayService,
+    ScheduleRepository,
+    HolidayRepository,
+  ],
 })
 export class ScheduleModule {}

@@ -125,20 +125,26 @@ export class CallService {
       whereOption.push(`vl.call_date BETWEEN '${startDate}' AND '${endDate}'`);
     }
 
-    const mainSql = `
-    SELECT
-        lead_id,
-        call_type,
-        call_date,
-        user,
-        phone_number,
-        status,
-        status_name,
-        length_in_sec,
-        campaign_id,
-        recording_id,
-        filename,
-        recording_location
+    const mainSql = `SELECT
+      lead_id,
+      call_type,
+      call_date,
+      user,
+      phone_number,
+      status,
+      status_name,
+      length_in_sec,
+      campaign_id,
+      recording_id,
+      filename,
+      recording_location,
+      CASE
+        WHEN status IN ('DISPO', 'DROP', 'NA', 'NOANSWER', 'ABANDON', 'TIMEOUT') THEN 'DROP'
+        WHEN status IN ('SALE', 'COMPLETE', 'ANSWERED', 'CBHOLD', 'FINISHED') THEN 'SALE'
+        WHEN status IN ('QUEUE', 'INQUEUE', 'WAITING') THEN 'QUEUE'
+        WHEN status IN ('ESCALATED', 'TRANSFER', 'XFER') THEN 'XFER'
+        ELSE 'SALE'
+      END AS call_category
     FROM (
         /*==========================================
           Llamadas salientes (tabla principal)
@@ -153,17 +159,15 @@ export class CallService {
             COALESCE(vcs.status_name, vs.status_name) AS status_name,
             vl.length_in_sec,
             val.campaign_id,
-            rl.recording_id,
+         	rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -184,14 +188,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_closer_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -212,14 +214,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log_archive vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log_archive vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -240,17 +240,15 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_closer_log_archive vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log_archive vl ON vl.user = u.user
+        inner JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
-
-    ) AS llamadas`;
+    ) AS llamadas
+    `;
 
     const sql = `
       ${mainSql}
@@ -338,20 +336,26 @@ export class CallService {
       whereOption.push(`vl.call_date BETWEEN '${startDate}' AND '${endDate}'`);
     }
 
-    const mainSql = `
-    SELECT
-        lead_id,
-        call_type,
-        call_date,
-        user,
-        phone_number,
-        status,
-        status_name,
-        length_in_sec,
-        campaign_id,
-        recording_id,
-        filename,
-        recording_location
+    const mainSql = `SELECT
+      lead_id,
+      call_type,
+      call_date,
+      user,
+      phone_number,
+      status,
+      status_name,
+      length_in_sec,
+      campaign_id,
+      recording_id,
+      filename,
+      recording_location,
+      CASE
+        WHEN status IN ('DISPO', 'DROP', 'NA', 'NOANSWER', 'ABANDON', 'TIMEOUT') THEN 'DROP'
+        WHEN status IN ('SALE', 'COMPLETE', 'ANSWERED', 'CBHOLD', 'FINISHED') THEN 'SALE'
+        WHEN status IN ('QUEUE', 'INQUEUE', 'WAITING') THEN 'QUEUE'
+        WHEN status IN ('ESCALATED', 'TRANSFER', 'XFER') THEN 'XFER'
+        ELSE 'SALE'
+      END AS call_category
     FROM (
         /*==========================================
           Llamadas salientes (tabla principal)
@@ -366,17 +370,15 @@ export class CallService {
             COALESCE(vcs.status_name, vs.status_name) AS status_name,
             vl.length_in_sec,
             val.campaign_id,
-            rl.recording_id,
+         	rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -397,14 +399,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_closer_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -425,14 +425,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log_archive vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log_archive vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -453,17 +451,15 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_closer_log_archive vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log_archive vl ON vl.user = u.user
+        inner JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
-
-    ) AS llamadas`;
+    ) AS llamadas
+    `;
 
     const sql = `
       ${mainSql}
@@ -553,7 +549,7 @@ export class CallService {
       whereOption.push(`vl.call_date BETWEEN '${startDate}' AND '${endDate}'`);
     }
 
-    const mainSql = `SELECT 
+    const mainSql = `SELECT
       lead_id,
       call_type,
       call_date,
@@ -587,17 +583,15 @@ export class CallService {
             COALESCE(vcs.status_name, vs.status_name) AS status_name,
             vl.length_in_sec,
             val.campaign_id,
-            rl.recording_id,
+         	rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -618,14 +612,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_closer_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -646,14 +638,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log_archive vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log_archive vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
@@ -674,14 +664,12 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_closer_log_archive vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log_archive vl ON vl.user = u.user
+        inner JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
         LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
         LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs
-              ON vl.status = vcs.status
-              AND val.campaign_id = vcs.campaign_id
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
     ) AS llamadas
     `;
@@ -711,7 +699,7 @@ export class CallService {
     return resumen;
   }
 
-  async getCallsCounterByNow(username?: string) {
+  async getCallsCounterByNow() {
     if (!this.db) {
       throw new InternalServerErrorException(
         'No se pudo otener la conexión con la base de datos de la central telefónica.',
@@ -720,7 +708,7 @@ export class CallService {
 
     const startDay = new Date();
     startDay.setHours(0, 0, 0);
-    const endDay = new Date();
+    const endDay = new Date(startDay);
     endDay.setHours(23, 59, 59);
 
     // Convertir a formato SQL (YYYY-MM-DD HH:MM:SS)
@@ -729,20 +717,14 @@ export class CallService {
       return localDate.toISOString().slice(0, 19).replace('T', ' ');
     };
 
-    let usernames = '';
+    const vUsers = (
+      await this.vicidialUserRepository.findAll({
+        attributes: ['username'],
+        include: [{ model: User, as: 'user' }],
+      })
+    ).map((u) => u.toJSON());
 
-    if (!username) {
-      const vUsers = (
-        await this.vicidialUserRepository.findAll({
-          attributes: ['username'],
-          include: [{ model: User, as: 'user' }],
-        })
-      ).map((u) => u.toJSON());
-
-      usernames = vUsers.map((u) => `'${u.username}'`).join(',');
-    } else {
-      usernames = `'${username}'`;
-    }
+    let usernames = vUsers.map((u) => `'${u.username}'`).join(',');
 
     let whereOption = [`u.user IN (${usernames})`];
 
@@ -752,7 +734,7 @@ export class CallService {
       );
     }
 
-    const mainSql = `SELECT 
+    const mainSql = `SELECT
       lead_id,
       call_type,
       call_date,
@@ -766,15 +748,69 @@ export class CallService {
       filename,
       recording_location,
       CASE
-        WHEN status IN ('DROP', 'DROP', 'NA', 'NOANSWER', 'ABANDON', 'TIMEOUT') THEN 'DROP'
+        WHEN status IN ('DISPO', 'DROP', 'NA', 'NOANSWER', 'ABANDON', 'TIMEOUT') THEN 'DROP'
         WHEN status IN ('SALE', 'COMPLETE', 'ANSWERED', 'CBHOLD', 'FINISHED') THEN 'SALE'
         WHEN status IN ('QUEUE', 'INQUEUE', 'WAITING') THEN 'QUEUE'
         WHEN status IN ('ESCALATED', 'TRANSFER', 'XFER') THEN 'XFER'
         ELSE 'SALE'
       END AS call_category
     FROM (
-        -- Llamadas salientes
-        SELECT 
+        /*==========================================
+          Llamadas salientes (tabla principal)
+        ==========================================*/
+        SELECT
+            vl.lead_id,
+            'OUTBOUND' AS call_type,
+            vl.call_date,
+            vl.user,
+            vl.phone_number,
+            vl.status,
+            COALESCE(vcs.status_name, vs.status_name) AS status_name,
+            vl.length_in_sec,
+            val.campaign_id,
+         	rl.recording_id,
+            rl.filename,
+            rl.location AS recording_location
+        FROM vicidial_users u
+        INNER JOIN vicidial_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
+        LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
+        LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
+        WHERE ${whereOption.join(' AND ')}
+
+        UNION ALL
+
+        /*==========================================
+          Llamadas entrantes (tabla principal)
+        ==========================================*/
+        SELECT
+            vl.lead_id,
+            'INBOUND' AS call_type,
+            vl.call_date,
+            vl.user,
+            vl.phone_number,
+            vl.status,
+            COALESCE(vcs.status_name, vs.status_name) AS status_name,
+            vl.length_in_sec,
+            val.campaign_id,
+            rl.recording_id,
+            rl.filename,
+            rl.location AS recording_location
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log val ON val.uniqueid = vl.uniqueid
+        LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
+        LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
+        WHERE ${whereOption.join(' AND ')}
+
+        UNION ALL
+
+        /*==========================================
+          Llamadas salientes archivadas
+        ==========================================*/
+        SELECT
             vl.lead_id,
             'OUTBOUND' AS call_type,
             vl.call_date,
@@ -787,52 +823,41 @@ export class CallService {
             rl.recording_id,
             rl.filename,
             rl.location AS recording_location
-        FROM vicidial_log vl
-        LEFT JOIN vicidial_users u ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val
-            ON val.lead_id = vl.lead_id
-        LEFT JOIN recording_log rl 
-            ON rl.lead_id = vl.lead_id
-      LEFT JOIN vicidial_statuses vs 
-            ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs 
-            ON vl.status = vcs.status 
-          AND val.campaign_id = vcs.campaign_id
+        FROM vicidial_users u
+        INNER JOIN vicidial_log_archive vl ON vl.user = u.user
+        INNER JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
+        LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
 
         UNION ALL
 
-        -- Llamadas entrantes
-        SELECT 
-          vl.lead_id,
-          'INBOUND' AS call_type,
-          vl.call_date,
-          vl.user,
-          vl.phone_number,
-          vl.status,
-          CASE 
-            WHEN vl.status = 'DISPO' THEN 'Disposition Screen'
-            ELSE COALESCE(vcs.status_name, vs.status_name) 
-          END AS status_name,
-          vl.length_in_sec,
-          val.campaign_id,
-          rl.recording_id,
-          rl.filename,
-          rl.location AS recording_location
-        FROM vicidial_closer_log vl
-        LEFT JOIN vicidial_users u 
-            ON vl.user = u.user
-        LEFT JOIN vicidial_agent_log val
-            ON val.lead_id = vl.lead_id
-        LEFT JOIN recording_log rl 
-            ON rl.lead_id = vl.lead_id
-        LEFT JOIN vicidial_statuses vs 
-            ON vl.status = vs.status
-        LEFT JOIN vicidial_campaign_statuses vcs 
-            ON vl.status = vcs.status 
-          AND val.campaign_id = vcs.campaign_id
+        /*==========================================
+          Llamadas entrantes archivadas
+        ==========================================*/
+        SELECT
+            vl.lead_id,
+            'INBOUND' AS call_type,
+            vl.call_date,
+            vl.user,
+            vl.phone_number,
+            vl.status,
+            COALESCE(vcs.status_name, vs.status_name) AS status_name,
+            vl.length_in_sec,
+            val.campaign_id,
+            rl.recording_id,
+            rl.filename,
+            rl.location AS recording_location
+        FROM vicidial_users u
+        INNER JOIN vicidial_closer_log_archive vl ON vl.user = u.user
+        inner JOIN vicidial_agent_log_archive val ON val.lead_id = vl.lead_id
+        LEFT JOIN recording_log rl ON rl.lead_id = vl.lead_id
+        LEFT JOIN vicidial_statuses vs ON vl.status = vs.status
+        LEFT JOIN vicidial_campaign_statuses vcs ON vl.status = vcs.status AND val.campaign_id = vcs.campaign_id
         WHERE ${whereOption.join(' AND ')}
-    ) AS llamadas`;
+    ) AS llamadas
+    `;
 
     const groupSQL = `
       SELECT calls.call_category as callStatus, SUM(length_in_sec) AS duration, COUNT(*) AS total
@@ -865,6 +890,195 @@ export class CallService {
       queueTotal:
         resumen.find((item) => item.callStatus == 'QUEUE')?.total ?? 0,
       saleTotal: resumen.find((item) => item.callStatus == 'SALE')?.total ?? 0,
+    };
+  }
+
+  async getCallsCounterByNowAndUsers(userNames: string[]) {
+    if (!this.db) {
+      throw new InternalServerErrorException(
+        'No se pudo otener la conexión con la base de datos de la central telefónica.',
+      );
+    }
+
+    const startDay = new Date();
+    startDay.setHours(0, 0, 0);
+    const endDay = new Date(startDay);
+    endDay.setHours(23, 59, 59);
+
+    // Convertir a formato SQL (YYYY-MM-DD HH:MM:SS)
+    const formatDateForSQL = (date) => {
+      const localDate = new Date(date.getTime() - 5 * 60 * 60 * 1000);
+      return localDate.toISOString().slice(0, 19).replace('T', ' ');
+    };
+
+    let usernames = '';
+
+    if (!userNames || userNames.length === 0) {
+      const vUsers = (
+        await this.vicidialUserRepository.findAll({
+          attributes: ['username'],
+          include: [{ model: User, as: 'user' }],
+        })
+      ).map((u) => u.toJSON());
+
+      usernames = vUsers.map((u) => `'${u.username}'`).join(',');
+    } else {
+      usernames = Array.isArray(userNames)
+        ? userNames.map((name) => `'${name}'`).join(',')
+        : `'${userNames}'`;
+    }
+
+    let whereOption = [`user IN (${usernames})`];
+
+    if (startDay && endDay) {
+      whereOption.push(
+        `call_date BETWEEN '${formatDateForSQL(startDay)}' AND '${formatDateForSQL(endDay)}'`,
+      );
+    }
+
+    const groupSQL = `
+      WITH calls_base AS (
+          /* ===============================
+            OUTBOUND
+          =============================== */
+          SELECT
+              lead_id,
+              uniqueid,
+              'OUTBOUND' AS call_type,
+              call_date,
+              user,
+              phone_number,
+              status,
+              length_in_sec,
+              campaign_id AS group_id
+          FROM vicidial_log
+          WHERE ${whereOption.join(' AND ')}
+
+          UNION ALL
+
+          SELECT
+              lead_id,
+              uniqueid,
+              'OUTBOUND',
+              call_date,
+              user,
+              phone_number,
+              status,
+              length_in_sec,
+              campaign_id
+          FROM vicidial_log_archive
+          WHERE ${whereOption.join(' AND ')}
+
+          UNION ALL
+
+          /* ===============================
+            INBOUND
+          =============================== */
+          SELECT
+              lead_id,
+              uniqueid,
+              'INBOUND',
+              call_date,
+              user,
+              phone_number,
+              status,
+              length_in_sec,
+              campaign_id
+          FROM vicidial_closer_log
+          WHERE ${whereOption.join(' AND ')}
+
+          UNION ALL
+
+          SELECT
+              lead_id,
+              uniqueid,
+              'INBOUND',
+              call_date,
+              user,
+              phone_number,
+              status,
+              length_in_sec,
+              campaign_id
+          FROM vicidial_closer_log_archive
+          WHERE ${whereOption.join(' AND ')}
+      ),
+
+      calls_enriched AS (
+          SELECT
+              c.*,
+              COALESCE(ei.cod_opcion, 0) AS score,
+              CASE
+                  WHEN c.status IN ('DISPO','DROP','NA','NOANSWER','ABANDON','TIMEOUT') THEN 'DROP'
+                  WHEN c.status IN ('SALE','COMPLETE','ANSWERED','CBHOLD','FINISHED') THEN 'SALE'
+                  WHEN c.status IN ('QUEUE','INQUEUE','WAITING') THEN 'QUEUE'
+                  WHEN c.status IN ('ESCALATED','TRANSFER','XFER') THEN 'XFER'
+                  ELSE 'SALE'
+              END AS call_category
+          FROM calls_base c
+          LEFT JOIN CentralTelefonica.encuesta_ivr ei
+                ON ei.id_llamada = c.uniqueid
+      )
+
+      SELECT
+          c.user,
+          c.call_category AS callStatus,
+          SUM(c.length_in_sec) AS duration,
+          COUNT(*) AS total,
+          ROUND(
+              SUM(CASE WHEN c.score = 1 THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN c.score IN (1,9) THEN 1 ELSE 0 END),0),
+              2
+          ) AS porcentaje_aprobacion
+      FROM calls_enriched c
+      LEFT JOIN recording_log rl
+            ON rl.lead_id = c.lead_id
+      LEFT JOIN vicidial_statuses vs
+            ON vs.status = c.status
+      GROUP BY
+          c.user, c.call_category;
+    `;
+
+    const resumenRaw = await this.db!.query<{
+      user: string;
+      callStatus: string;
+      duration: number;
+      total: number;
+      porcentaje_aprobacion: number;
+    }>(groupSQL, { replacements: [], type: QueryTypes.SELECT });
+
+    const ESTADOS = ['QUEUE', 'DROP', 'XFER', 'SALE', 'IVR'];
+
+    // Normalizamos el resultado, garantizando que todos los estados estén presentes
+    const resumen = userNames
+      .map((user) => {
+        const estado = ESTADOS.map((status) => {
+          const item = resumenRaw.find(
+            (r) => r.callStatus === status && r.user === user,
+          );
+          return {
+            user,
+            callStatus: status,
+            callStateName: callstates[status],
+            duration: item ? Number(item.duration) : 0,
+            total: item ? Number(item.total) : 0,
+            aprobacion: item ? Number(item.porcentaje_aprobacion) : 0,
+          };
+        });
+        return estado;
+      })
+      .flat();
+
+    return {
+      calls: resumen,
+      total: resumen.reduce((acc, item) => acc + item.total, 0),
+      queueTotal:
+        resumen
+          .filter((item) => item.callStatus == 'QUEUE')
+          .reduce((acc, item) => acc + item.total, 0) ?? 0,
+      saleTotal:
+        resumen
+          .filter((item) => item.callStatus == 'SALE')
+          .reduce((acc, item) => acc + item.total, 0) ?? 0,
     };
   }
 
@@ -938,35 +1152,8 @@ export class CallService {
       ],
     });
     const advisorJson: any[] = getAdvisors.map((a) => a.toJSON());
-    return advisorJson.map((a) => a.user);
-    // const phoneLogins = advisorJson
-    //   .map((a) => a.phoneLogin)
-    //   .filter((p): p is string => !!p);
-    // if (phoneLogins.length <= 0) {
-    //   return [];
-    // }
-    // try {
-    //   const sql = `
-    //   SELECT DISTINCT
-    //     vu.user as id,
-    //     vu.full_name as displayName
-    //   FROM vicidial_users vu
-    //   WHERE vu.active = 'Y'
-    //   AND vu.user_group NOT IN ('DESARROLLO', 'DEMO')
-    //   AND vu.full_name REGEXP '[^0-9]'
-    //   AND vu.full_name IS NOT NULL
-    //   AND vu.phone_login IN (:phoneLogins)
-    //   ORDER BY vu.full_name
-    // `;
-    //   const results = await this.centralConnection!.query<AdvisorItem>(sql, {
-    //     type: QueryTypes.SELECT,
-    //     replacements: { phoneLogins },
-    //   });
-    //   return results;
-    // } catch (error) {
-    //   console.log(error);
-    //   return [];
-    // }
+    const advisors = advisorJson.map((a) => a.user);
+    return advisors;
   }
   async GetAdvisorsInfo() {
     if (!this.db) {
@@ -1040,9 +1227,6 @@ export class CallService {
       AND vu.full_name IS NOT NULL
       ORDER BY vu.full_name
     `;
-
-      //console.log("============================ DEBUG ADVISORS ===============================");
-      //console.log("SQL:", sql);
 
       const results = await this.db!.query<AdvisorItem>(sql, {
         type: QueryTypes.SELECT,

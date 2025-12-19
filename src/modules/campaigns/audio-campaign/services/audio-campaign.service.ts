@@ -11,7 +11,8 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { User } from '@modules/user/entities/user.entity';
 import { Department } from '@modules/department/entities/department.entity';
 import { DatabaseCentralService } from '@database/central/database-central.service';
-import { Sequelize } from 'sequelize';
+import { col, fn, literal, Order, Sequelize, where } from 'sequelize';
+import { Op } from 'sequelize';
 /**
  * Service layer for managing AudioCampaigns.
  *
@@ -80,12 +81,26 @@ export class AudioCampaignService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<AudioCampaign>> {
     try {
+        const { orderField, searchText = '' } = q || {};
+        const searchTerm = searchText.toLowerCase();
+        const whereOptions: any = {};
+        if (searchTerm) {
+          const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+          whereOptions[Op.or] = [
+            where(fn('LOWER', col('AudioCampaign.name')), {
+              [Op.like]: `%${safeTerm}%`,
+            }),
+          ];
+        }
+        const order: Order = orderField
+          ? [[orderField.field, orderField.order]]
+          : [['id', 'DESC']];
 
         const audioCampaign = await this.repository.findAndCountAll({
             include: [{ model: Department }, { model: User, as: 'createdByUser' }],
             limit,
             offset,
-            order: [['id', 'DESC']],
+            order,
         });
 
         await Promise.all(

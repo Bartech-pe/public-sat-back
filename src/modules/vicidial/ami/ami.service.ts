@@ -5,20 +5,12 @@ import {
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  ActiveChannel,
-  AMIFilter,
-  CallAMi,
-  durationToSeconds,
-  StateIcon,
-} from './dto/ami.dto';
+import { ActiveChannel, AMIFilter, CallAMi, StateIcon } from './dto/ami.dto';
 import {
   DataCollection,
   GetPages,
 } from '@common/interfaces/paginated-response.interface';
-import { formatPhoneNumber, stripPeruCode } from '@common/helpers/phone.helper';
-import { groupBy } from '@common/helpers/group.helper';
-import { AMIGateway } from './ami.gateway';
+import { stripPeruCode } from '@common/helpers/phone.helper';
 import { RequestContextService } from '@common/context/request-context.service';
 import { VicidialUserRepository } from '@modules/user/repositories/vicidial-user.repository';
 import { User } from '@modules/user/entities/user.entity';
@@ -32,8 +24,6 @@ import {
   ChannelPhoneState,
   VicidialAgentStatus,
 } from '@common/enums/status-call.enum';
-import { VicidialPauseCode } from '@common/enums/pause-code.enum';
-import { UserGateway } from '@modules/user/user.gateway';
 import { CallHistoryRepository } from '@modules/call/repositories/call-history.repository';
 const AsteriskManager = require('asterisk-manager');
 
@@ -41,19 +31,15 @@ const AsteriskManager = require('asterisk-manager');
 export class AmiService implements OnModuleInit {
   private ami: any;
   private canales: ActiveChannel[] = [];
-  private channelAdvisors: CallAMi[] = [];
   private actives: CallAMi[] = [];
 
   constructor(
     private readonly callService: CallService,
-    private readonly gateway: AMIGateway,
     private readonly userRepository: VicidialUserRepository,
     @Inject(forwardRef(() => AloSatService))
     private readonly aloSatService: AloSatService,
     private readonly vicidialUserRepository: VicidialUserRepository,
     private readonly callHistoryRepository: CallHistoryRepository,
-    @Inject(forwardRef(() => UserGateway))
-    private readonly userGateway: UserGateway,
   ) {
     try {
       const port = amiConfig.port;
@@ -258,7 +244,6 @@ export class AmiService implements OnModuleInit {
           case 'CoreShowChannelsComplete':
             console.log(`canales actuales:`, this.canales);
             this.canales = [];
-            this.channelAdvisors = [];
             break;
           case 'RTCPSent':
             break;

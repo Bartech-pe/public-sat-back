@@ -14,6 +14,7 @@ import { Public } from '@common/decorators/public.decorator';
 import { Citizen } from '@modules/citizen/entities/citizen.entity';
 import { CitizenService } from '@modules/citizen/services/citizen.service';
 import { cleanAttributes } from '@common/helpers/object-atribute.helper';
+import { TypeIdeDocRepository } from '@modules/citizen/repositories/type-ide-doc.repository';
 
 @Public()
 @Controller('omnicanalidad')
@@ -23,6 +24,7 @@ export class OmnicanalidadController {
   constructor(
     private readonly authSatService: AuthSatService,
     private readonly citizenService: CitizenService,
+    private readonly typeIdeDocRepository: TypeIdeDocRepository,
   ) {
     this.client = axios.create({
       baseURL: apiSatConfig.url,
@@ -61,7 +63,7 @@ export class OmnicanalidadController {
             pvValPar2,
           );
         }
-        return res.data
+        const result = res.data
           .map(
             (d) =>
               cleanAttributes(d) as {
@@ -80,6 +82,17 @@ export class OmnicanalidadController {
                 vnumTel: d.vnumTel,
               }) as ContactoDto,
           );
+        const typeIdeDoc = await this.typeIdeDocRepository.findOrCreate(
+          {
+            name: result[0].vtipDoc,
+            code: result[0].vtipDoc,
+          },
+          {
+            name: result[0].vtipDoc,
+            code: result[0].vtipDoc,
+          },
+        );
+        return result;
       }
 
       // Si no encontró resultados en la API externa

@@ -66,15 +66,13 @@ export class EmailWorkerService {
     return { name: undefined, email: input.trim() };
   }
 
-  async getSatCredential(id?: number): Promise<EmailCredential> {
+  async getSatCredential(): Promise<EmailCredential> {
     const credential = await this.emailCredentialRepository.findOne({
       include: [
         {
           model: Inbox,
           required: true,
-          where: id
-            ? { id, channelId: ChannelEnum.EMAIL }
-            : { channelId: ChannelEnum.EMAIL },
+          where: { channelId: ChannelEnum.EMAIL },
         },
       ],
     });
@@ -248,34 +246,6 @@ export class EmailWorkerService {
     }
   }
 
-  // async getAdvisorsAvaliable() {
-  //   try {
-  //     const stateAvalible =
-  //       await this.stateChannelRepository.findAvalibleEmail();
-  //     if (!stateAvalible)
-  //       throw new InternalServerErrorException(
-  //         'No se encontró el estado DISPONIBLE',
-  //       );
-  //     const stateAvalibleJson = stateAvalible.toJSON();
-  //     const skillId = stateAvalibleJson.id;
-  //     const ibox = await this.inboxRepository.findOne({
-  //       where: { channelId: ChannelEnum.EMAIL },
-  //     });
-  //     if (!ibox) throw new NotFoundException('No se encontro la credencial');
-  //     const inboxId = ibox.toJSON().id;
-  //     const emailUsers = await this.inboxUserRepository.findAll({
-  //       where: { channelStateId: stateAvalibleJson.id, inboxId: inboxId },
-  //       include: [{ model: User, as: 'user', where: { roleId: UserRole.Ase } }],
-  //       attributes: ['userId'],
-  //     });
-  //     const emailUserJson = emailUsers.map((a) => a.toJSON());
-  //     return { skillId, emailUserJson };
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  //   return { skillId: 0, emailUserJson: [] };
-  // }
-
   async getAdvisorToAssign(): Promise<
     { userId: number; assigns: number } | undefined
   > {
@@ -330,6 +300,13 @@ export class EmailWorkerService {
               as: 'user',
               attributes: ['id', 'email'],
             },
+            {
+              model: Inbox,
+              as: 'inbox',
+              where: { channelId: ChannelEnum.EMAIL },
+              required: true,
+              attributes: ['id'],
+            },
           ],
         });
         const mailUserDtoJson = mailUserDto?.toJSON();
@@ -357,11 +334,9 @@ export class EmailWorkerService {
         advisorInboxId: !!inboxId ? inboxId : undefined,
         ticketCode: code,
         mailThreadId: event.threadId,
-        assistanceStateId:
-          event.isSpam ? 
-            MailStates.SPAM
-          :
-          !!event.userId || event.userId == 0
+        assistanceStateId: event.isSpam
+          ? MailStates.SPAM
+          : !!event.userId || event.userId == 0
             ? MailStates.CLOSED
             : attention.toJSON().id,
       });

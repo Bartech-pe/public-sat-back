@@ -18,6 +18,8 @@ import {
 import { Inbox } from '@modules/inbox/entities/inbox.entity';
 import { BaseResponseDto } from '@common/dto/base-response.dto';
 import { CategoryChannel } from '@modules/channel/entities/category-channel.entity';
+import { col, fn, Order, where } from 'sequelize';
+import { Op } from 'sequelize';
 
 /**
  * Service layer for managing ChannelState.
@@ -45,10 +47,27 @@ export class ChannelStateService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<ChannelState>> {
     try {
+      const { orderField, searchText = '' } = q || {};
+      const searchTerm = searchText.toLowerCase();
+      const whereOptions: any = {};
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('ChannelState.name')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+
+        : [['id', 'DESC']];
+
       return this.repository.findAndCountAll({
+        where: whereOptions,
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

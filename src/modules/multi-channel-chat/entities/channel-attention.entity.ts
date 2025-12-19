@@ -1,4 +1,3 @@
-import { Optional } from 'sequelize';
 import {
   BelongsTo,
   Column,
@@ -8,6 +7,7 @@ import {
   DeletedAt,
   ForeignKey,
   HasMany,
+  HasOne,
   Model,
   Table,
   UpdatedAt,
@@ -17,6 +17,7 @@ import { ChannelRoom } from './channel-room.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { ConsultType } from '@modules/consult-type/entities/consult-type.entity';
 import { ChannelQueryHistory } from './channel-query-history.entity';
+import { Survey } from '@modules/survey/entities/survey.entity';
 
 export enum ChannelAttentionStatus {
   IDENTITY_VERIFICATION = 'identity_verification',
@@ -54,7 +55,7 @@ export class ChannelAttention extends Model<ChannelAttention> {
   @Column({
     field: 'consult_type_id',
     type: DataType.INTEGER,
-    allowNull: true
+    allowNull: true,
   })
   consultTypeId?: number;
 
@@ -73,10 +74,10 @@ export class ChannelAttention extends Model<ChannelAttention> {
     allowNull: true,
   })
   userId?: number | null;
-  
-  @BelongsTo(() => User, { foreignKey: 'user_id', as: 'user'})
+
+  @BelongsTo(() => User, { foreignKey: 'user_id', as: 'user' })
   user: User;
-  
+
   @Column({
     field: 'status',
     type: DataType.ENUM(...Object.values(ChannelAttentionStatus)),
@@ -112,6 +113,9 @@ export class ChannelAttention extends Model<ChannelAttention> {
 
   @BelongsTo(() => ConsultType)
   consultType: ConsultType;
+
+  @HasOne(() => Survey)
+  survey: Survey;
 
   @ForeignKey(() => User)
   @Column({ field: 'created_by', allowNull: true })

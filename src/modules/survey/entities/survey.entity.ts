@@ -1,3 +1,4 @@
+import { ChannelAttention } from '@modules/multi-channel-chat/entities/channel-attention.entity';
 import { User } from '@modules/user/entities/user.entity';
 import {
   BelongsTo,
@@ -29,6 +30,7 @@ export class Survey extends Model<Survey> {
   })
   declare id: number;
 
+  @ForeignKey(() => ChannelAttention)
   @Column({
     field: 'assistance_id',
     type: DataType.BIGINT,
@@ -36,6 +38,9 @@ export class Survey extends Model<Survey> {
     comment: 'ID of the associated assistance',
   })
   assistanceId: number;
+
+  @BelongsTo(() => ChannelAttention, 'assistance_id')
+  declare assistance: ChannelAttention;
 
   @Column({
     field: 'channel_room_id',
@@ -100,7 +105,7 @@ export class Survey extends Model<Survey> {
   @ForeignKey(() => User)
   @Column({
     field: 'updated_by',
-    type: DataType.BIGINT, 
+    type: DataType.BIGINT,
     allowNull: true,
   })
   declare updatedBy: number | null;

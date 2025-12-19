@@ -30,7 +30,7 @@ export class EmailWorker extends WorkerHost {
         return;
       }
 
-      console.log('Procesando evento:', event.messageId, event);
+      console.log('Procesando evento:', event.messageId);
 
       const inboxExist = await this.emailWorkerService.inboxExist();
 

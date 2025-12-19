@@ -1,4 +1,16 @@
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+
+export class AttchDataDto {
+  name: string;
+  cid: string;
+}
 
 export class CenterEmail {
   @IsString()
@@ -13,6 +25,10 @@ export class CenterEmail {
   @IsOptional()
   @IsNumber()
   mailAttentionId: number;
+
+  @IsOptional()
+  @Transform(({ value }) => JSON.parse(value) as AttchDataDto[])
+  attData: AttchDataDto[];
 }
 
 export class GenericEmail {

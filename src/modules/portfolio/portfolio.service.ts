@@ -12,7 +12,7 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { User } from '@modules/user/entities/user.entity';
 import { Office } from '@modules/office/entities/office.entity';
 import { PortfolioDetail } from '@modules/portfolio-detail/entities/portfolio-detail.entity';
-import { col, Op, WhereOptions } from 'sequelize';
+import { col, fn, Op, Order, where, WhereOptions } from 'sequelize';
 import { CitizenContact } from '@modules/citizen/entities/citizen-contact.entity';
 import * as XLSX from 'xlsx';
 import { UserRepository } from '@modules/user/repositories/user.repository';
@@ -38,9 +38,9 @@ export class PortfolioService {
     q?: Record<string, any>,
   ): Promise<PaginatedResponse<Portfolio>> {
     try {
-      const dateSelected = q?.dateSelected;
-
+      const { orderField, searchText = '', dateSelected } = q || {};
       let whereOptions: WhereOptions<Portfolio> = {};
+      const searchTerm = searchText.toLowerCase();
 
       if (dateSelected) {
         whereOptions = {
@@ -52,13 +52,24 @@ export class PortfolioService {
           },
         };
       }
+      if (searchTerm) {
+        const safeTerm = searchTerm.replace(/'/g, "''"); // prevenir inyección SQL
+        whereOptions[Op.or] = [
+          where(fn('LOWER', col('Portfolio.content')), {
+            [Op.like]: `%${safeTerm}%`,
+          }),
+        ];
+      }
+      const order: Order = orderField
+        ? [[orderField.field, orderField.order]]
+        : [['id', 'DESC']];
 
       return this.repository.findAndCountAll({
         where: whereOptions,
         include: [{ model: Office }, { model: User, as: 'createdByUser' }],
         limit,
         offset,
-        order: [['id', 'DESC']],
+        order,
       });
     } catch (error) {
       throw new InternalServerErrorException(

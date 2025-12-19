@@ -12,6 +12,8 @@ import { ChannelModule } from '@modules/channel/channel.module';
 import { Channel } from '@modules/channel/entities/channel.entity';
 import { ChannelStateModule } from '@modules/custom-states/channel-state/channel-state.module';
 import { InboxSchedule } from './entities/inbox-schedule.entity';
+import { ChannelStateUserHistory } from './entities/channel-state-user-history.model';
+import { ChannelStateUserHistoryRepository } from './repositories/channel-state-user-history.repository';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { InboxSchedule } from './entities/inbox-schedule.entity';
       InboxUser,
       InboxCredential,
       InboxSchedule,
+      ChannelStateUserHistory,
     ]),
     ChannelModule,
     ChannelStateModule,
@@ -31,7 +34,14 @@ import { InboxSchedule } from './entities/inbox-schedule.entity';
     InboxRepository,
     InboxUserRepository,
     InboxCredentialRepository,
+    ChannelStateUserHistoryRepository,
   ],
-  exports: [InboxRepository, InboxUserRepository, InboxCredentialRepository],
+  exports: [
+    InboxService,
+    InboxRepository,
+    InboxUserRepository,
+    InboxCredentialRepository,
+    ChannelStateUserHistoryRepository,
+  ],
 })
 export class InboxModule {}

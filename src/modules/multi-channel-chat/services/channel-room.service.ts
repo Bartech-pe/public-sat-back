@@ -66,6 +66,7 @@ import { CreateChannelQueryHistoryDto } from '../dto/channel-query-history/creat
 import { ChannelQueryHistoryRepository } from '../repositories/channel-room.repository copy';
 import { ConsultTypeRepository } from '@modules/consult-type/repositories/consult-type.repository';
 import { UserRepository } from '@modules/user/repositories/user.repository';
+import { Citizen } from '@modules/citizen/entities/citizen.entity';
 
 @Injectable()
 export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
@@ -947,6 +948,10 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const room = await this.channelRoomRepository.findById(channelroomId, {
         include: [
           {
+              model: ChannelCitizen,
+              required: true
+          },
+          {
             model: ChannelAttention,
             required: false,
             where: {
@@ -962,6 +967,14 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
             required: true,
             include: [
               {
+                model: InboxCredential,
+                required: true
+              },
+              {
+                model: Channel,
+                required: true
+              },
+              {
                 model: User,
                 as: 'users',
                 required: false,
@@ -975,6 +988,7 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
       const attention = room.get('assistances')[0] as ChannelAttention;
       const attentionParsed = attention.toJSON() as ChannelAttention;
       const inbox = room?.get('inbox') as Inbox;
+      const citizenParsed = room?.get('citizen').toJSON() as ChannelCitizen;
       const newAdvisor = await this.userRepository.findById(advisorId);
       if (!newAdvisor) {
         throw new NotFoundException(
@@ -1002,6 +1016,17 @@ export class ChannelRoomService implements OnModuleInit, OnModuleDestroy {
           displayName: newAdvisorParsed.displayName ?? 'Unknown',
           name: newAdvisorParsed.name,
         });
+      }
+      if(inbox.channel.name == ChannelType.CHATSAT)
+      {
+        this.sendMessage({
+          assistanceId: attentionParsed.id,
+          channel: ChannelType.CHATSAT,
+          channelRoomId: attentionParsed.channelRoomId,
+          attachments: [],
+          message: `Asesor asignado: ${newAdvisor.displayName}`,
+          phoneNumberReceiver: citizenParsed?.phoneNumber?? ""
+        },newAdvisorParsed)
       }
       response.message = `Se ha asignado la conversación al asesor ${newAdvisorParsed.name} correctamente`;
       response.success = true;
