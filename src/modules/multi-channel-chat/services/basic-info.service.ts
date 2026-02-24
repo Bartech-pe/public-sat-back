@@ -442,10 +442,13 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
   private async processDocumentType(citizen: ChannelCitizen, body: string) {
     const cleanedBody = body.trim().toUpperCase();
     if (['DNI', 'CE', 'OTROS', 'OTRO'].includes(cleanedBody)) {
+      // Normalizar "OTRO" a "OTROS"
+      const documentType = cleanedBody === 'OTRO' ? 'OTROS' : cleanedBody;
+      
       await this.citizenRepository.update(citizen.id, {
-        documentType: cleanedBody as CitizenDocType,
+        documentType: documentType as CitizenDocType,
       });
-      citizen.documentType = cleanedBody as CitizenDocType;
+      citizen.documentType = documentType as CitizenDocType;
       return { success: true, message: '' };
     } else {
       return {
@@ -469,15 +472,24 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
     const digitsOnly = value.replace(/\D/g, '');
 
     let regex: RegExp;
+    let errorMessage: string;
+    
     switch (docType) {
       case 'DNI':
-        regex = /^\d{8}$/; // exactamente 8 dígitos
+        regex = /^\d{8}$/;
+        errorMessage = 'Por favor, ingrese un DNI válido (8 dígitos).';
         break;
       case 'CE':
-        regex = /^\d{9,12}$/; // entre 9 y 12 dígitos
+        regex = /^\d{9,12}$/;
+        errorMessage = 'Por favor, ingrese un Carné de Extranjería válido (9 a 12 dígitos).';
+        break;
+      case 'OTROS':
+        regex = /^\d{8,}$/;
+        errorMessage = 'Por favor, ingrese un número de documento válido (mínimo 8 dígitos).';
         break;
       default:
-        regex = /^\d{8,}$/; // mínimo 8
+        regex = /^\d{8,}$/;
+        errorMessage = 'Por favor, ingrese un número de documento válido (mínimo 8 dígitos).';
     }
 
     if (regex.test(digitsOnly)) {
@@ -488,12 +500,7 @@ export class BasicInfoService implements OnModuleInit, OnModuleDestroy {
       return { success: true, message: '' };
     }
 
-    const msg =
-      docType === 'CE'
-        ? 'Por favor, ingrese un Carné de Extranjería válido (9 a 12 dígitos).'
-        : 'Por favor, ingrese un DNI válido (8 dígitos).';
-
-    return { success: false, message: msg };
+    return { success: false, message: errorMessage };
   }
 
   public async requestBasicInformation(message: BufferedMessage) {
